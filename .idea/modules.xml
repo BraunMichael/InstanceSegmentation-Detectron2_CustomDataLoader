@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/InstanceSegmentation-Detectron2.iml" filepath="$PROJECT_DIR$/.idea/InstanceSegmentation-Detectron2.iml" />
+      <module fileurl="file://$PROJECT_DIR$/detectron2_repo/.idea/detectron2_repo.iml" filepath="$PROJECT_DIR$/detectron2_repo/.idea/detectron2_repo.iml" />
     </modules>
   </component>
 </project>
