@@ -24,16 +24,12 @@ ContinueTraining = True
 showPlots = False
 root = Tk()
 root.withdraw()
-# annotationTrainListFileName = filedialog.askopenfilename(initialdir="/home/mbraun/NewIS", filetypes=[('Annotation Train Dict List in text file', '.txt')])
-# For testing only
-annotationTrainListFileName = '/home/mbraun/NewIS/new_annotations_dict_bitmask_Train.txt'
+annotationTrainListFileName = filedialog.askopenfilename(initialdir="/home/mbraun/NewIS", filetypes=[('Annotation Train Dict List in text file', '.txt')])
 if not annotationTrainListFileName:
     quit()
 
-# annotationValidateListFileName = filedialog.askopenfilename(initialdir="/home/mbraun/NewIS", filetypes=[('Annotation Validate Dict List in text file', '.txt')])
+annotationValidateListFileName = filedialog.askopenfilename(initialdir="/home/mbraun/NewIS", filetypes=[('Annotation Validate Dict List in text file', '.txt')])
 root.destroy()
-# For testing only
-annotationValidateListFileName = '/home/mbraun/NewIS/new_annotations_dict_bitmask_Validate.txt'
 if not annotationValidateListFileName:
     quit()
 
@@ -44,12 +40,8 @@ with open(annotationTrainListFileName, 'rb') as handle:
 with open(annotationTrainListFileName, 'rb') as handle:
     annotationValidateDicts = pickle.loads(handle.read())
 
-
 annotationDicts = [annotationTrainDicts, annotationValidateDicts]
-# InputDirectoryName = filedialog.askdirectory(initialdir="/home/mbraun/NewIS", title = "Select folder with Training and Validation folders")
-# For testing only
-# InputDirectoryName = '/home/mbraun/NewIS/VerticalNanowires'
-InputDirectoryName = '/home/mbraun/NewIS/NewAugmentedRawImages'
+InputDirectoryName = filedialog.askdirectory(initialdir="/home/mbraun/NewIS", title = "Select folder with Training and Validation folders")
 if not InputDirectoryName:
     quit()
 # dirnames should return ['Train', 'Validation']
@@ -115,25 +107,3 @@ trainer = DefaultTrainer(cfg)
 if ContinueTraining:
     trainer.resume_or_load(resume=True)  # Only if starting from a model checkpoint
 trainer.train()
-
-# cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")
-# cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5   # set the testing threshold for this model
-# predictor = DefaultPredictor(cfg)
-#
-# fig, ax = plt.subplots(figsize=(10, 8))
-# for d in random.sample(annotationTrainDicts, 3):
-#     rawImage = Image.open(d["file_name"])
-#     npImage = np.array(rawImage)
-#     outputs = predictor(npImage)
-#     v = Visualizer(npImage[:, :, ::-1],
-#                    metadata=nanowire_metadata,
-#                    scale=0.8,
-#                    instance_mode=ColorMode.IMAGE_BW  # remove the colors of unsegmented pixels
-#                    )
-#     v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
-#     ax.imshow(v.get_image()[:, :, ::-1])
-#     plt.show(block=False)
-#     plt.pause(5)
-#     plt.cla()
-# plt.close()
-# print('here')
