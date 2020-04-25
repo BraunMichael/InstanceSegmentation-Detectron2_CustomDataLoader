@@ -22,7 +22,7 @@ sudo apt-get install python3-distutils git build-essential python3.8-dev python3
 
 Pycharm sometimes has a Distutils issue from: https://stackoverflow.com/questions/55749206/modulenotfounderror-no-module-named-distutils-core
 
-##Installing Detectron
+## Installing Detectron
 
 Make sure you are in your PyCharm virtual environment, this is mostly from here: https://detectron2.readthedocs.io/tutorials/install.html
 
