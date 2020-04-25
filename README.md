@@ -6,53 +6,67 @@ Detectron only works on linux, or online notebooks like Google Colab. If install
 
 # Linux Installation
 After setting up a new linux install (or ubuntu on windows install), get PyCharm.
-
+```
 sudo snap install pycharm-community --classic
+```
+Start a new project with a new virtual environment. From within pycharm, use the terminal tab at the very bottom. This should be activated in the virtual environment already, but not in python yet. Check your python version:
 
-Start a new project with a new virtual environment. From within pycharm, use the terminal tab at the very bottom. This should be activated in the virtual environment already, but not in python yet. This is mostly from here: https://detectron2.readthedocs.io/tutorials/install.html
+```
+python --version
+```
+Then install the corresponding python-dev package, at the time of writing 20.04 comes with 3.8. Also make sure some other compiling tools are available
 
-Check for python-dev existance, if it is not in the virtual environment, install a matching python-dev version to python version in virtual environment. At the time of writing 20.04 comes with 3.8.
-
-Distutils for pycharm issue from: https://stackoverflow.com/questions/55749206/modulenotfounderror-no-module-named-distutils-core
+```
 sudo apt-get install python3-distutils git build-essential python3.8-dev python3-tk
+```
 
+Pycharm sometimes has a Distutils issue from: https://stackoverflow.com/questions/55749206/modulenotfounderror-no-module-named-distutils-core
+
+##Installing Detectron
+
+Make sure you are in your PyCharm virtual environment, this is mostly from here: https://detectron2.readthedocs.io/tutorials/install.html
+
+```
 sudo apt install nvidia-cuda-toolkit
 nvcc --version  # Check cuda version, hopefully 10.1 (or newer)
+```
 
+```
 pip install --upgrade pip
 pip install opencv-python matplotlib scikit-image numpy cython Pillow imgaug imagecorruptions imageio ttictoc multiprocess lmfit joblib pyyaml==5.1
+```
 
-# Need to have all matching cuda versions, written with Cuda 10.1 as target
-# This line apparently doesn't work... need to use the older torch and torchvision with the prebuilt detectron2 on the following line
-# pip install torch==1.5.0+cu101 torchvision==0.6.0+cu101 -f https://download.pytorch.org/whl/torch_stable.html
+You need to have all matching cuda versions, written with Cuda 10.1 as target. As of writing the following doesn't work for the prebuilt detectron2:
+```
+ pip install torch==1.5.0+cu101 torchvision==0.6.0+cu101 -f https://download.pytorch.org/whl/torch_stable.html
+```
+
+Instead use an older version of torch and torchvision:
+```
 pip install -U torch==1.4 torchvision==0.5 -f https://download.pytorch.org/whl/cu101/torch_stable.html
-	
+```
+Install detectron2
+```
 pip install detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu101/index.html
 pip install -U 'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI'
-
-# Now you should be able to run the ExampleUsage.py and ExampleTrainNewData.py 
-# Each of those scripts download their example data from within each script
-
+```
+Now you should be able to run the ExampleUsage.py and ExampleTrainNewData.py, Each of those scripts download their example data from within each script
 
 
 
+# Troubleshooting
+First, go to the detectron troubleshooting: https://github.com/facebookresearch/detectron2/blob/master/INSTALL.md#common-installation-issues
 
-
-
-#Also install using the commands below: psensor, sound switcher indicator, notepadqq, pycharm, or maybe https://github.com/adaxi/audio-output-switcher
-sudo snap install pycharm-community --classic
-
-	
-
-# Nvidia Issues?
-# Get graphics driver directly from site here: 
+Graphics drivers can cause issues as well, get Nvidia graphics driver directly from site here: 
 https://www.nvidia.com/Download/index.aspx
 
+
+### Cuda installation troubleshooting that might help:
 https://developer.nvidia.com/cuda-10.1-download-archive-base
 https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#ubuntu-installation
 
-# For CUDA things
-# Maybe this? https://developer.nvidia.com/cuda-10.1-download-archive-update2?target_os=Linux&target_arch=x86_64&target_distro=Ubuntu&target_version=1804&target_type=deblocal
+https://developer.nvidia.com/cuda-10.1-download-archive-update2?target_os=Linux&target_arch=x86_64&target_distro=Ubuntu&target_version=1804&target_type=deblocal
+```
 wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-ubuntu1804.pin
 sudo mv cuda-ubuntu1804.pin /etc/apt/preferences.d/cuda-repository-pin-600
 wget http://developer.download.nvidia.com/compute/cuda/10.1/Prod/local_installers/cuda-repo-ubuntu1804-10-1-local-10.1.243-418.87.00_1.0-1_amd64.deb
@@ -60,3 +74,4 @@ sudo dpkg -i cuda-repo-ubuntu1804-10-1-local-10.1.243-418.87.00_1.0-1_amd64.deb
 sudo apt-key add /var/cuda-repo-10-1-local-10.1.243-418.87.00/7fa2af80.pub
 sudo apt-get update
 sudo apt-get -y install cuda
+```
