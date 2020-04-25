@@ -30,7 +30,7 @@ if not annotationTrainListFileName:
     quit()
 
 annotationValidateListFileName = filedialog.askopenfilename(initialdir=os.getcwd(), filetypes=[('Annotation Validate Dict List in text file', '.txt')])
-root.destroy()
+
 if not annotationValidateListFileName:
     quit()
 
@@ -43,6 +43,7 @@ with open(annotationTrainListFileName, 'rb') as handle:
 
 annotationDicts = [annotationTrainDicts, annotationValidateDicts]
 InputDirectoryName = filedialog.askdirectory(initialdir=os.getcwd(), title = "Select folder with Training and Validation folders")
+root.destroy()
 if not InputDirectoryName:
     quit()
 # dirnames should return ['Train', 'Validation']
