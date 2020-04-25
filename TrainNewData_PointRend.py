@@ -16,7 +16,7 @@ from detectron2.utils.logger import setup_logger
 setup_logger()
 
 # import PointRend project
-import sys; sys.path.insert(1, "/home/mbraun/NewIS/detectron2_repo/projects/PointRend")
+import sys; sys.path.insert(1, os.path.join(os.getcwd(),"detectron2_repo", "projects", "PointRend"))
 import point_rend
 
 
@@ -24,11 +24,11 @@ ContinueTraining = True
 showPlots = False
 root = Tk()
 root.withdraw()
-annotationTrainListFileName = filedialog.askopenfilename(initialdir="/home/mbraun/NewIS", filetypes=[('Annotation Train Dict List in text file', '.txt')])
+annotationTrainListFileName = filedialog.askopenfilename(initialdir=os.getcwd(), filetypes=[('Annotation Train Dict List in text file', '.txt')])
 if not annotationTrainListFileName:
     quit()
 
-annotationValidateListFileName = filedialog.askopenfilename(initialdir="/home/mbraun/NewIS", filetypes=[('Annotation Validate Dict List in text file', '.txt')])
+annotationValidateListFileName = filedialog.askopenfilename(initialdir=os.getcwd(), filetypes=[('Annotation Validate Dict List in text file', '.txt')])
 root.destroy()
 if not annotationValidateListFileName:
     quit()
@@ -41,7 +41,7 @@ with open(annotationTrainListFileName, 'rb') as handle:
     annotationValidateDicts = pickle.loads(handle.read())
 
 annotationDicts = [annotationTrainDicts, annotationValidateDicts]
-InputDirectoryName = filedialog.askdirectory(initialdir="/home/mbraun/NewIS", title = "Select folder with Training and Validation folders")
+InputDirectoryName = filedialog.askdirectory(initialdir=os.getcwd(), title = "Select folder with Training and Validation folders")
 if not InputDirectoryName:
     quit()
 # dirnames should return ['Train', 'Validation']
@@ -74,12 +74,12 @@ if showPlots:
     # plt.close()
 
 cfg = get_cfg()
-cfg.OUTPUT_DIR = '/home/mbraun/NewIS/PointRendModel_4mask'
+cfg.OUTPUT_DIR = os.path.join(os.getcwd(), "PointRendModel_4mask")
 # See params here https://github.com/facebookresearch/detectron2/blob/master/projects/PointRend/point_rend/config.py
 point_rend.add_pointrend_config(cfg)
 cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (VerticalNanowires)
 cfg.MODEL.POINT_HEAD.NUM_CLASSES = cfg.MODEL.ROI_HEADS.NUM_CLASSES  # PointRend has to match num classes
-cfg.merge_from_file("/home/mbraun/NewIS/detectron2_repo/projects/PointRend/configs/InstanceSegmentation/pointrend_rcnn_R_50_FPN_3x_coco.yaml")
+cfg.merge_from_file(os.path.join(os.getcwd(), "detectron2_repo", "projects", "PointRend", "configs", "InstanceSegmentation", "pointrend_rcnn_R_50_FPN_3x_coco.yaml"))
 
 if ContinueTraining:
     cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")  # If continuing training
