@@ -1,2 +1,6 @@
 /NewAugmentedMaskImages/
 /NewAugmentedRawImages/
+/Test/
+/PointRendModel_4mask/
+
+*.pth
