@@ -16,7 +16,8 @@ from detectron2.utils.logger import setup_logger
 setup_logger()
 
 # import PointRend project
-import sys; sys.path.insert(1, os.path.join(os.getcwd(),"detectron2_repo", "projects", "PointRend"))
+import sys
+sys.path.insert(1, os.path.join(os.getcwd(),"detectron2_repo", "projects", "PointRend"))
 import point_rend
 
 
@@ -92,13 +93,13 @@ cfg.DATASETS.TEST = (nanowireStr + "_Validation",)
 cfg.DATALOADER.NUM_WORKERS = 8
 cfg.SOLVER.IMS_PER_BATCH = 1
 cfg.SOLVER.BASE_LR = 0.00025  # pick a good LR
-cfg.SOLVER.MAX_ITER = 50000    # balloon test used 300 iterations, likely need to train longer for a practical dataset
+cfg.SOLVER.MAX_ITER = 100000    # balloon test used 300 iterations, likely need to train longer for a practical dataset
 cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512   # (default: 512, balloon test used 128)
 
 cfg.INPUT.MIN_SIZE_TRAIN = (1179,)  # (default: (800,))
 cfg.INPUT.MAX_SIZE_TRAIN = 1366  # (default: 1333)
 cfg.TEST.DETECTIONS_PER_IMAGE = 200  # Increased from COCO default, should never have more than 200 wires per image (default: 100)
-cfg.SOLVER.CHECKPOINT_PERIOD = 500
+cfg.SOLVER.CHECKPOINT_PERIOD = 5000
 cfg.MODEL.RPN.PRE_NMS_TOPK_TRAIN = 12000  # (default: 12000)
 cfg.MODEL.RPN.PRE_NMS_TOPK_TEST = 6000  # (default: 6000)
 
