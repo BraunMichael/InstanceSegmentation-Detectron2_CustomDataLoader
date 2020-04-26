@@ -60,6 +60,46 @@ def setConfigurator(outputModelFolder: str = 'model', continueTraining: bool = F
     return cfg
 
 
+def setDatasetAndMetadata(baseStr: str):
+    annotationTrainListFileName = getFileOrDirList('file', 'Annotation Train Dict List in text file', '.txt')
+    annotationValidateListFileName = getFileOrDirList('file', 'Annotation Validation Dict List in text file', '.txt')
+    InputDirectoryName = getFileOrDirList('folder', "Select folder with Training and Validation folders")
+
+    # Need to make a train and a validation list of dicts separately in InstanceSegmentationDatasetDict
+    with open(annotationTrainListFileName, 'rb') as handle:
+        annotationTrainDicts = pickle.loads(handle.read())
+    with open(annotationValidateListFileName, 'rb') as handle:
+        annotationValidateDicts = pickle.loads(handle.read())
+    annotationDicts = [annotationTrainDicts, annotationValidateDicts]
+
+    # dirnames should return ['Train', 'Validation']
+    (dirpath, dirnames, rawFileNames) = next(os.walk(InputDirectoryName))
+    if 'Train' not in dirnames or 'Validation' not in dirnames:
+        print('You are missing either a Train or Validation directory')
+        quit()
+    dirnames = ['Train',
+                'Validation']  # After making sure these are directories as expected, lets force the order to match the annotationDicts order
+
+    for d in range(len(dirnames)):
+        if baseStr + "_" + dirnames[d] not in DatasetCatalog.__dict__['_REGISTERED']:
+            DatasetCatalog.register(baseStr + "_" + dirnames[d], lambda d=d: annotationDicts[d])
+        MetadataCatalog.get(baseStr + "_" + dirnames[d]).set(thing_classes=["VerticalNanowires"])
+
+    if showPlots:
+        for d in random.sample(annotationTrainDicts, 20):
+            fig, ax = plt.subplots(figsize=(10, 8))
+            print(d["file_name"])
+            rawImage = Image.open(d["file_name"])
+            npImage = np.array(rawImage)
+            visualizerNP = Visualizer(npImage[:, :, ::-1], metadata=nanowire_metadata, scale=0.5)
+            visTest = visualizerNP.draw_dataset_dict(d)
+            ax.imshow(visTest.get_image()[:, :, ::-1])
+            plt.show(block=True)
+            # plt.pause(10)
+            # plt.cla()
+        # plt.close()
+
+
 def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file', fileTypes: str = None):
     root = Tk()
     root.withdraw()
@@ -74,46 +114,10 @@ def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file'
     return fileOrFolderList
 
 
-annotationTrainListFileName = getFileOrDirList('file', 'Annotation Train Dict List in text file', '.txt')
-annotationValidateListFileName = getFileOrDirList('file', 'Annotation Validation Dict List in text file', '.txt')
-InputDirectoryName = getFileOrDirList('folder', "Select folder with Training and Validation folders")
-
-# Need to make a train and a validation list of dicts separately in InstanceSegmentationDatasetDict
-with open(annotationTrainListFileName, 'rb') as handle:
-    annotationTrainDicts = pickle.loads(handle.read())
-with open(annotationTrainListFileName, 'rb') as handle:
-    annotationValidateDicts = pickle.loads(handle.read())
-annotationDicts = [annotationTrainDicts, annotationValidateDicts]
-
-# dirnames should return ['Train', 'Validation']
-(dirpath, dirnames, rawFileNames) = next(os.walk(InputDirectoryName))
-if 'Train' not in dirnames or 'Validation' not in dirnames:
-    print('You are missing either a Train or Validation directory')
-    quit()
-dirnames = ['Train', 'Validation']  # After making sure these are directories as expected, lets force the order to match the annotationDicts order
-
 baseStr = 'VerticalNanowires'
-for d in range(len(dirnames)):
-    if baseStr + "_" + dirnames[d] not in DatasetCatalog.__dict__['_REGISTERED']:
-        DatasetCatalog.register(baseStr + "_" + dirnames[d], lambda d=d: annotationDicts[d])
-    MetadataCatalog.get(baseStr + "_" + dirnames[d]).set(thing_classes=["VerticalNanowires"])
+setDatasetAndMetadata(baseStr)
 nanowire_metadata = MetadataCatalog.get(baseStr + "_Train")
-
-if showPlots:
-    for d in random.sample(annotationTrainDicts, 20):
-        fig, ax = plt.subplots(figsize=(10, 8))
-        print(d["file_name"])
-        rawImage = Image.open(d["file_name"])
-        npImage = np.array(rawImage)
-        visualizerNP = Visualizer(npImage[:, :, ::-1], metadata=nanowire_metadata, scale=0.5)
-        visTest = visualizerNP.draw_dataset_dict(d)
-        ax.imshow(visTest.get_image()[:, :, ::-1])
-        plt.show(block=True)
-        # plt.pause(10)
-        # plt.cla()
-    # plt.close()
-
-configurator = setConfigurator(outputModelFolder, continueTraining)
+configurator = setConfigurator(outputModelFolder, continueTraining, baseStr)
 trainer = DefaultTrainer(configurator)
 if continueTraining:
     trainer.resume_or_load(resume=True)  # Only if starting from a model checkpoint
