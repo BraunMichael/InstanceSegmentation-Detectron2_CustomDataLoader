@@ -86,6 +86,7 @@ def setDatasetAndMetadata(baseStr: str):
         MetadataCatalog.get(baseStr + "_" + dirnames[d]).set(thing_classes=["VerticalNanowires"])
 
     if showPlots:
+        nanowire_metadata = MetadataCatalog.get(baseStr + "_Train")
         for d in random.sample(annotationTrainDicts, 20):
             fig, ax = plt.subplots(figsize=(10, 8))
             print(d["file_name"])
@@ -95,9 +96,6 @@ def setDatasetAndMetadata(baseStr: str):
             visTest = visualizerNP.draw_dataset_dict(d)
             ax.imshow(visTest.get_image()[:, :, ::-1])
             plt.show(block=True)
-            # plt.pause(10)
-            # plt.cla()
-        # plt.close()
 
 
 def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file', fileTypes: str = None):
@@ -114,11 +112,15 @@ def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file'
     return fileOrFolderList
 
 
-baseStr = 'VerticalNanowires'
-setDatasetAndMetadata(baseStr)
-nanowire_metadata = MetadataCatalog.get(baseStr + "_Train")
-configurator = setConfigurator(outputModelFolder, continueTraining, baseStr)
-trainer = DefaultTrainer(configurator)
-if continueTraining:
-    trainer.resume_or_load(resume=True)  # Only if starting from a model checkpoint
-trainer.train()
+def main():
+    baseStr = 'VerticalNanowires'
+    setDatasetAndMetadata(baseStr)
+    configurator = setConfigurator(outputModelFolder, continueTraining, baseStr)
+    trainer = DefaultTrainer(configurator)
+    if continueTraining:
+        trainer.resume_or_load(resume=True)  # Only if starting from a model checkpoint
+    trainer.train()
+
+
+if __name__ == "__main__":
+    main()
