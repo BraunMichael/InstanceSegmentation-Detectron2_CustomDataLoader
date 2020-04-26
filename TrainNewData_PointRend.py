@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np  # (pip install numpy)
 from PIL import Image, ImageOps
 from tkinter import Tk, filedialog
-
+import multiprocessing
 from detectron2.data import DatasetCatalog, MetadataCatalog
 import random
 from detectron2 import model_zoo
@@ -21,8 +21,43 @@ sys.path.insert(1, os.path.join(os.getcwd(),"detectron2_repo", "projects", "Poin
 import point_rend
 
 
-ContinueTraining = True
+continueTraining = True
+outputModelFolder = "PointRendModel_4mask"
 showPlots = False
+
+
+def setConfigurator(outputModelFolder: str = 'model', continueTraining: bool = False, baseStr: str = ''):
+    cfg = get_cfg()
+    cfg.OUTPUT_DIR = os.path.join(os.getcwd(), outputModelFolder)
+    # See params here https://github.com/facebookresearch/detectron2/blob/master/projects/PointRend/point_rend/config.py
+    point_rend.add_pointrend_config(cfg)
+    cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (VerticalNanowires)
+    cfg.MODEL.POINT_HEAD.NUM_CLASSES = cfg.MODEL.ROI_HEADS.NUM_CLASSES  # PointRend has to match num classes
+    cfg.merge_from_file(os.path.join(os.getcwd(), "detectron2_repo", "projects", "PointRend", "configs", "InstanceSegmentation", "pointrend_rcnn_R_50_FPN_3x_coco.yaml"))
+
+    if continueTraining:
+        cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")  # If continuing training
+    else:
+        cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, 'model_final_3c3198.pkl')
+
+    cfg.INPUT.MASK_FORMAT = 'bitmask'
+    cfg.DATASETS.TRAIN = (baseStr + "_Train",)
+    cfg.DATASETS.TEST = (baseStr + "_Validation",)
+    cfg.DATALOADER.NUM_WORKERS = multiprocessing.cpu_count()
+    cfg.SOLVER.IMS_PER_BATCH = 1
+    cfg.SOLVER.BASE_LR = 0.00025  # pick a good LR
+    cfg.SOLVER.MAX_ITER = 200000    # balloon test used 300 iterations, likely need to train longer for a practical dataset
+    cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512   # (default: 512, balloon test used 128)
+
+    cfg.INPUT.MIN_SIZE_TRAIN = (1179,)  # (default: (800,))
+    cfg.INPUT.MAX_SIZE_TRAIN = 1366  # (default: 1333)
+    cfg.TEST.DETECTIONS_PER_IMAGE = 200  # Increased from COCO default, should never have more than 200 wires per image (default: 100)
+    cfg.SOLVER.CHECKPOINT_PERIOD = 1000
+    cfg.MODEL.RPN.PRE_NMS_TOPK_TRAIN = 12000  # (default: 12000)
+    cfg.MODEL.RPN.PRE_NMS_TOPK_TEST = 6000  # (default: 6000)
+
+    os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
+    return cfg
 
 
 def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file', fileTypes: str = None):
@@ -57,13 +92,12 @@ if 'Train' not in dirnames or 'Validation' not in dirnames:
     quit()
 dirnames = ['Train', 'Validation']  # After making sure these are directories as expected, lets force the order to match the annotationDicts order
 
-nanowireStr = 'VerticalNanowires'
+baseStr = 'VerticalNanowires'
 for d in range(len(dirnames)):
-    if nanowireStr + "_" + dirnames[d] not in DatasetCatalog.__dict__['_REGISTERED']:
-        DatasetCatalog.register(nanowireStr + "_" + dirnames[d], lambda d=d: annotationDicts[d])
-    MetadataCatalog.get(nanowireStr + "_" + dirnames[d]).set(thing_classes=["VerticalNanowires"])
-nanowire_metadata = MetadataCatalog.get(nanowireStr + "_Train")
-
+    if baseStr + "_" + dirnames[d] not in DatasetCatalog.__dict__['_REGISTERED']:
+        DatasetCatalog.register(baseStr + "_" + dirnames[d], lambda d=d: annotationDicts[d])
+    MetadataCatalog.get(baseStr + "_" + dirnames[d]).set(thing_classes=["VerticalNanowires"])
+nanowire_metadata = MetadataCatalog.get(baseStr + "_Train")
 
 if showPlots:
     for d in random.sample(annotationTrainDicts, 20):
@@ -79,37 +113,8 @@ if showPlots:
         # plt.cla()
     # plt.close()
 
-cfg = get_cfg()
-cfg.OUTPUT_DIR = os.path.join(os.getcwd(), "PointRendModel_4mask")
-# See params here https://github.com/facebookresearch/detectron2/blob/master/projects/PointRend/point_rend/config.py
-point_rend.add_pointrend_config(cfg)
-cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (VerticalNanowires)
-cfg.MODEL.POINT_HEAD.NUM_CLASSES = cfg.MODEL.ROI_HEADS.NUM_CLASSES  # PointRend has to match num classes
-cfg.merge_from_file(os.path.join(os.getcwd(), "detectron2_repo", "projects", "PointRend", "configs", "InstanceSegmentation", "pointrend_rcnn_R_50_FPN_3x_coco.yaml"))
-
-if ContinueTraining:
-    cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")  # If continuing training
-else:
-    cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, 'model_final_3c3198.pkl')
-
-cfg.INPUT.MASK_FORMAT = 'bitmask'
-cfg.DATASETS.TRAIN = (nanowireStr + "_Train",)
-cfg.DATASETS.TEST = (nanowireStr + "_Validation",)
-cfg.DATALOADER.NUM_WORKERS = 8
-cfg.SOLVER.IMS_PER_BATCH = 1
-cfg.SOLVER.BASE_LR = 0.00025  # pick a good LR
-cfg.SOLVER.MAX_ITER = 200000    # balloon test used 300 iterations, likely need to train longer for a practical dataset
-cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512   # (default: 512, balloon test used 128)
-
-cfg.INPUT.MIN_SIZE_TRAIN = (1179,)  # (default: (800,))
-cfg.INPUT.MAX_SIZE_TRAIN = 1366  # (default: 1333)
-cfg.TEST.DETECTIONS_PER_IMAGE = 200  # Increased from COCO default, should never have more than 200 wires per image (default: 100)
-cfg.SOLVER.CHECKPOINT_PERIOD = 1000
-cfg.MODEL.RPN.PRE_NMS_TOPK_TRAIN = 12000  # (default: 12000)
-cfg.MODEL.RPN.PRE_NMS_TOPK_TEST = 6000  # (default: 6000)
-
-os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
-trainer = DefaultTrainer(cfg)
-if ContinueTraining:
+configurator = setConfigurator(outputModelFolder, continueTraining)
+trainer = DefaultTrainer(configurator)
+if continueTraining:
     trainer.resume_or_load(resume=True)  # Only if starting from a model checkpoint
 trainer.train()
