@@ -23,29 +23,33 @@ import point_rend
 
 ContinueTraining = True
 showPlots = False
-root = Tk()
-root.withdraw()
-annotationTrainListFileName = filedialog.askopenfilename(initialdir=os.getcwd(), filetypes=[('Annotation Train Dict List in text file', '.txt')])
-if not annotationTrainListFileName:
-    quit()
 
-annotationValidateListFileName = filedialog.askopenfilename(initialdir=os.getcwd(), filetypes=[('Annotation Validate Dict List in text file', '.txt')])
 
-if not annotationValidateListFileName:
-    quit()
+def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file', fileTypes: str = None):
+    root = Tk()
+    root.withdraw()
+    assert fileOrFolder.lower() == 'file' or fileOrFolder.lower() == 'folder', "Only file or folder is an allowed string choice for fileOrFolder"
+    if fileOrFolder.lower() == 'file':
+        fileOrFolderList = filedialog.askopenfilename(initialdir=os.getcwd(), title=titleStr, filetypes=[(fileTypes + "file", fileTypes)])
+    else:  # Must be folder from assert statement
+        fileOrFolderList = filedialog.askdirectory(initialdir=os.getcwd(), title=titleStr)
+    if not fileOrFolderList:
+        quit()
+    root.destroy()
+    return fileOrFolderList
+
+
+annotationTrainListFileName = getFileOrDirList('file', 'Annotation Train Dict List in text file', '.txt')
+annotationValidateListFileName = getFileOrDirList('file', 'Annotation Validation Dict List in text file', '.txt')
+InputDirectoryName = getFileOrDirList('folder', "Select folder with Training and Validation folders")
 
 # Need to make a train and a validation list of dicts separately in InstanceSegmentationDatasetDict
 with open(annotationTrainListFileName, 'rb') as handle:
     annotationTrainDicts = pickle.loads(handle.read())
-
 with open(annotationTrainListFileName, 'rb') as handle:
     annotationValidateDicts = pickle.loads(handle.read())
-
 annotationDicts = [annotationTrainDicts, annotationValidateDicts]
-InputDirectoryName = filedialog.askdirectory(initialdir=os.getcwd(), title = "Select folder with Training and Validation folders")
-root.destroy()
-if not InputDirectoryName:
-    quit()
+
 # dirnames should return ['Train', 'Validation']
 (dirpath, dirnames, rawFileNames) = next(os.walk(InputDirectoryName))
 if 'Train' not in dirnames or 'Validation' not in dirnames:
@@ -94,13 +98,13 @@ cfg.DATASETS.TEST = (nanowireStr + "_Validation",)
 cfg.DATALOADER.NUM_WORKERS = 8
 cfg.SOLVER.IMS_PER_BATCH = 1
 cfg.SOLVER.BASE_LR = 0.00025  # pick a good LR
-cfg.SOLVER.MAX_ITER = 100000    # balloon test used 300 iterations, likely need to train longer for a practical dataset
+cfg.SOLVER.MAX_ITER = 200000    # balloon test used 300 iterations, likely need to train longer for a practical dataset
 cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512   # (default: 512, balloon test used 128)
 
 cfg.INPUT.MIN_SIZE_TRAIN = (1179,)  # (default: (800,))
 cfg.INPUT.MAX_SIZE_TRAIN = 1366  # (default: 1333)
 cfg.TEST.DETECTIONS_PER_IMAGE = 200  # Increased from COCO default, should never have more than 200 wires per image (default: 100)
-cfg.SOLVER.CHECKPOINT_PERIOD = 5000
+cfg.SOLVER.CHECKPOINT_PERIOD = 1000
 cfg.MODEL.RPN.PRE_NMS_TOPK_TRAIN = 12000  # (default: 12000)
 cfg.MODEL.RPN.PRE_NMS_TOPK_TEST = 6000  # (default: 6000)
 
