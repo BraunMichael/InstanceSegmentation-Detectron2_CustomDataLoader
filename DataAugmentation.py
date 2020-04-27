@@ -359,11 +359,15 @@ for entry in range(0, len(rawImageFileNames)):
             plt.imshow(combinedImage, 'jet', interpolation='none')
             plt.show()
             return combinedImage
-
-        with tqdm_joblib(tqdm(desc="Drawing Segmentation Maps on Images", total=len(fullImageList))) as progress_bar:
-            plotList = joblib.Parallel(n_jobs=num_cores)(
-                joblib.delayed(drawSegmentationMapsOnImages)(fullImage, segmapImage, colorList) for fullImage, segmapImage
-                in zip(fullImageList, segmapList))
+        if PARALLEL_PROCESSING:
+            with tqdm_joblib(tqdm(desc="Drawing Segmentation Maps on Images", total=len(fullImageList))) as progress_bar:
+                plotList = joblib.Parallel(n_jobs=num_cores)(
+                    joblib.delayed(drawSegmentationMapsOnImages)(fullImage, segmapImage, colorList) for fullImage, segmapImage
+                    in zip(fullImageList, segmapList))
+        else:
+            plotList = []
+            for fullImage, segmapImage in zip(fullImageList, segmapList):
+                plotList.append(drawSegmentationMapsOnImages(fullImage, segmapImage, colorList))
 
     if saveFiles:
         augmentedRawImagesDir = 'NewAugmentedRawImages'
