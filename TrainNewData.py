@@ -21,23 +21,23 @@ sys.path.insert(1, os.path.join(os.getcwd(),"detectron2_repo", "projects", "Poin
 import point_rend
 
 
-modelType = 'PointRend'  # options are 'PointRend' or 'MaskRCNN'
-continueTraining = True
-outputModelFolder = modelType+"Model_4mask"
+modelType = 'MaskRCNN'  # options are 'PointRend' or 'MaskRCNN'
+continueTraining = False
+outputModelFolder = modelType+"Model_4masklowres"
+numClasses = 1  # only has one class (VerticalNanowires)
 showPlots = False
 
 
-def setConfigurator(outputModelFolder: str = 'model', continueTraining: bool = False, baseStr: str = '', modelType: str = 'maskrcnn'):
+def setConfigurator(outputModelFolder: str = 'model', continueTraining: bool = False, baseStr: str = '', modelType: str = 'maskrcnn', numClasses: int = 1):
     cfg = get_cfg()
     cfg.OUTPUT_DIR = os.path.join(os.getcwd(), outputModelFolder)
-    cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (VerticalNanowires)
 
     if modelType.lower() == 'pointrend':
         print('pointrend')
         # See params here https://github.com/facebookresearch/detectron2/blob/master/projects/PointRend/point_rend/config.py
         point_rend.add_pointrend_config(cfg)
-        cfg.MODEL.POINT_HEAD.NUM_CLASSES = cfg.MODEL.ROI_HEADS.NUM_CLASSES  # PointRend has to match num classes
         cfg.merge_from_file(os.path.join(os.getcwd(), "detectron2_repo", "projects", "PointRend", "configs", "InstanceSegmentation", "pointrend_rcnn_R_50_FPN_3x_coco.yaml"))
+        cfg.MODEL.POINT_HEAD.NUM_CLASSES = numClasses  # PointRend has to match num classes
         if continueTraining:
             cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")  # If continuing training
         else:
@@ -50,19 +50,20 @@ def setConfigurator(outputModelFolder: str = 'model', continueTraining: bool = F
         else:
             cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
 
+    cfg.MODEL.ROI_HEADS.NUM_CLASSES = numClasses
     cfg.INPUT.MASK_FORMAT = 'bitmask'
     cfg.DATASETS.TRAIN = (baseStr + "_Train",)
     cfg.DATASETS.TEST = (baseStr + "_Validation",)
     cfg.DATALOADER.NUM_WORKERS = multiprocessing.cpu_count()
     cfg.SOLVER.IMS_PER_BATCH = 1
     cfg.SOLVER.BASE_LR = 0.00025  # pick a good LR
-    cfg.SOLVER.MAX_ITER = 225001    # balloon test used 300 iterations, likely need to train longer for a practical dataset
+    cfg.SOLVER.MAX_ITER = 5000  # balloon test used 300 iterations, likely need to train longer for a practical dataset
     cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512   # (default: 512, balloon test used 128)
 
-    cfg.INPUT.MIN_SIZE_TRAIN = (1179,)  # (default: (800,))
-    cfg.INPUT.MAX_SIZE_TRAIN = 1366  # (default: 1333)
+    # cfg.INPUT.MIN_SIZE_TRAIN = (1179,)  # (default: (800,))
+    # cfg.INPUT.MAX_SIZE_TRAIN = 1366  # (default: 1333)
     cfg.TEST.DETECTIONS_PER_IMAGE = 200  # Increased from COCO default, should never have more than 200 wires per image (default: 100)
-    cfg.SOLVER.CHECKPOINT_PERIOD = 5000
+    cfg.SOLVER.CHECKPOINT_PERIOD = 1000
     cfg.MODEL.RPN.PRE_NMS_TOPK_TRAIN = 12000  # (default: 12000)
     cfg.MODEL.RPN.PRE_NMS_TOPK_TEST = 6000  # (default: 6000)
 
@@ -125,7 +126,7 @@ def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file'
 def main():
     baseStr = 'VerticalNanowires'
     setDatasetAndMetadata(baseStr)
-    configurator = setConfigurator(outputModelFolder, continueTraining, baseStr, modelType)
+    configurator = setConfigurator(outputModelFolder, continueTraining, baseStr, modelType, numClasses)
     trainer = DefaultTrainer(configurator)
     if continueTraining:
         trainer.resume_or_load(resume=True)  # Only if starting from a model checkpoint
