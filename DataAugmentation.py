@@ -138,6 +138,7 @@ def dictShotNoise(baseImageListFunc, baseMaskListFunc, fullImageListFunc, segmap
 
         fullImageListFunc.extend(alteredImageListFunc)
         segmapListFunc.extend(alteredMaskListFunc)
+
     return fullImageListFunc, segmapListFunc
 
 
