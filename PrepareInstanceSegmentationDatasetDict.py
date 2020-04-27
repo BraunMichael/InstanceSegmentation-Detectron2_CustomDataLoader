@@ -251,12 +251,6 @@ def main():
         with open(annotationDictFileName, 'wb') as handle:
             pickle.dump(allAnnotations, handle)
 
-    # loading a saved dict back in
-    #with open(annotationDictFileName, 'rb') as handle:
-    #    readDict = pickle.loads(handle.read())
-
-    print("Done")
-
 
 if __name__ == "__main__":
     main()
