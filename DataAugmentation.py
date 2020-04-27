@@ -29,7 +29,6 @@ validationPercent = 100 - trainingPercent
 showGridImage = False
 
 
-
 @contextlib.contextmanager
 def tqdm_joblib(tqdm_object):
     """Context manager to patch joblib to report into tqdm progress bar given as argument"""
@@ -120,7 +119,7 @@ def dictCropMultiples(baseImageListFunc, baseMaskListFunc, fullImageListFunc, se
         alteredImageListFunc, alteredMaskListFunc = expandList(baseImageListFunc, baseMaskListFunc,
                                                                cropMultiples_x00percent)
         (alteredImageListFunc, alteredMaskListFunc) = cropMultiples(images=alteredImageListFunc,
-                                                                   segmentation_maps=alteredMaskListFunc)
+                                                                    segmentation_maps=alteredMaskListFunc)
 
         fullImageListFunc.extend(alteredImageListFunc)
         segmapListFunc.extend(alteredMaskListFunc)
@@ -143,7 +142,7 @@ def dictShotNoise(baseImageListFunc, baseMaskListFunc, fullImageListFunc, segmap
         alteredImageListFunc, alteredMaskListFunc = expandList(baseImageListFunc, baseMaskListFunc,
                                                                shotNoise_x00percent)
         (alteredImageListFunc, alteredMaskListFunc) = shotNoise(images=alteredImageListFunc,
-                                                                   segmentation_maps=alteredMaskListFunc)
+                                                                segmentation_maps=alteredMaskListFunc)
 
         fullImageListFunc.extend(alteredImageListFunc)
         segmapListFunc.extend(alteredMaskListFunc)
@@ -365,7 +364,7 @@ for entry in range(0, len(rawImageFileNames)):
     if showPlots or showGridImage:
         def drawSegmentationMapsOnImages(fullImage, segmapImage, colorList):
             combinedImage = segmapImage.draw_on_image(fullImage, colors=colorList)[0]
-            fig, ax = plt.subplots(figsize=(10, 8))
+            plt.subplots(figsize=(10, 8))
             plt.imshow(combinedImage, 'jet', interpolation='none')
             plt.show()
             return combinedImage
