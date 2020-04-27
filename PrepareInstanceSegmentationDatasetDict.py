@@ -18,6 +18,7 @@ from tqdm import tqdm
 import pycocotools
 from ttictoc import tic, toc
 
+maskType = 'bitmask'  # Options are 'bitmask' or 'polygon'
 # If more than 1 type of thing, need a new (and consistent) category_id (in annotate function) for each different type of object
 showPlots = False
 showSavedMaskAndImage = False
@@ -48,22 +49,25 @@ def tqdm_joblib(tqdm_object):
 
 
 # noinspection PyShadowingNames
-def create_sub_mask_annotation(sub_mask, region, category_id, annotation_id, is_crowd):
+def create_sub_mask_annotation(sub_mask, region, category_id, annotation_id, is_crowd, maskType):
     sub_mask = sub_mask.astype('uint8')
     minr, minc, maxr, maxc = region.bbox
-    annotationDict = {
-        'segmentation': pycocotools.mask.encode(np.array(sub_mask, order="F")),
-        'iscrowd': is_crowd,
-        'category_id': category_id,
-        'id': annotation_id,
-        'bbox': [minc, minr, maxc, maxr],
-        'bbox_mode': BoxMode.XYXY_ABS,
-        'area': region.area
-    }
+    if maskType.lower() == 'bitmask':
+        annotationDict = {
+            'segmentation': pycocotools.mask.encode(np.array(sub_mask, order="F")),
+            'iscrowd': is_crowd,
+            'category_id': category_id,
+            'id': annotation_id,
+            'bbox': [minc, minr, maxc, maxr],
+            'bbox_mode': BoxMode.XYXY_ABS,
+            'area': region.area
+        }
+    else:
+        pass
     return annotationDict
 
 
-def annotateSingleImage(rawImageName, binaryMaskName):
+def annotateSingleImage(rawImageName, binaryMaskName, maskType):
     # print('raw:', getNakedNameFromFilePath(rawImageName), "binary:", getNakedNameFromFilePath(binaryMaskName))
     record = {}
     rawImage = Image.open(rawImageName)
@@ -110,7 +114,7 @@ def annotateSingleImage(rawImageName, binaryMaskName):
             subMask = np.zeros(image.shape)
             for pixelXY in maskCoords:
                 subMask[pixelXY[0]][pixelXY[1]] = 1
-            annotationDict = create_sub_mask_annotation(subMask, region, category_id, regionNumber, 0)
+            annotationDict = create_sub_mask_annotation(subMask, region, category_id, regionNumber, 0, maskType)
             objectsList.append(annotationDict)
 
             if showPlots:
@@ -182,7 +186,7 @@ def main():
 
         totalImages = len(binaryImageNames)
         with tqdm_joblib(tqdm(desc="Annotating" + dirName + "Images", total=totalImages)) as progress_bar:
-            allAnnotations = joblib.Parallel(n_jobs=num_cores)(joblib.delayed(annotateSingleImage)(rawImageName, binaryImageName) for (rawImageName, binaryImageName) in zip(rawImageNames, binaryImageNames))
+            allAnnotations = joblib.Parallel(n_jobs=num_cores)(joblib.delayed(annotateSingleImage)(rawImageName, binaryImageName, maskType) for (rawImageName, binaryImageName) in zip(rawImageNames, binaryImageNames))
 
         # allAnnotationsDict = {key: value for i in allAnnotations for key, value in i.items()}
         annotationDictFileName = 'new_annotations_dict_bitmask_' + dirName + '.txt'
