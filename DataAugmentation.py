@@ -411,14 +411,26 @@ for entry in range(0, len(rawImageFileNames)):
         trainSegmapList = list(deque(segmapListdeque.popleft() for _ in range(trainImageListLength)))
         validationSegmapList = list(segmapListdeque)
 
-        with tqdm_joblib(tqdm(desc="Saving Training Images", total=trainImageListLength)) as progress_bar:
-            Parallel(n_jobs=num_cores)(
-                delayed(saveImageAndMask)(image, maskImage, augmentedRawImagesTrainDir, augmentedMaskedImagesTrainDir, baseFileName,
-                                          baseFileType, maskFileType, fileNum) for (image, maskImage, fileNum) in zip(trainImageList, trainSegmapList, list(range(1, trainImageListLength + 1))))
-        with tqdm_joblib(tqdm(desc="Saving Validation Images", total=validationImageListLength)) as progress_bar:
-            Parallel(n_jobs=num_cores)(
-                delayed(saveImageAndMask)(image, maskImage, augmentedRawImagesValidationDir, augmentedMaskedImagesValidationDir, baseFileName,
-                                          baseFileType, maskFileType, fileNum) for (image, maskImage, fileNum) in zip(validationImageList, validationSegmapList, list(range(1, validationImageListLength + 1))))
+        if PARALLEL_PROCESSING:
+            with tqdm_joblib(tqdm(desc="Saving Training Images", total=trainImageListLength)) as progress_bar:
+                Parallel(n_jobs=num_cores)(
+                    delayed(saveImageAndMask)(image, maskImage, augmentedRawImagesTrainDir, augmentedMaskedImagesTrainDir, baseFileName,
+                                              baseFileType, maskFileType, fileNum) for (image, maskImage, fileNum) in zip(trainImageList, trainSegmapList, list(range(1, trainImageListLength + 1))))
+            with tqdm_joblib(tqdm(desc="Saving Validation Images", total=validationImageListLength)) as progress_bar:
+                Parallel(n_jobs=num_cores)(
+                    delayed(saveImageAndMask)(image, maskImage, augmentedRawImagesValidationDir, augmentedMaskedImagesValidationDir, baseFileName,
+                                              baseFileType, maskFileType, fileNum) for (image, maskImage, fileNum) in zip(validationImageList, validationSegmapList, list(range(1, validationImageListLength + 1))))
+        else:
+            print("Saving Training Images")
+            progressBar = ProgressBar(total=trainImageListLength)
+            for (image, maskImage, fileNum) in zip(trainImageList, trainSegmapList, list(range(1, trainImageListLength + 1))):
+                progressBar.print_progress_bar(fileNum)
+                saveImageAndMask(image, maskImage, augmentedRawImagesTrainDir, augmentedMaskedImagesTrainDir, baseFileName, baseFileType, maskFileType, fileNum)
+            print("Saving Validation Images")
+            progressBar = ProgressBar(total=validationImageListLength)
+            for (image, maskImage, fileNum) in zip(validationImageList, validationSegmapList, list(range(1, validationImageListLength + 1))):
+                progressBar.print_progress_bar(fileNum)
+                saveImageAndMask(image, maskImage, augmentedRawImagesValidationDir, augmentedMaskedImagesValidationDir, baseFileName, baseFileType, maskFileType, fileNum)
 
     if showGridImage:
         grid_image = ia.draw_grid(plotList)
