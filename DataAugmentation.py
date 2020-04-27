@@ -109,12 +109,21 @@ def dictCropMultiples(baseImageListFunc, baseMaskListFunc, fullImageListFunc, se
     cropMultiples_x00percent = cropMultiples_heightmultiple * cropMultiples_widthmultiple
     cropMultiples = iaa.CropToMultiplesOf(height_multiple=cropMultiples_heightmultiple,
                                           width_multiple=cropMultiples_widthmultiple)
-    batches = [UnnormalizedBatch(images=baseImageListFunc, segmentation_maps=baseMaskListFunc) for _ in
-               range(cropMultiples_x00percent)]
-    batches_aug = list(cropMultiples.augment_batches(batches, background=True))
-    for entry in batches_aug:
-        fullImageListFunc.extend(entry.images_aug)
-        segmapListFunc.extend(entry.segmentation_maps_aug)
+    if PARALLEL_PROCESSING:
+        batches = [UnnormalizedBatch(images=baseImageListFunc, segmentation_maps=baseMaskListFunc) for _ in
+                   range(cropMultiples_x00percent)]
+        batches_aug = list(cropMultiples.augment_batches(batches, background=True))
+        for entry in batches_aug:
+            fullImageListFunc.extend(entry.images_aug)
+            segmapListFunc.extend(entry.segmentation_maps_aug)
+    else:
+        alteredImageListFunc, alteredMaskListFunc = expandList(baseImageListFunc, baseMaskListFunc,
+                                                               cropMultiples_x00percent)
+        (alteredImageListFunc, alteredMaskListFunc) = cropMultiples(images=alteredImageListFunc,
+                                                                   segmentation_maps=alteredMaskListFunc)
+
+        fullImageListFunc.extend(alteredImageListFunc)
+        segmapListFunc.extend(alteredMaskListFunc)
     return fullImageListFunc, segmapListFunc
 
 
