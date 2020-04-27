@@ -63,7 +63,65 @@ def create_sub_mask_annotation(sub_mask, region, category_id, annotation_id, is_
             'area': region.area
         }
     else:
-        pass
+        # Find contours (boundary lines) around each sub-mask
+        # Note: there could be multiple contours if the object
+        # is partially occluded. (E.g. an elephant behind a tree)
+
+        # This fixes the corner issue of diagonally cutting across the mask since edge pixels had no neighboring black pixels
+        sub_mask_bordered = ImageOps.expand(sub_mask, border=1)
+        contours = measure.find_contours(sub_mask_bordered, 0.5, positive_orientation='low')
+
+        segmentations = []
+        polygons = []
+        for contour in contours:
+            # Flip from (row, col) representation to (x, y)
+            # and subtract the padding pixel (not doing that, we didn't buffer)
+
+            # The 2nd line is needed for the correct orientation in the TrainNewData.py file
+            # If wanting to showPlots here and get correct orientation, need to change something in the plotting code
+            # contour[:, 0], contour[:, 1] = contour[:, 1], sub_mask.size[1] - contour[:, 0].copy()
+            contour[:, 0], contour[:, 1] = contour[:, 1], contour[:, 0].copy()
+
+            # Make a polygon and simplify it
+            poly = Polygon(contour)
+            poly = poly.simplify(1.0, preserve_topology=False)
+            polygons.append(poly)
+            # print("Annotation ID:", annotation_id, "poly.geom_type:", poly.geom_type)
+            segmentation = np.array(poly.exterior.coords).ravel().tolist()
+            segmentations.append(segmentation)
+
+            if showPlots:
+                fig, ax = plt.subplots()
+                plt.ylim(0, sub_mask.size[1])
+                plt.xlim(0, sub_mask.size[0])
+                if poly.geom_type is 'Polygon':
+                    xs, ys = poly.exterior.xy
+                    ax.fill(xs, ys, alpha=0.5, fc='r', ec='none')
+                else:
+                    for geom in poly.geoms:
+                        xs, ys = geom.exterior.xy
+                        ax.fill(xs, ys, alpha=0.5, fc='r', ec='none')
+                plt.show(block=False)
+                plt.pause(1)
+                sub_mask_Image = np.array(sub_mask)
+                ax.imshow(sub_mask_Image)
+                plt.show(block=False)
+                plt.pause(1)
+                plt.cla()
+        if showPlots:
+            plt.close()
+        # Combine the polygons to calculate the bounding box and areas
+        multi_poly = MultiPolygon(polygons)
+
+        annotationDict = {
+            'segmentation': segmentations,
+            'iscrowd': is_crowd,
+            'category_id': category_id,
+            'id': annotation_id,
+            'bbox': multi_poly.bounds,
+            'bbox_mode': BoxMode.XYXY_ABS,
+            'area': multi_poly.area
+        }
     return annotationDict
 
 
