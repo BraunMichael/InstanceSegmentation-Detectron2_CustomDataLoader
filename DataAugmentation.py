@@ -19,7 +19,7 @@ from ttictoc import tic, toc
 
 # Parallelization implemented on ShotNoise, everything else was slower with the number of images used so far.
 # Formatting of ShotNoise can be copied easily into the others if wanting to switch back to parallelization
-parallelProcessing = True
+PARALLEL_PROCESSING = True
 showPlots = False  # Will show tiled grid if true, only works with a small number of images
 saveFiles = True
 
@@ -122,12 +122,22 @@ def dictShotNoise(baseImageListFunc, baseMaskListFunc, fullImageListFunc, segmap
     print('Shot noise, starting number of images:', len(segmapListFunc))
     shotNoise_x00percent = 5
     shotNoise = iaa.imgcorruptlike.ShotNoise(severity=1)
-    batches = [UnnormalizedBatch(images=baseImageListFunc, segmentation_maps=baseMaskListFunc) for _ in
-               range(shotNoise_x00percent)]
-    batches_aug = list(shotNoise.augment_batches(batches, background=True))
-    for entry in batches_aug:
-        fullImageListFunc.extend(entry.images_aug)
-        segmapListFunc.extend(entry.segmentation_maps_aug)
+
+    if PARALLEL_PROCESSING:
+        batches = [UnnormalizedBatch(images=baseImageListFunc, segmentation_maps=baseMaskListFunc) for _ in
+                   range(shotNoise_x00percent)]
+        batches_aug = list(shotNoise.augment_batches(batches, background=True))
+        for entry in batches_aug:
+            fullImageListFunc.extend(entry.images_aug)
+            segmapListFunc.extend(entry.segmentation_maps_aug)
+    else:
+        alteredImageListFunc, alteredMaskListFunc = expandList(baseImageListFunc, baseMaskListFunc,
+                                                               shotNoise_x00percent)
+        (alteredImageListFunc, alteredMaskListFunc) = shotNoise(images=alteredImageListFunc,
+                                                                   segmentation_maps=alteredMaskListFunc)
+
+        fullImageListFunc.extend(alteredImageListFunc)
+        segmapListFunc.extend(alteredMaskListFunc)
     return fullImageListFunc, segmapListFunc
 
 
@@ -292,8 +302,7 @@ binaryMaskFileNames = sorted(getFilesInFolderList("Select Binary Mask Image Fold
 rawImageFileNames = sorted(getFilesInFolderList("Select Raw Image Folder", ".jpg"))
 root.destroy()
 
-if parallelProcessing:
-    num_cores = multiprocessing.cpu_count()
+num_cores = multiprocessing.cpu_count()
 
 if len(binaryMaskFileNames) != len(rawImageFileNames):
     print(
