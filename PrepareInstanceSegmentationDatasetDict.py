@@ -24,7 +24,6 @@ showPlots = False
 showSavedMaskAndImage = False
 is_crowd = 0  # Likely never relevant for us, used to mark if it is a collection of objects rather than fully separated
 num_cores = multiprocessing.cpu_count()
-# num_cores = 1
 
 @contextlib.contextmanager
 def tqdm_joblib(tqdm_object):
