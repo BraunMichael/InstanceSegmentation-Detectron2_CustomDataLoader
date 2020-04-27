@@ -212,8 +212,8 @@ def main():
     root.withdraw()
     # Folder structure should be a mask folder, inside a train and validation folder, inside each of those are the actual images
     # A duplicate folder structure should exist for the raw images
-    binaryFilesFolder = filedialog.askdirectory(initialdir="/home/mbraun/NewIS", title="Select Binary Mask Image Folder")
-    rawFilesFolder = filedialog.askdirectory(initialdir="/home/mbraun/NewIS", title="Select Raw Image Folder")
+    binaryFilesFolder = filedialog.askdirectory(title="Select Binary Mask Image Folder")
+    rawFilesFolder = filedialog.askdirectory(title="Select Raw Image Folder")
     root.destroy()
     if not binaryFilesFolder or not rawFilesFolder:
         quit()
