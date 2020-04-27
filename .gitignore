@@ -6,3 +6,4 @@
 *.pth
 
 /tiltedSEM/
+/MaskRCNNModel_4mask/
