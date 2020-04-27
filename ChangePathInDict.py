@@ -5,11 +5,10 @@ from tkinter import Tk, filedialog
 
 # newAnnotationDictFileName = 'annotations_dict_bitmask_Train_colab.txt'
 newAnnotationDictFileName = 'annotations_dict_bitmask_Validation_colab.txt'
-# basePath = "/home/mbraun/NewIS"
-colabBasePath = "/content/drive/My Drive/NewIS"
+colabBasePath = "/content/drive/My Drive/InstanceSegmentation-Detectron2"
 root = Tk()
 root.withdraw()
-annotationDictFileName = filedialog.askopenfilename(filetypes=[("Text Dict","*.txt")])
+annotationDictFileName = filedialog.askopenfilename(filetypes=[("Text Dict", "*.txt")])
 
 if not annotationDictFileName:
     quit()
