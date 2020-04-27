@@ -1,9 +1,10 @@
 import os
 import pickle
-import numpy as np  # (pip install numpy)
 from tkinter import Tk, filedialog
 
 
+# newAnnotationDictFileName = 'annotations_dict_bitmask_Train_colab.txt'
+newAnnotationDictFileName = 'annotations_dict_bitmask_Validation_colab.txt'
 # basePath = "/home/mbraun/NewIS"
 colabBasePath = "/content/drive/My Drive/NewIS"
 root = Tk()
@@ -15,9 +16,8 @@ if not annotationDictFileName:
 
 # loading a saved dict back in
 with open(annotationDictFileName, 'rb') as handle:
-   readDictList = pickle.loads(handle.read())
+    readDictList = pickle.loads(handle.read())
 
-quit()
 for segDict in readDictList:
     originalNamePath, _ = os.path.split(segDict['file_name'])
     originalNameParentFolderPath, _ = os.path.split(originalNamePath)
@@ -29,9 +29,6 @@ for segDict in readDictList:
 
     segDict['file_name'] = segDict['file_name'].replace(originalNameBasePath, colabBasePath)
     segDict['image_id'] = segDict['image_id'].replace(originalImageIDBasePath, colabBasePath)
-
-# newAnnotationDictFileName = 'annotations_dict_bitmask_Train_colab.txt'
-newAnnotationDictFileName = 'annotations_dict_bitmask_Validation_colab.txt'
 
 with open(newAnnotationDictFileName, 'wb') as handle:
     pickle.dump(readDictList, handle)
