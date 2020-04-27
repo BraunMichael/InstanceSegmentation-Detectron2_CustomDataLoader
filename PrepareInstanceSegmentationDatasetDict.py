@@ -25,6 +25,7 @@ showSavedMaskAndImage = False
 is_crowd = 0  # Likely never relevant for us, used to mark if it is a collection of objects rather than fully separated
 num_cores = multiprocessing.cpu_count()
 
+
 @contextlib.contextmanager
 def tqdm_joblib(tqdm_object):
     """Context manager to patch joblib to report into tqdm progress bar given as argument"""
