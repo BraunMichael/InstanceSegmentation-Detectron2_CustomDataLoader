@@ -19,15 +19,15 @@ from ttictoc import tic, toc
 
 # Parallelization implemented on ShotNoise, everything else was slower with the number of images used so far.
 # Formatting of ShotNoise can be copied easily into the others if wanting to switch back to parallelization
-num_cores = multiprocessing.cpu_count()
+parallelProcessing = True
 showPlots = False  # Will show tiled grid if true, only works with a small number of images
-showGridImage = False
 saveFiles = True
+
 additiveAugmentMode = True  # False is "multiplicative" mode, where there will be an image that has every augment applied, and every possible combination of augment is represented
 trainingPercent = 80
 validationPercent = 100 - trainingPercent
-# This shouldn't be needed, but otherwise an error pops up in imgaug (used to make a colormap)
-numberRegions = 300
+showGridImage = False
+
 
 
 @contextlib.contextmanager
@@ -291,9 +291,10 @@ root.withdraw()
 binaryMaskFileNames = sorted(getFilesInFolderList("Select Binary Mask Image Folder", ".png"))
 rawImageFileNames = sorted(getFilesInFolderList("Select Raw Image Folder", ".jpg"))
 root.destroy()
-# For testing only
-# binaryMaskFileNames = ['/home/mbraun/NewIS/MaskedImages/141VerticalWires_Binary.png', '/home/mbraun/NewIS/MaskedImages/MB0239_Center_Binary_SmoothedDilated.png']
-# rawImageFileNames = ['/home/mbraun/NewIS/RawImages/2020_03_02_JZL0141_Parallelogram_006_cropped.jpg', '/home/mbraun/NewIS/RawImages/2020_03_05_MB0239_Center_009_cropped.jpg']
+
+if parallelProcessing:
+    num_cores = multiprocessing.cpu_count()
+
 if len(binaryMaskFileNames) != len(rawImageFileNames):
     print(
         "There are a different number of files in each of the selected folders. Make sure you have a masked image for each raw image!")
