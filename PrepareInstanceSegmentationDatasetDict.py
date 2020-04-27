@@ -217,7 +217,9 @@ def main():
     root.destroy()
     if not binaryFilesFolder or not rawFilesFolder:
         quit()
-
+    parentFolder, _ = os.path.split(binaryFilesFolder)
+    altParentFolder, _ = os.path.split(rawFilesFolder)
+    assert parentFolder == altParentFolder, "The parent folder of the chose binary and raw folders do not match, check your folder structure"
     (_, binaryDirnames, _) = next(os.walk(binaryFilesFolder))
     (_, rawDirnames, _) = next(os.walk(rawFilesFolder))
 
