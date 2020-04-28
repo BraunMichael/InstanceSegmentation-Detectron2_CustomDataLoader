@@ -257,7 +257,7 @@ def main():
 
         # allAnnotationsDict = {key: value for i in allAnnotations for key, value in i.items()}
         # annotationDictFileName = 'new_annotations_dict_bitmask_' + dirName + '.txt'
-        annotationDictFileName = 'newtest_poly_' + dirName + '.txt'
+        annotationDictFileName = 'annotations_' + dirName + '.txt'
         annotationsWithMaskType = (allAnnotations, maskType)
         with open(annotationDictFileName, 'wb') as handle:
             pickle.dump(annotationsWithMaskType, handle)
