@@ -18,12 +18,13 @@ from tqdm import tqdm
 import pycocotools
 from ttictoc import tic, toc
 
-maskType = 'polygon'  # Options are 'bitmask' or 'polygon'
+maskType = 'bitmask'  # Options are 'bitmask' or 'polygon'
 # If more than 1 type of thing, need a new (and consistent) category_id (in annotate function) for each different type of object
 showPlots = False
 showSavedMaskAndImage = False
 is_crowd = 0  # Likely never relevant for us, used to mark if it is a collection of objects rather than fully separated
 num_cores = multiprocessing.cpu_count()
+assert maskType.lower() == 'bitmask' or maskType.lower() == 'polygon', "The valid maskType options are 'bitmask' and 'polygon'"
 
 
 @contextlib.contextmanager
