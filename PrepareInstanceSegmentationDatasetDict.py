@@ -18,7 +18,7 @@ from tqdm import tqdm
 import pycocotools
 from ttictoc import tic, toc
 
-maskType = 'bitmask'  # Options are 'bitmask' or 'polygon'
+maskType = 'polygon'  # Options are 'bitmask' or 'polygon'
 # If more than 1 type of thing, need a new (and consistent) category_id (in annotate function) for each different type of object
 showPlots = False
 showSavedMaskAndImage = False
@@ -250,9 +250,10 @@ def main():
 
         # allAnnotationsDict = {key: value for i in allAnnotations for key, value in i.items()}
         # annotationDictFileName = 'new_annotations_dict_bitmask_' + dirName + '.txt'
-        annotationDictFileName = 'test_' + maskType + '_' + dirName + '.txt'
+        annotationDictFileName = 'test_' + dirName + '.txt'
+        annotationsWithMaskType = (allAnnotations, maskType)
         with open(annotationDictFileName, 'wb') as handle:
-            pickle.dump(allAnnotations, handle)
+            pickle.dump(annotationsWithMaskType, handle)
 
 
 if __name__ == "__main__":

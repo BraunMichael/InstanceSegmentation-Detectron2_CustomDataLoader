@@ -22,12 +22,10 @@ import point_rend
 
 
 modelType = 'MaskRCNN'  # options are 'PointRend' or 'MaskRCNN'
-maskType = 'bitmask'  # options are 'bitmask' or 'polygon'
 continueTraining = False
 outputModelFolder = modelType+"Model_4masklowres"
 numClasses = 1  # only has one class (VerticalNanowires)
-showPlots = False
-assert maskType.lower() == 'bitmask' or maskType.lower() == 'polygon', "The valid maskType options are 'bitmask' and 'polygon'"
+showPlots = True
 
 
 def setConfigurator(outputModelFolder: str = 'model', continueTraining: bool = False, baseStr: str = '', modelType: str = 'maskrcnn', numClasses: int = 1, maskType: str = 'polygon'):
@@ -53,13 +51,13 @@ def setConfigurator(outputModelFolder: str = 'model', continueTraining: bool = F
             cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
 
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = numClasses
-    cfg.INPUT.MASK_FORMAT = maskType
+    cfg.INPUT.MASK_FORMAT = maskType.lower()
     cfg.DATASETS.TRAIN = (baseStr + "_Train",)
     cfg.DATASETS.TEST = (baseStr + "_Validation",)
     cfg.DATALOADER.NUM_WORKERS = multiprocessing.cpu_count()
     cfg.SOLVER.IMS_PER_BATCH = 1
     cfg.SOLVER.BASE_LR = 0.00025  # pick a good LR
-    cfg.SOLVER.MAX_ITER = 5000  # balloon test used 300 iterations, likely need to train longer for a practical dataset
+    cfg.SOLVER.MAX_ITER = 6000  # balloon test used 300 iterations, likely need to train longer for a practical dataset
     cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512   # (default: 512, balloon test used 128)
 
     # cfg.INPUT.MIN_SIZE_TRAIN = (1179,)  # (default: (800,))
@@ -80,9 +78,13 @@ def setDatasetAndMetadata(baseStr: str):
 
     # Need to make a train and a validation list of dicts separately in InstanceSegmentationDatasetDict
     with open(annotationTrainListFileName, 'rb') as handle:
-        annotationTrainDicts = pickle.loads(handle.read())
+        annotationTrainDicts, maskType = pickle.loads(handle.read())
     with open(annotationValidateListFileName, 'rb') as handle:
-        annotationValidateDicts = pickle.loads(handle.read())
+        annotationValidateDicts, altMaskType = pickle.loads(handle.read())
+
+    assert maskType == altMaskType, "The stated mask type from the Train and Validation annotation dicts do not match"
+    assert maskType.lower() == 'bitmask' or maskType.lower() == 'polygon', "The valid maskType options are 'bitmask' and 'polygon'"
+
     annotationDicts = [annotationTrainDicts, annotationValidateDicts]
 
     # dirnames should return ['Train', 'Validation']
@@ -109,6 +111,7 @@ def setDatasetAndMetadata(baseStr: str):
             visTest = visualizerNP.draw_dataset_dict(d)
             ax.imshow(visTest.get_image()[:, :, ::-1])
             plt.show(block=True)
+    return maskType
 
 
 def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file', fileTypes: str = None):
@@ -127,7 +130,7 @@ def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file'
 
 def main():
     baseStr = 'VerticalNanowires'
-    setDatasetAndMetadata(baseStr)
+    maskType = setDatasetAndMetadata(baseStr)
     configurator = setConfigurator(outputModelFolder, continueTraining, baseStr, modelType, numClasses, maskType)
     trainer = DefaultTrainer(configurator)
     if continueTraining:
