@@ -94,7 +94,7 @@ def create_sub_mask_annotation(sub_mask, region, category_id, annotation_id, is_
                 fig, ax = plt.subplots()
                 plt.ylim(0, subMaskImage.size[1])
                 plt.xlim(0, subMaskImage.size[0])
-                if poly.geom_type is 'Polygon':
+                if poly.geom_type == 'Polygon':
                     xs, ys = poly.exterior.xy
                     ax.fill(xs, ys, alpha=0.5, fc='r', ec='none')
                 else:
