@@ -78,23 +78,25 @@ def setDatasetAndMetadata(baseStr: str):
 
     # Need to make a train and a validation list of dicts separately in InstanceSegmentationDatasetDict
     with open(annotationTrainListFileName, 'rb') as handle:
+        fileContents = pickle.loads(handle.read())
         try:
-            annotationTrainDicts, maskType = pickle.loads(handle.read())
+            annotationTrainDicts, maskType = fileContents
         except ValueError as e:
-            if str(e) == 'not enough values to unpack (expected 2, got 1)':
+            if str(e) == 'too many values to unpack (expected 2)':
                 # Using old version of dict
                 maskType = 'polygon'
-                annotationTrainDicts = pickle.loads(handle.read())
+                annotationTrainDicts = fileContents
             else:
                 raise
     with open(annotationValidateListFileName, 'rb') as handle:
+        fileContents = pickle.loads(handle.read())
         try:
-            annotationValidateDicts, altMaskType = pickle.loads(handle.read())
+            annotationValidateDicts, altMaskType = fileContents
         except ValueError as e:
-            if str(e) == 'not enough values to unpack (expected 2, got 1)':
+            if str(e) == 'too many values to unpack (expected 2)':
                 # Using old version of dict
                 altMaskType = 'polygon'
-                annotationValidateDicts = pickle.loads(handle.read())
+                annotationValidateDicts = fileContents
             else:
                 raise
     assert maskType == altMaskType, "The stated mask type from the Train and Validation annotation dicts do not match"
