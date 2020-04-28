@@ -23,9 +23,9 @@ import point_rend
 
 modelType = 'MaskRCNN'  # options are 'PointRend' or 'MaskRCNN'
 continueTraining = False
-outputModelFolder = modelType+"Model_4masklowres"
+outputModelFolder = modelType+"Model_4maskpolygon"
 numClasses = 1  # only has one class (VerticalNanowires)
-showPlots = True
+showPlots = False
 
 
 def setConfigurator(outputModelFolder: str = 'model', continueTraining: bool = False, baseStr: str = '', modelType: str = 'maskrcnn', numClasses: int = 1, maskType: str = 'polygon'):
@@ -78,10 +78,25 @@ def setDatasetAndMetadata(baseStr: str):
 
     # Need to make a train and a validation list of dicts separately in InstanceSegmentationDatasetDict
     with open(annotationTrainListFileName, 'rb') as handle:
-        annotationTrainDicts, maskType = pickle.loads(handle.read())
+        try:
+            annotationTrainDicts, maskType = pickle.loads(handle.read())
+        except ValueError as e:
+            if str(e) == 'not enough values to unpack (expected 2, got 1)':
+                # Using old version of dict
+                maskType = 'polygon'
+                annotationTrainDicts = pickle.loads(handle.read())
+            else:
+                raise
     with open(annotationValidateListFileName, 'rb') as handle:
-        annotationValidateDicts, altMaskType = pickle.loads(handle.read())
-
+        try:
+            annotationValidateDicts, altMaskType = pickle.loads(handle.read())
+        except ValueError as e:
+            if str(e) == 'not enough values to unpack (expected 2, got 1)':
+                # Using old version of dict
+                altMaskType = 'polygon'
+                annotationValidateDicts = pickle.loads(handle.read())
+            else:
+                raise
     assert maskType == altMaskType, "The stated mask type from the Train and Validation annotation dicts do not match"
     assert maskType.lower() == 'bitmask' or maskType.lower() == 'polygon', "The valid maskType options are 'bitmask' and 'polygon'"
 
