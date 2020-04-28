@@ -22,13 +22,15 @@ import point_rend
 
 
 modelType = 'MaskRCNN'  # options are 'PointRend' or 'MaskRCNN'
+maskType = 'bitmask'  # options are 'bitmask' or 'polygon'
 continueTraining = False
 outputModelFolder = modelType+"Model_4masklowres"
 numClasses = 1  # only has one class (VerticalNanowires)
 showPlots = False
+assert maskType.lower() == 'bitmask' or maskType.lower() == 'polygon', "The valid maskType options are 'bitmask' and 'polygon'"
 
 
-def setConfigurator(outputModelFolder: str = 'model', continueTraining: bool = False, baseStr: str = '', modelType: str = 'maskrcnn', numClasses: int = 1):
+def setConfigurator(outputModelFolder: str = 'model', continueTraining: bool = False, baseStr: str = '', modelType: str = 'maskrcnn', numClasses: int = 1, maskType: str = 'polygon'):
     cfg = get_cfg()
     cfg.OUTPUT_DIR = os.path.join(os.getcwd(), outputModelFolder)
 
@@ -51,7 +53,7 @@ def setConfigurator(outputModelFolder: str = 'model', continueTraining: bool = F
             cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
 
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = numClasses
-    cfg.INPUT.MASK_FORMAT = 'bitmask'
+    cfg.INPUT.MASK_FORMAT = maskType
     cfg.DATASETS.TRAIN = (baseStr + "_Train",)
     cfg.DATASETS.TEST = (baseStr + "_Validation",)
     cfg.DATALOADER.NUM_WORKERS = multiprocessing.cpu_count()
@@ -126,7 +128,7 @@ def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file'
 def main():
     baseStr = 'VerticalNanowires'
     setDatasetAndMetadata(baseStr)
-    configurator = setConfigurator(outputModelFolder, continueTraining, baseStr, modelType, numClasses)
+    configurator = setConfigurator(outputModelFolder, continueTraining, baseStr, modelType, numClasses, maskType)
     trainer = DefaultTrainer(configurator)
     if continueTraining:
         trainer.resume_or_load(resume=True)  # Only if starting from a model checkpoint
