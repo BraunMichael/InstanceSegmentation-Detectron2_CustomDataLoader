@@ -71,34 +71,30 @@ def setConfigurator(outputModelFolder: str = 'model', continueTraining: bool = F
     return cfg
 
 
+def fileHandling(annotationFileName):
+    with open(annotationFileName, 'rb') as handle:
+        fileContents = pickle.loads(handle.read())
+        try:
+            annotationDicts, maskType = fileContents
+        except ValueError as e:
+            if str(e) == 'too many values to unpack (expected 2)':
+                # Using old version of dict
+                maskType = 'polygon'
+                annotationDicts = fileContents
+            else:
+                raise
+    return annotationDicts, maskType
+
+
 def setDatasetAndMetadata(baseStr: str):
     annotationTrainListFileName = getFileOrDirList('file', 'Annotation Train Dict List in text file', '.txt')
     annotationValidateListFileName = getFileOrDirList('file', 'Annotation Validation Dict List in text file', '.txt')
     InputDirectoryName = getFileOrDirList('folder', "Select folder with Training and Validation folders")
 
     # Need to make a train and a validation list of dicts separately in InstanceSegmentationDatasetDict
-    with open(annotationTrainListFileName, 'rb') as handle:
-        fileContents = pickle.loads(handle.read())
-        try:
-            annotationTrainDicts, maskType = fileContents
-        except ValueError as e:
-            if str(e) == 'too many values to unpack (expected 2)':
-                # Using old version of dict
-                maskType = 'polygon'
-                annotationTrainDicts = fileContents
-            else:
-                raise
-    with open(annotationValidateListFileName, 'rb') as handle:
-        fileContents = pickle.loads(handle.read())
-        try:
-            annotationValidateDicts, altMaskType = fileContents
-        except ValueError as e:
-            if str(e) == 'too many values to unpack (expected 2)':
-                # Using old version of dict
-                altMaskType = 'polygon'
-                annotationValidateDicts = fileContents
-            else:
-                raise
+    annotationTrainDicts, maskType = fileHandling(annotationTrainListFileName)
+    annotationValidateDicts, altMaskType = fileHandling(annotationValidateListFileName)
+
     assert maskType == altMaskType, "The stated mask type from the Train and Validation annotation dicts do not match"
     assert maskType.lower() == 'bitmask' or maskType.lower() == 'polygon', "The valid maskType options are 'bitmask' and 'polygon'"
 
