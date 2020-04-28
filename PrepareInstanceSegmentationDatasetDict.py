@@ -18,12 +18,13 @@ from tqdm import tqdm
 import pycocotools
 from ttictoc import tic, toc
 
-maskType = 'bitmask'  # Options are 'bitmask' or 'polygon'
+maskType = 'polygon'  # Options are 'bitmask' or 'polygon'
 # If more than 1 type of thing, need a new (and consistent) category_id (in annotate function) for each different type of object
-showPlots = False
-showSavedMaskAndImage = False
+showPlots = True
+showSavedMaskAndImage = True
 is_crowd = 0  # Likely never relevant for us, used to mark if it is a collection of objects rather than fully separated
 num_cores = multiprocessing.cpu_count()
+num_cores = 1
 assert maskType.lower() == 'bitmask' or maskType.lower() == 'polygon', "The valid maskType options are 'bitmask' and 'polygon'"
 
 
@@ -214,10 +215,14 @@ def main():
     # Folder structure should be a mask folder, inside a train and validation folder, inside each of those are the actual images
     # A duplicate folder structure should exist for the raw images
     binaryFilesFolder = filedialog.askdirectory(initialdir=os.getcwd(), title="Select Binary Mask Image Folder")
-    rawFilesFolder = filedialog.askdirectory(initialdir=os.getcwd(), title="Select Raw Image Folder")
-    root.destroy()
-    if not binaryFilesFolder or not rawFilesFolder:
+    if not binaryFilesFolder:
+        root.destroy()
         quit()
+    rawFilesFolder = filedialog.askdirectory(initialdir=os.getcwd(), title="Select Raw Image Folder")
+    if not rawFilesFolder:
+        root.destroy()
+        quit()
+    root.destroy()
     parentFolder, _ = os.path.split(binaryFilesFolder)
     altParentFolder, _ = os.path.split(rawFilesFolder)
     assert parentFolder == altParentFolder, "The parent folder of the chose binary and raw folders do not match, check your folder structure"
@@ -251,7 +256,7 @@ def main():
 
         # allAnnotationsDict = {key: value for i in allAnnotations for key, value in i.items()}
         # annotationDictFileName = 'new_annotations_dict_bitmask_' + dirName + '.txt'
-        annotationDictFileName = 'test_' + dirName + '.txt'
+        annotationDictFileName = 'test_bit_' + dirName + '.txt'
         annotationsWithMaskType = (allAnnotations, maskType)
         with open(annotationDictFileName, 'wb') as handle:
             pickle.dump(annotationsWithMaskType, handle)
