@@ -66,9 +66,9 @@ def create_sub_mask_annotation(sub_mask, region, category_id, annotation_id, is_
         # Find contours (boundary lines) around each sub-mask
         # Note: there could be multiple contours if the object
         # is partially occluded. (E.g. an elephant behind a tree)
-
+        subMaskImage = Image.fromarray(np.uint8(np.multiply(sub_mask, 255)))
         # This fixes the corner issue of diagonally cutting across the mask since edge pixels had no neighboring black pixels
-        sub_mask_bordered = ImageOps.expand(sub_mask, border=1)
+        sub_mask_bordered = ImageOps.expand(subMaskImage, border=1)
         contours = measure.find_contours(sub_mask_bordered, 0.5, positive_orientation='low')
 
         segmentations = []
@@ -92,8 +92,8 @@ def create_sub_mask_annotation(sub_mask, region, category_id, annotation_id, is_
 
             if showPlots:
                 fig, ax = plt.subplots()
-                plt.ylim(0, sub_mask.size[1])
-                plt.xlim(0, sub_mask.size[0])
+                plt.ylim(0, subMaskImage.size[1])
+                plt.xlim(0, subMaskImage.size[0])
                 if poly.geom_type is 'Polygon':
                     xs, ys = poly.exterior.xy
                     ax.fill(xs, ys, alpha=0.5, fc='r', ec='none')
@@ -103,8 +103,8 @@ def create_sub_mask_annotation(sub_mask, region, category_id, annotation_id, is_
                         ax.fill(xs, ys, alpha=0.5, fc='r', ec='none')
                 plt.show(block=False)
                 plt.pause(1)
-                sub_mask_Image = np.array(sub_mask)
-                ax.imshow(sub_mask_Image)
+                npSubMaskImage = np.array(subMaskImage)
+                ax.imshow(npSubMaskImage)
                 plt.show(block=False)
                 plt.pause(1)
                 plt.cla()
@@ -125,7 +125,7 @@ def create_sub_mask_annotation(sub_mask, region, category_id, annotation_id, is_
     return annotationDict
 
 
-def annotateSingleImage(rawImageName, binaryMaskName, maskType):
+def annotateSingleImage(rawImageName, binaryMaskName, maskType, parentFolder):
     # print('raw:', getNakedNameFromFilePath(rawImageName), "binary:", getNakedNameFromFilePath(binaryMaskName))
     record = {}
     rawImage = Image.open(rawImageName)
@@ -142,8 +142,8 @@ def annotateSingleImage(rawImageName, binaryMaskName, maskType):
             print('The imported rawImage is 4 dimensional for some reason, check it out.')
             quit()
 
-    record["file_name"] = rawImageName
-    record["image_id"] = rawImageName
+    record["file_name"] = os.path.relpath(rawImageName, parentFolder)
+    record["image_id"] = os.path.relpath(rawImageName, parentFolder)
     record["height"] = height
     record["width"] = width
     # label image regions
@@ -246,10 +246,11 @@ def main():
 
         totalImages = len(binaryImageNames)
         with tqdm_joblib(tqdm(desc="Annotating" + dirName + "Images", total=totalImages)) as progress_bar:
-            allAnnotations = joblib.Parallel(n_jobs=num_cores)(joblib.delayed(annotateSingleImage)(rawImageName, binaryImageName, maskType) for (rawImageName, binaryImageName) in zip(rawImageNames, binaryImageNames))
+            allAnnotations = joblib.Parallel(n_jobs=num_cores)(joblib.delayed(annotateSingleImage)(rawImageName, binaryImageName, maskType, parentFolder) for (rawImageName, binaryImageName) in zip(rawImageNames, binaryImageNames))
 
         # allAnnotationsDict = {key: value for i in allAnnotations for key, value in i.items()}
-        annotationDictFileName = 'new_annotations_dict_bitmask_' + dirName + '.txt'
+        # annotationDictFileName = 'new_annotations_dict_bitmask_' + dirName + '.txt'
+        annotationDictFileName = 'test_' + maskType + '_' + dirName + '.txt'
         with open(annotationDictFileName, 'wb') as handle:
             pickle.dump(allAnnotations, handle)
 
