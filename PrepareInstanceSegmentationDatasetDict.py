@@ -14,17 +14,17 @@ from tkinter import Tk, filedialog
 from skimage.measure import label, regionprops, approximate_polygon, find_contours
 from skimage.color import label2rgb
 from detectron2.structures import BoxMode
+from scipy.ndimage import binary_fill_holes
 from tqdm import tqdm
 import pycocotools
 from ttictoc import tic, toc
 
 maskType = 'polygon'  # Options are 'bitmask' or 'polygon'
 # If more than 1 type of thing, need a new (and consistent) category_id (in annotate function) for each different type of object
-showPlots = True
-showSavedMaskAndImage = True
+showPlots = False
+showSavedMaskAndImage = False
 is_crowd = 0  # Likely never relevant for us, used to mark if it is a collection of objects rather than fully separated
 num_cores = multiprocessing.cpu_count()
-num_cores = 1
 assert maskType.lower() == 'bitmask' or maskType.lower() == 'polygon', "The valid maskType options are 'bitmask' and 'polygon'"
 
 
@@ -114,6 +114,7 @@ def create_sub_mask_annotation(sub_mask, region, category_id, annotation_id, is_
             plt.close()
         # Combine the polygons to calculate the bounding box and areas
         multi_poly = MultiPolygon(polygons)
+        assert len(segmentations) == 1, "Length of segmentations must be 1"  # Otherwise MaskRCNN breaks, this should be taken care of with binary_fill_holes
 
         annotationDict = {
             'segmentation': segmentations,
@@ -135,28 +136,28 @@ def annotateSingleImage(rawImageName, binaryMaskName, maskType, parentFolder):
     assert rawImage.size == binaryImage.size, "Image:" + rawImageName + "and Mask:" + binaryMaskName + "do not have the same image size!"
     (width, height) = binaryImage.size
     rawNPImage = np.array(rawImage)
-    image = np.array(binaryImage)
-    if image.ndim > 2:
-        if image.ndim == 3:
+    binaryNPImage = np.array(binaryImage)
+    if binaryNPImage.ndim > 2:
+        if binaryNPImage.ndim == 3:
             # Assuming black and white masks, be lazy and only take the first color channel
-            image = image[:, :, 0]
+            binaryNPImage = binaryNPImage[:, :, 0]
         else:
             print('The imported rawImage is 4 dimensional for some reason, check it out.')
             quit()
-
+    binaryNPImage = binary_fill_holes(binaryNPImage)  # Fill holes in image, MaskRCNN polygon maskType breaks with holes
     record["file_name"] = os.path.relpath(rawImageName, parentFolder)
     record["image_id"] = os.path.relpath(rawImageName, parentFolder)
     record["height"] = height
     record["width"] = width
     # label image regions
-    label_image = label(image, connectivity=1)
+    label_image = label(binaryNPImage, connectivity=1)
     if showPlots or showSavedMaskAndImage:
         labeledImageArray = np.array(label_image)
         numberRegions = np.max(labeledImageArray)
         c = matplotlib.cm.get_cmap(name='jet', lut=numberRegions)
         colorList = [c(color)[:3] for color in range(0, numberRegions - 1)]
         colorList.insert(0, (0, 0, 0))
-        image_label_overlay = label2rgb(label_image, image=image, colors=colorList)
+        image_label_overlay = label2rgb(label_image, image=binaryNPImage, colors=colorList)
     if showPlots:
         rgbImage = Image.fromarray(np.uint8(np.multiply(image_label_overlay, 255)))
         rgbImage.show()
@@ -171,7 +172,7 @@ def annotateSingleImage(rawImageName, binaryMaskName, maskType, parentFolder):
         if region.area > 100:
             category_id = 0  # If more than 1 type of thing, need a new (and consistent) category_id for each different type of object
             maskCoords = region.coords
-            subMask = np.zeros(image.shape)
+            subMask = np.zeros(binaryNPImage.shape)
             for pixelXY in maskCoords:
                 subMask[pixelXY[0]][pixelXY[1]] = 1
             annotationDict = create_sub_mask_annotation(subMask, region, category_id, regionNumber, 0, maskType)
@@ -256,7 +257,7 @@ def main():
 
         # allAnnotationsDict = {key: value for i in allAnnotations for key, value in i.items()}
         # annotationDictFileName = 'new_annotations_dict_bitmask_' + dirName + '.txt'
-        annotationDictFileName = 'test_bit_' + dirName + '.txt'
+        annotationDictFileName = 'newtest_poly_' + dirName + '.txt'
         annotationsWithMaskType = (allAnnotations, maskType)
         with open(annotationDictFileName, 'wb') as handle:
             pickle.dump(annotationsWithMaskType, handle)
