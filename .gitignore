@@ -1,11 +1,10 @@
 /NewAugmentedMaskImages/
 /NewAugmentedRawImages/
-/Test/
-/PointRendModel_4mask/
+/tiltedSEM/
+/OutputModels/
 
 *.pth
 *.pkl
-/tiltedSEM/
-/MaskRCNNModel_4mask/
-/MaskRCNNModel_4masklowres/
-/MaskRCNNModel_4maskpolygon/
+
+
+
