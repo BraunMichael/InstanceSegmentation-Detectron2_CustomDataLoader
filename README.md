@@ -14,10 +14,10 @@ Start a new project with a new virtual environment. From within pycharm, use the
 ```
 python --version
 ```
-Then install the corresponding python-dev package, at the time of writing 20.04 comes with 3.8. Also make sure some other compiling tools are available
+Then install the corresponding python-dev package, at the time of writing 20.04 comes with 3.8. Also make sure some other compiling tools are available and get xclip and xsel for kivy:
 
 ```
-sudo apt-get install python3-distutils git build-essential python3.8-dev python3-tk
+sudo apt-get install python3-distutils git build-essential python3.8-dev python3-tk xclip xsel
 ```
 
 Pycharm sometimes has a Distutils issue from: https://stackoverflow.com/questions/55749206/modulenotfounderror-no-module-named-distutils-core
