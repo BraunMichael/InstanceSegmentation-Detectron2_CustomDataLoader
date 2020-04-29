@@ -37,8 +37,8 @@ pip install opencv-python matplotlib scikit-image numpy cython Pillow imgaug ima
 ```
 
 You need to have all matching cuda versions, written with Cuda 10.1 as target. As of writing the following doesn't work for the prebuilt detectron2:
-```
- pip install torch==1.5.0+cu101 torchvision==0.6.0+cu101 -f https://download.pytorch.org/whl/torch_stable.html
+```diff
+- pip install torch==1.5.0+cu101 torchvision==0.6.0+cu101 -f https://download.pytorch.org/whl/torch_stable.html
 ```
 
 Instead use an older version of torch and torchvision:
