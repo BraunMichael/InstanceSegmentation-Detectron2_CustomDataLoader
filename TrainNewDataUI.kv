@@ -1,0 +1,80 @@
+<ExampleTextFields@BoxLayout>:
+    orientation: "vertical"
+    size_hint_y: None
+    height: self.minimum_height
+
+    MDBoxLayout:
+        orientation: "vertical"
+        # size_hint_y: None
+        adaptive_height: True
+        # adaptive_width: True
+        # height: self.minimum_height
+        padding: dp(48)
+        spacing: 15
+
+        
+        # MDRoundFlatIconButton:
+        #     id: fileManager
+        #     text: "Choose File"
+        #     icon: "folder"
+        #     pos_hint: {'center_x': .5, 'center_y': .6}
+        #     on_release: app.file_manager_open()
+                
+        MDBoxLayout:
+            orientation: "horizontal"
+            adaptive_height: True
+            padding: 0
+            spacing: 10
+            
+            MDLabel:
+                text: 'Choose deep learning model'
+            MDDropDownItem:
+                id: modelTypeButton
+                pos_hint: {'center_x': 0.5, 'center_y': .5}
+                text: "Model"
+                on_release: app.modelTypeMenu.open()
+        MDTextField:
+            id: folderSuffixField
+            color: 0, 0, 0, 1    # black text color
+            focus: False
+            hint_text: "Enter desired model output folder name suffix"
+            helper_text: "Folder prefix is model type"
+            helper_text_mode: "on_focus"
+        MDTextField:
+            id: numClassesField
+            color: 0, 0, 0, 1    # black text color
+            focus: False
+            hint_text: "Enter number of classes in images and annotations (normally 1)"
+            input_filter: "int"
+            helper_text: "Only integers allowed"
+            helper_text_mode: "on_error"
+
+        MDBoxLayout:
+            orientation: "horizontal"
+            adaptive_height: True
+            padding: 0
+            spacing: 10
+            
+            MDLabel:
+                text: 'Continue training chosen model in output folder?'
+                
+            
+            MDDropDownItem:
+                id: continueTrainingButton
+                pos_hint: {'center_x': 0.5, 'center_y': .5}
+                text: "True"
+                on_release: app.continueTrainingMenu.open()
+
+        MDBoxLayout:
+            orientation: "horizontal"
+            adaptive_height: True
+            padding: 0
+            spacing: 10
+            
+            MDLabel:
+                text: 'Show plots with annotated images before training?'
+            MDDropDownItem:
+                id: showPlotsButton
+                pos_hint: {'center_x': 0.5, 'center_y': .5}
+                text: "False"
+                on_release: app.showPlotsMenu.open()

@@ -7,6 +7,16 @@ from tkinter import Tk, filedialog
 import multiprocessing
 from detectron2.data import DatasetCatalog, MetadataCatalog
 import random
+
+from kivy.lang import Builder
+from kivy.factory import Factory
+from kivymd.app import MDApp
+from kivymd.uix.textfield import MDTextField
+from kivy.storage.jsonstore import JsonStore
+from kivymd.uix.menu import MDDropdownMenu
+from kivymd.uix.dropdownitem import MDDropDownItem
+from kivy.core.window import Window
+
 from detectron2 import model_zoo
 from detectron2.engine import DefaultPredictor, DefaultTrainer
 from detectron2.config import get_cfg
@@ -19,13 +29,6 @@ setup_logger()
 import sys
 sys.path.insert(1, os.path.join(os.getcwd(),"detectron2_repo", "projects", "PointRend"))
 import point_rend
-
-
-modelType = 'MaskRCNN'  # options are 'PointRend' or 'MaskRCNN'
-continueTraining = False
-outputModelFolder = modelType+"Model_4maskpolygon"
-numClasses = 1  # only has one class (VerticalNanowires)
-showPlots = False
 
 
 def setConfigurator(outputModelFolder: str = 'model', continueTraining: bool = False, baseStr: str = '', modelType: str = 'maskrcnn', numClasses: int = 1, maskType: str = 'polygon'):
@@ -57,20 +60,20 @@ def setConfigurator(outputModelFolder: str = 'model', continueTraining: bool = F
     cfg.DATALOADER.NUM_WORKERS = multiprocessing.cpu_count()
     cfg.SOLVER.IMS_PER_BATCH = 1
     cfg.SOLVER.BASE_LR = 0.00025  # pick a good LR
-    cfg.SOLVER.MAX_ITER = 6000  # balloon test used 300 iterations, likely need to train longer for a practical dataset
+    cfg.SOLVER.MAX_ITER = 100000  # balloon test used 300 iterations, likely need to train longer for a practical dataset
     cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512   # (default: 512, balloon test used 128)
 
     # cfg.INPUT.MIN_SIZE_TRAIN = (1179,)  # (default: (800,))
     # cfg.INPUT.MAX_SIZE_TRAIN = 1366  # (default: 1333)
     cfg.TEST.DETECTIONS_PER_IMAGE = 200  # Increased from COCO default, should never have more than 200 wires per image (default: 100)
-    cfg.SOLVER.CHECKPOINT_PERIOD = 1000
+    cfg.SOLVER.CHECKPOINT_PERIOD = 5000
     cfg.MODEL.RPN.PRE_NMS_TOPK_TRAIN = 12000  # (default: 12000)
     cfg.MODEL.RPN.PRE_NMS_TOPK_TEST = 6000  # (default: 6000)
 
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
     return cfg
 
-
+# maybe can check the dict and determine masktype from the segmentation entry without needing the separate field?
 def fileHandling(annotationFileName):
     with open(annotationFileName, 'rb') as handle:
         fileContents = pickle.loads(handle.read())
@@ -86,7 +89,7 @@ def fileHandling(annotationFileName):
     return annotationDicts, maskType
 
 
-def setDatasetAndMetadata(baseStr: str):
+def setDatasetAndMetadata(baseStr: str, showPlots: bool):
     annotationTrainListFileName = getFileOrDirList('file', 'Annotation Train Dict List in text file', '.txt')
     annotationValidateListFileName = getFileOrDirList('file', 'Annotation Validation Dict List in text file', '.txt')
     InputDirectoryName = getFileOrDirList('folder', "Select folder with Training and Validation folders")
@@ -141,9 +144,125 @@ def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file'
     return fileOrFolderList
 
 
-def main():
+def textToBool(text):
+    assert text.lower() == 'true' or text.lower() == 'false', "The passed text is not true/false"
+    if text.lower() == 'true':
+        return True
+    elif text.lower() == 'false':
+        return False
+
+
+class SetupOptions:
+    def __init__(self):
+        self.showPlots = False
+        self.continueTraining = True
+        self.modelType = "maskrcnn"
+        self.numClasses = 1
+        self.folderSuffix = "output"
+
+
+class SetupUI(MDApp):
+    def __init__(self, **kwargs):
+        self.title = "KivyMD Examples - Text Fields"
+        self.theme_cls.primary_palette = "Blue"
+        super().__init__(**kwargs)
+        self.root = Factory.ExampleTextFields()
+
+        modelTypeMenu_items = [{"text": "MaskRCNN"}, {"text": "PointRend"}]
+        # technically grows always from the bottom left (closest to (0,0)), I think there is possibly something in menu.py or animation.py, especially related to
+        # ver_growth/hor_growth, tar_x, tar_y, _start_coords, and anim=Animation difference of Auto and center/bottom cases and _animated_properties in animation.py
+        # Or with MouseMotionEvent, its getting the 410 190 position and sending that into the animation, which I believe is the bottom left corner of the final widget
+        # The commented lines in menu.py def open get closer, opens from the top left corner, but no items present in the menu
+        self.modelTypeMenu = MDDropdownMenu(
+            caller=self.root.ids['modelTypeButton'],
+            items=modelTypeMenu_items,
+            position="auto",
+            callback=self.set_model,
+            width_mult=4,
+        )
+
+        trueFalseMenu_items = [{"text":"True"}, {"text":"False"}]
+        self.showPlotsMenu = MDDropdownMenu(
+            caller=self.root.ids['showPlotsButton'],
+            items=trueFalseMenu_items,
+            position="auto",
+            callback=self.set_showPlots,
+            width_mult=4,
+        )
+        self.continueTrainingMenu = MDDropdownMenu(
+            caller=self.root.ids['continueTrainingButton'],
+            items=trueFalseMenu_items,
+            position="auto",
+            callback=self.set_continueTraining,
+            width_mult=4,
+        )
+
+    def file_manager_open(self):
+        print("use getFileOrDirList() here to launch file manager, then but text in a neighboring text field. Could also grab text from that field as an initialdir")
+
+    def set_model(self, instance):
+        self.root.ids['modelTypeButton'].set_item(instance.text)
+        self.modelTypeMenu.dismiss()
+
+    def set_showPlots(self, instance):
+        self.root.ids['showPlotsButton'].set_item(instance.text)
+        self.showPlotsMenu.dismiss()
+
+    def set_continueTraining(self, instance):
+        self.root.ids['continueTrainingButton'].set_item(instance.text)
+        self.continueTrainingMenu.dismiss()
+
+    def build(self):
+        return self.root
+
+    def on_start(self):
+        # print("\non_start:")
+        store = JsonStore('Backup.json')
+        if store.count() > 0:
+            for key in store:
+                if key in self.root.ids:
+                    entry = self.root.ids[key]
+                    # print("\tid={0}, obj={1}".format(key, entry))
+                    if isinstance(entry, MDTextField):
+                        entry.text = store.get(key)['text']
+                        # print("\t\ttext=", entry.text)
+                    elif isinstance(entry, MDDropDownItem):
+                        entry.set_item(store.get(key)['text'])
+                        # print("\t\tvalue=", entry.current_item)
+
+    def on_stop(self):
+        # print("\non_stop:")
+        store = JsonStore('Backup.json')
+        for key in self.root.ids:
+            entry = self.root.ids[key]
+            if isinstance(entry, MDTextField):
+                # print("\tid={0}, text={1}".format(key, entry.text))
+                store.put(key, text=entry.text)
+            elif isinstance(entry, MDDropDownItem):
+                # print("\tid={0}, current_item={1}".format(key, entry.current_item))
+                store.put(key, text=entry.current_item)
+
+            if key == 'showPlotsButton':
+                setupoptions.showPlots = textToBool(entry.current_item)
+            elif key == 'continueTrainingButton':
+                setupoptions.continueTraining = textToBool(entry.current_item)
+            elif key == 'numClassesField':
+                setupoptions.numClasses = int(entry.text)
+            elif key == 'folderSuffixField':
+                setupoptions.folderSuffix = entry.text
+            elif key == 'modelTypeButton':
+                setupoptions.modelType = entry.current_item
+
+
+def main(setupoptions: SetupOptions):
+    modelType = setupoptions.modelType # options are 'PointRend' or 'MaskRCNN'
+    continueTraining = setupoptions.continueTraining
+    outputModelFolder = modelType+"Model_" + setupoptions.folderSuffix
+    numClasses = setupoptions.numClasses  # only has one class (VerticalNanowires)
+    showPlots = setupoptions.showPlots
     baseStr = 'VerticalNanowires'
-    maskType = setDatasetAndMetadata(baseStr)
+
+    maskType = setDatasetAndMetadata(baseStr, showPlots)
     configurator = setConfigurator(outputModelFolder, continueTraining, baseStr, modelType, numClasses, maskType)
     trainer = DefaultTrainer(configurator)
     trainer.resume_or_load(resume=True)  # Only if starting from a model checkpoint
@@ -151,4 +270,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    setupoptions = SetupOptions()
+    Window.size = (600, 350)
+    Builder.load_file(f"TrainNewDataUI.kv")
+    SetupUI().run()
+    main(setupoptions)
