@@ -30,7 +30,7 @@ showPlots = False
 
 def setConfigurator(outputModelFolder: str = 'model', continueTraining: bool = False, baseStr: str = '', modelType: str = 'maskrcnn', numClasses: int = 1, maskType: str = 'polygon'):
     cfg = get_cfg()
-    cfg.OUTPUT_DIR = os.path.join(os.getcwd(), outputModelFolder)
+    cfg.OUTPUT_DIR = os.path.join(os.getcwd(), 'OutputModels', outputModelFolder)
 
     if modelType.lower() == 'pointrend':
         print('pointrend')
