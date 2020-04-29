@@ -14,10 +14,10 @@ Start a new project with a new virtual environment. From within pycharm, use the
 ```
 python --version
 ```
-Then install the corresponding python-dev package, at the time of writing 20.04 comes with 3.8. Also make sure some other compiling tools are available
+Then install the corresponding python-dev package, at the time of writing 20.04 comes with 3.8. Also make sure some other compiling tools are available and get xclip and xsel for kivy:
 
 ```
-sudo apt-get install python3-distutils git build-essential python3.8-dev python3-tk
+sudo apt-get install python3-distutils git build-essential python3.8-dev python3-tk xclip xsel
 ```
 
 Pycharm sometimes has a Distutils issue from: https://stackoverflow.com/questions/55749206/modulenotfounderror-no-module-named-distutils-core
@@ -31,14 +31,28 @@ sudo apt install nvidia-cuda-toolkit
 nvcc --version  # Check cuda version, hopefully 10.1 (or newer)
 ```
 
+Install the required python packages:
 ```
 pip install --upgrade pip
 pip install opencv-python matplotlib scikit-image numpy cython Pillow imgaug imagecorruptions imageio ttictoc multiprocess lmfit joblib pyyaml==5.1
 ```
+Currently using kivy for the gui interactions, kivy has only early support for Python 3.8 so far. for Python <3.8:
+```
+pip install kivy
+```
+On Python 3.8:
+```
+pip install kivy[base] kivy_examples --pre --extra-index-url https://kivy.org/downloads/simple/
+```
+Followed by:
+```
+pip install kivymd
+```
 
 You need to have all matching cuda versions, written with Cuda 10.1 as target. As of writing the following doesn't work for the prebuilt detectron2:
-```
- pip install torch==1.5.0+cu101 torchvision==0.6.0+cu101 -f https://download.pytorch.org/whl/torch_stable.html
+```diff
+# DO NOT USE THIS
+- pip install torch==1.5.0+cu101 torchvision==0.6.0+cu101 -f https://download.pytorch.org/whl/torch_stable.html
 ```
 
 Instead use an older version of torch and torchvision:
