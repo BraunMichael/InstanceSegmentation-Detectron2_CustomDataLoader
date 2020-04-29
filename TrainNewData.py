@@ -217,7 +217,7 @@ class SetupUI(MDApp):
 
     def on_start(self):
         # print("\non_start:")
-        store = JsonStore('Backup.json')
+        store = JsonStore('SavedSetupOptions.json')
         if store.count() > 0:
             for key in store:
                 if key in self.root.ids:
@@ -232,7 +232,7 @@ class SetupUI(MDApp):
 
     def on_stop(self):
         # print("\non_stop:")
-        store = JsonStore('Backup.json')
+        store = JsonStore('SavedSetupOptions.json')
         for key in self.root.ids:
             entry = self.root.ids[key]
             if isinstance(entry, MDTextField):
