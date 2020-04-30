@@ -187,8 +187,7 @@ class SetupUI(MDApp):
                         # print("\t\tvalue=", entry.current_item)
 
         fullModelDirPath = self.root.ids['modelTypeButton'].current_item + "Model_" + self.root.ids['folderSuffixField'].text
-        self.root.ids['iterationsComplete'].text = str(getLastIteration(fullModelDirPath) + 1)
-
+        self.setLastIteration(fullModelDirPath)
 
     def on_stop(self):
         # print("\non_stop:")
