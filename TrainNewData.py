@@ -135,6 +135,31 @@ class SetupUI(MDApp):
     def build(self):
         return self.root
 
+    def getLastIteration(self, saveDir) -> int:
+        """
+        Returns:
+            int : Number of iterations performed from model in target directory.
+        """
+        fullSaveDir = os.path.join(os.getcwd(), 'OutputModels', saveDir)
+        checkpointFilePath = os.path.join(os.getcwd(), 'OutputModels', fullSaveDir, "last_checkpoint")
+
+        # get file from checkpointFilePath as latestModel
+        if os.path.exists(checkpointFilePath):
+            with open(checkpointFilePath) as f:
+                latestModel = os.path.join(fullSaveDir, f.read().strip())
+        elif os.path.exists(os.path.join(fullSaveDir, 'model_final.pth')):
+            latestModel = os.path.join(fullSaveDir, 'model_final.pth')
+        else:
+            fileList = glob("*.pth")
+            if fileList:
+                latestModel = sorted(fileList, reverse=True)[0]
+            else:
+                return 0
+
+        latestIteration = torchload(latestModel, map_location=torchdevice("cpu")).get("iteration", -1)
+        print(latestIteration)
+        return latestIteration
+
     def on_start(self):
         # print("\non_start:")
         self.root.ids['fileManager_Train'].ids['lbl_txt'].halign = 'center'
@@ -239,6 +264,7 @@ def setConfigurator(outputModelFolder: str = 'model', continueTraining: bool = F
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
     return cfg
 
+
 # maybe can check the dict and determine masktype from the segmentation entry without needing the separate field?
 def fileHandling(annotationFileName):
     with open(annotationFileName, 'rb') as handle:
@@ -318,32 +344,6 @@ def textToBool(text):
         return True
     elif text.lower() == 'false':
         return False
-
-
-def getLastIteration(saveDir) -> int:
-    """
-    Returns:
-        int : Number of iterations performed from model in target directory.
-    """
-    fullSaveDir = os.path.join(os.getcwd(), 'OutputModels', saveDir)
-    checkpointFilePath = os.path.join(os.getcwd(), 'OutputModels', fullSaveDir, "last_checkpoint")
-
-    # get file from checkpointFilePath as latestModel
-    if os.path.exists(checkpointFilePath):
-        with open(checkpointFilePath) as f:
-            latestModel = os.path.join(fullSaveDir, f.read().strip())
-    elif os.path.exists(os.path.join(fullSaveDir, 'model_final.pth')):
-        latestModel = os.path.join(fullSaveDir, 'model_final.pth')
-    else:
-        fileList = glob("*.pth")
-        if fileList:
-            latestModel = sorted(fileList, reverse=True)[0]
-        else:
-            return 0
-
-    latestIteration = torchload(latestModel, map_location=torchdevice("cpu")).get("iteration", -1)
-    print(latestIteration)
-    return latestIteration
 
 
 def main(setupoptions: SetupOptions):
