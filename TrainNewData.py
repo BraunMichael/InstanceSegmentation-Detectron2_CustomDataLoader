@@ -75,7 +75,7 @@ class SetupOptions:
 
 class SetupUI(MDApp):
     def __init__(self, **kwargs):
-        self.title = "KivyMD Examples - Text Fields"
+        self.title = "Deep Learning Training Setup UI"
         self.theme_cls.primary_palette = "Blue"
         super().__init__(**kwargs)
         self.root = Factory.SetupUI()
