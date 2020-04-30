@@ -75,6 +75,32 @@ class SetupOptions:
         self.rawImagesPath = ''
 
 
+def getLastIteration(saveDir) -> int:
+    """
+    Returns:
+        int : Number of iterations performed from model in target directory.
+    """
+    fullSaveDir = os.path.join(os.getcwd(), 'OutputModels', saveDir)
+    checkpointFilePath = os.path.join(os.getcwd(), 'OutputModels', fullSaveDir, "last_checkpoint")
+
+    # get file from checkpointFilePath as latestModel
+    if os.path.exists(checkpointFilePath):
+        with open(checkpointFilePath) as f:
+            latestModel = os.path.join(fullSaveDir, f.read().strip())
+    elif os.path.exists(os.path.join(fullSaveDir, 'model_final.pth')):
+        latestModel = os.path.join(fullSaveDir, 'model_final.pth')
+    else:
+        fileList = glob("*.pth")
+        if fileList:
+            latestModel = sorted(fileList, reverse=True)[0]
+        else:
+            return 0
+
+    latestIteration = torchload(latestModel, map_location=torchdevice("cpu")).get("iteration", -1)
+    print(latestIteration)
+    return latestIteration
+
+
 class SetupUI(MDApp):
     def __init__(self, **kwargs):
         self.title = "Deep Learning Training Setup UI"
@@ -135,37 +161,14 @@ class SetupUI(MDApp):
     def build(self):
         return self.root
 
-    def getLastIteration(self, saveDir) -> int:
-        """
-        Returns:
-            int : Number of iterations performed from model in target directory.
-        """
-        fullSaveDir = os.path.join(os.getcwd(), 'OutputModels', saveDir)
-        checkpointFilePath = os.path.join(os.getcwd(), 'OutputModels', fullSaveDir, "last_checkpoint")
-
-        # get file from checkpointFilePath as latestModel
-        if os.path.exists(checkpointFilePath):
-            with open(checkpointFilePath) as f:
-                latestModel = os.path.join(fullSaveDir, f.read().strip())
-        elif os.path.exists(os.path.join(fullSaveDir, 'model_final.pth')):
-            latestModel = os.path.join(fullSaveDir, 'model_final.pth')
-        else:
-            fileList = glob("*.pth")
-            if fileList:
-                latestModel = sorted(fileList, reverse=True)[0]
-            else:
-                return 0
-
-        latestIteration = torchload(latestModel, map_location=torchdevice("cpu")).get("iteration", -1)
-        print(latestIteration)
-        return latestIteration
+    def setLastIteration(self, fullModelDirPath):
+        self.root.ids['iterationsComplete'].text = str(getLastIteration(fullModelDirPath) + 1)
 
     def on_start(self):
         # print("\non_start:")
         self.root.ids['fileManager_Train'].ids['lbl_txt'].halign = 'center'
         self.root.ids['fileManager_Validate'].ids['lbl_txt'].halign = 'center'
         self.root.ids['fileManager_Images'].ids['lbl_txt'].halign = 'center'
-
 
         store = JsonStore('SavedSetupOptions.json')
         if store.count() > 0:
@@ -182,6 +185,10 @@ class SetupUI(MDApp):
                     elif isinstance(entry, MDDropDownItem):
                         entry.set_item(store.get(key)['text'])
                         # print("\t\tvalue=", entry.current_item)
+
+        fullModelDirPath = self.root.ids['modelTypeButton'].current_item + "Model_" + self.root.ids['folderSuffixField'].text
+        self.root.ids['iterationsComplete'].text = str(getLastIteration(fullModelDirPath) + 1)
+
 
     def on_stop(self):
         # print("\non_stop:")
