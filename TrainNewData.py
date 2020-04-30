@@ -286,6 +286,7 @@ class SetupUI(MDApp):
                 setupoptions.iterationCheckpointPeriod = entry.text
             elif key == 'totalIterations':
                 setupoptions.totalIterations = entry.text
+        self.root_window.close()
 
 
 def main(setupoptions: SetupOptions):
