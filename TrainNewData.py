@@ -17,6 +17,7 @@ from kivymd.uix.textfield import MDTextField
 from kivy.storage.jsonstore import JsonStore
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.dropdownitem import MDDropDownItem
+from kivymd.uix.button import MDRoundFlatIconButton
 from kivy.core.window import Window
 
 from detectron2 import model_zoo
@@ -32,8 +33,167 @@ import sys
 sys.path.insert(1, os.path.join(os.getcwd(),"detectron2_repo", "projects", "PointRend"))
 import point_rend
 
-
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
+
+
+class CenteredMDTextField(MDTextField):
+    '''
+    A centered TextInput.
+    '''
+
+    text_width = NumericProperty()
+    '''The text width
+    '''
+
+    def update_padding(self, *args):
+        '''
+        Update the padding so the text is centered
+        '''
+        if len(self.text) > 0:
+            charFreeStr = ''.join(ch for ch in self.text if ch.isdigit() or ch == '.' or ch == ',')
+            self.text = format(int(float(locale.atof(charFreeStr))), ",.0f")
+        self.text_width = self._get_text_width(
+            self.text,
+            self.tab_width,
+            self._label_cached
+        )
+
+
+class SetupOptions:
+    def __init__(self):
+        self.showPlots = False
+        self.continueTraining = True
+        self.modelType = "maskrcnn"
+        self.numClasses = 1
+        self.folderSuffix = "output"
+        self.totalIterations = 10000
+        self.iterationCheckpointPeriod = 1000
+        self.validationDictPath = ''
+        self.trainDictPath = ''
+        self.rawImagesPath = ''
+
+
+class SetupUI(MDApp):
+    def __init__(self, **kwargs):
+        self.title = "KivyMD Examples - Text Fields"
+        self.theme_cls.primary_palette = "Blue"
+        super().__init__(**kwargs)
+        self.root = Factory.SetupUI()
+        modelTypeMenu_items = [{"text": "MaskRCNN"}, {"text": "PointRend"}]
+        # technically grows always from the bottom left (closest to (0,0)), I think there is possibly something in menu.py or animation.py, especially related to
+        # ver_growth/hor_growth, tar_x, tar_y, _start_coords, and anim=Animation difference of Auto and center/bottom cases and _animated_properties in animation.py
+        # Or with MouseMotionEvent, its getting the 410 190 position and sending that into the animation, which I believe is the bottom left corner of the final widget
+        # The commented lines in menu.py def open get closer, opens from the top left corner, but no items present in the menu
+        self.modelTypeMenu = MDDropdownMenu(
+            caller=self.root.ids['modelTypeButton'],
+            items=modelTypeMenu_items,
+            position="auto",
+            callback=self.set_model,
+            width_mult=4,
+        )
+
+        trueFalseMenu_items = [{"text":"True"}, {"text":"False"}]
+        self.showPlotsMenu = MDDropdownMenu(
+            caller=self.root.ids['showPlotsButton'],
+            items=trueFalseMenu_items,
+            position="auto",
+            callback=self.set_showPlots,
+            width_mult=4,
+        )
+        self.continueTrainingMenu = MDDropdownMenu(
+            caller=self.root.ids['continueTrainingButton'],
+            items=trueFalseMenu_items,
+            position="auto",
+            callback=self.set_continueTraining,
+            width_mult=4,
+        )
+
+    def file_manager_open(self, destinationField, openType, message):
+        print("use getFileOrDirList() here to launch file manager, then but text in a neighboring text field. Could also grab text from that field as an initialdir")
+        listName = getFileOrDirList(openType, message, '.txt')
+        self.root.ids[destinationField].text = listName.replace(os.path.expanduser('~'), '~')
+
+    # def file_manager_open(self, destinationField):
+    #     print("use getFileOrDirList() here to launch file manager, then but text in a neighboring text field. Could also grab text from that field as an initialdir")
+    #     annotationTrainListFileName = getFileOrDirList('file', 'Annotation Train Dict List in text file', '.txt')
+    #     self.root.ids['trainAnnotationDictPath'].text = annotationTrainListFileName
+
+    def set_model(self, instance):
+        self.root.ids['modelTypeButton'].set_item(instance.text)
+        self.modelTypeMenu.dismiss()
+
+    def set_showPlots(self, instance):
+        self.root.ids['showPlotsButton'].set_item(instance.text)
+        self.showPlotsMenu.dismiss()
+
+    def set_continueTraining(self, instance):
+        self.root.ids['continueTrainingButton'].set_item(instance.text)
+        self.continueTrainingMenu.dismiss()
+
+    def build(self):
+        return self.root
+
+    def on_start(self):
+        # print("\non_start:")
+        self.root.ids['fileManager_Train'].ids['lbl_txt'].halign = 'center'
+        self.root.ids['fileManager_Validate'].ids['lbl_txt'].halign = 'center'
+        self.root.ids['fileManager_Images'].ids['lbl_txt'].halign = 'center'
+
+
+        store = JsonStore('SavedSetupOptions.json')
+        if store.count() > 0:
+            for key in store:
+                if key in self.root.ids:
+                    entry = self.root.ids[key]
+                    print("\tid={0}, obj={1}".format(key, entry))
+                    if isinstance(entry, MDTextField):
+                        if key == 'rawImagesPath' or key == 'validateAnnotationDictPath' or key == 'trainAnnotationDictPath':
+                            entry.text = store.get(key)['text'].replace(os.path.expanduser('~'), '~')
+                        else:
+                            entry.text = store.get(key)['text']
+                        # print("\t\ttext=", entry.text)
+                    elif isinstance(entry, MDDropDownItem):
+                        entry.set_item(store.get(key)['text'])
+                        # print("\t\tvalue=", entry.current_item)
+
+    def on_stop(self):
+        # print("\non_stop:")
+        store = JsonStore('SavedSetupOptions.json')
+        for key in self.root.ids:
+            entry = self.root.ids[key]
+            if isinstance(entry, MDTextField):
+                # print("\tid={0}, text={1}".format(key, entry.text))
+                if key == 'rawImagesPath' or key == 'validateAnnotationDictPath' or key == 'trainAnnotationDictPath':
+                    store.put(key, text=entry.text.replace('~', os.path.expanduser('~')))
+                else:
+                    store.put(key, text=entry.text)
+            elif isinstance(entry, MDDropDownItem):
+                # print("\tid={0}, current_item={1}".format(key, entry.current_item))
+                store.put(key, text=entry.current_item)
+
+            if key == 'showPlotsButton':
+                setupoptions.showPlots = textToBool(entry.current_item)
+            elif key == 'continueTrainingButton':
+                setupoptions.continueTraining = textToBool(entry.current_item)
+            elif key == 'numClassesField':
+                setupoptions.numClasses = int(entry.text)
+            elif key == 'folderSuffixField':
+                setupoptions.folderSuffix = entry.text
+            elif key == 'modelTypeButton':
+                setupoptions.modelType = entry.current_item
+            elif key == 'iterationCheckpointPeriod':
+                setupoptions.iterationCheckpointPeriod = entry.text
+            elif key == 'totalIterations':
+                setupoptions.totalIterations = entry.text
+            elif key == 'trainAnnotationDictPath':
+                setupoptions.trainDictPath = entry.text.replace('~', os.path.expanduser('~'))
+            elif key == 'validateAnnotationDictPath':
+                setupoptions.validationDictPath = entry.text.replace('~', os.path.expanduser('~'))
+            elif key == 'rawImagesPath':
+                setupoptions.rawImagesPath = entry.text.replace('~', os.path.expanduser('~'))
+
+        self.root_window.close()
+
 
 def setConfigurator(outputModelFolder: str = 'model', continueTraining: bool = False, baseStr: str = '', modelType: str = 'maskrcnn', numClasses: int = 1, maskType: str = 'polygon'):
     cfg = get_cfg()
@@ -93,10 +253,12 @@ def fileHandling(annotationFileName):
     return annotationDicts, maskType
 
 
-def setDatasetAndMetadata(baseStr: str, showPlots: bool):
-    annotationTrainListFileName = getFileOrDirList('file', 'Annotation Train Dict List in text file', '.txt')
-    annotationValidateListFileName = getFileOrDirList('file', 'Annotation Validation Dict List in text file', '.txt')
-    InputDirectoryName = getFileOrDirList('folder', "Select folder with Training and Validation folders")
+def setDatasetAndMetadata(baseStr: str, setupoptions: SetupOptions):
+    showPlots = setupoptions.showPlots
+
+    annotationTrainListFileName = setupoptions.trainDictPath
+    annotationValidateListFileName = setupoptions.validationDictPath
+    InputDirectoryName = setupoptions.rawImagesPath
 
     # Need to make a train and a validation list of dicts separately in InstanceSegmentationDatasetDict
     annotationTrainDicts, maskType = fileHandling(annotationTrainListFileName)
@@ -156,148 +318,14 @@ def textToBool(text):
         return False
 
 
-class CenteredMDTextField(MDTextField):
-    '''
-    A centered TextInput.
-    '''
-
-    text_width = NumericProperty()
-    '''The text width
-    '''
-
-    def update_padding(self, *args):
-        '''
-        Update the padding so the text is centered
-        '''
-        if len(self.text) > 0:
-            charFreeStr = ''.join(ch for ch in self.text if ch.isdigit() or ch == '.' or ch == ',')
-            self.text = format(int(float(locale.atof(charFreeStr))), ",.0f")
-        self.text_width = self._get_text_width(
-            self.text,
-            self.tab_width,
-            self._label_cached
-        )
-
-
-
-class SetupOptions:
-    def __init__(self):
-        self.showPlots = False
-        self.continueTraining = True
-        self.modelType = "maskrcnn"
-        self.numClasses = 1
-        self.folderSuffix = "output"
-        self.totalIterations = 10000
-        self.iterationCheckpointPeriod = 1000
-
-
-class SetupUI(MDApp):
-    def __init__(self, **kwargs):
-        self.title = "KivyMD Examples - Text Fields"
-        self.theme_cls.primary_palette = "Blue"
-        super().__init__(**kwargs)
-        self.root = Factory.SetupUI()
-
-        modelTypeMenu_items = [{"text": "MaskRCNN"}, {"text": "PointRend"}]
-        # technically grows always from the bottom left (closest to (0,0)), I think there is possibly something in menu.py or animation.py, especially related to
-        # ver_growth/hor_growth, tar_x, tar_y, _start_coords, and anim=Animation difference of Auto and center/bottom cases and _animated_properties in animation.py
-        # Or with MouseMotionEvent, its getting the 410 190 position and sending that into the animation, which I believe is the bottom left corner of the final widget
-        # The commented lines in menu.py def open get closer, opens from the top left corner, but no items present in the menu
-        self.modelTypeMenu = MDDropdownMenu(
-            caller=self.root.ids['modelTypeButton'],
-            items=modelTypeMenu_items,
-            position="auto",
-            callback=self.set_model,
-            width_mult=4,
-        )
-
-        trueFalseMenu_items = [{"text":"True"}, {"text":"False"}]
-        self.showPlotsMenu = MDDropdownMenu(
-            caller=self.root.ids['showPlotsButton'],
-            items=trueFalseMenu_items,
-            position="auto",
-            callback=self.set_showPlots,
-            width_mult=4,
-        )
-        self.continueTrainingMenu = MDDropdownMenu(
-            caller=self.root.ids['continueTrainingButton'],
-            items=trueFalseMenu_items,
-            position="auto",
-            callback=self.set_continueTraining,
-            width_mult=4,
-        )
-
-    def file_manager_open(self):
-        print("use getFileOrDirList() here to launch file manager, then but text in a neighboring text field. Could also grab text from that field as an initialdir")
-
-    def set_model(self, instance):
-        self.root.ids['modelTypeButton'].set_item(instance.text)
-        self.modelTypeMenu.dismiss()
-
-    def set_showPlots(self, instance):
-        self.root.ids['showPlotsButton'].set_item(instance.text)
-        self.showPlotsMenu.dismiss()
-
-    def set_continueTraining(self, instance):
-        self.root.ids['continueTrainingButton'].set_item(instance.text)
-        self.continueTrainingMenu.dismiss()
-
-    def build(self):
-        return self.root
-
-    def on_start(self):
-        # print("\non_start:")
-        store = JsonStore('SavedSetupOptions.json')
-        if store.count() > 0:
-            for key in store:
-                if key in self.root.ids:
-                    entry = self.root.ids[key]
-                    # print("\tid={0}, obj={1}".format(key, entry))
-                    if isinstance(entry, MDTextField):
-                        entry.text = store.get(key)['text']
-                        # print("\t\ttext=", entry.text)
-                    elif isinstance(entry, MDDropDownItem):
-                        entry.set_item(store.get(key)['text'])
-                        # print("\t\tvalue=", entry.current_item)
-
-    def on_stop(self):
-        # print("\non_stop:")
-        store = JsonStore('SavedSetupOptions.json')
-        for key in self.root.ids:
-            entry = self.root.ids[key]
-            if isinstance(entry, MDTextField):
-                # print("\tid={0}, text={1}".format(key, entry.text))
-                store.put(key, text=entry.text)
-            elif isinstance(entry, MDDropDownItem):
-                # print("\tid={0}, current_item={1}".format(key, entry.current_item))
-                store.put(key, text=entry.current_item)
-
-            if key == 'showPlotsButton':
-                setupoptions.showPlots = textToBool(entry.current_item)
-            elif key == 'continueTrainingButton':
-                setupoptions.continueTraining = textToBool(entry.current_item)
-            elif key == 'numClassesField':
-                setupoptions.numClasses = int(entry.text)
-            elif key == 'folderSuffixField':
-                setupoptions.folderSuffix = entry.text
-            elif key == 'modelTypeButton':
-                setupoptions.modelType = entry.current_item
-            elif key == 'iterationCheckpointPeriod':
-                setupoptions.iterationCheckpointPeriod = entry.text
-            elif key == 'totalIterations':
-                setupoptions.totalIterations = entry.text
-        self.root_window.close()
-
-
 def main(setupoptions: SetupOptions):
     modelType = setupoptions.modelType # options are 'PointRend' or 'MaskRCNN'
     continueTraining = setupoptions.continueTraining
     outputModelFolder = modelType+"Model_" + setupoptions.folderSuffix
     numClasses = setupoptions.numClasses  # only has one class (VerticalNanowires)
-    showPlots = setupoptions.showPlots
     baseStr = 'VerticalNanowires'
 
-    maskType = setDatasetAndMetadata(baseStr, showPlots)
+    maskType = setDatasetAndMetadata(baseStr, setupoptions)
     configurator = setConfigurator(outputModelFolder, continueTraining, baseStr, modelType, numClasses, maskType)
     trainer = DefaultTrainer(configurator)
     trainer.resume_or_load(resume=True)  # Only if starting from a model checkpoint
@@ -306,7 +334,7 @@ def main(setupoptions: SetupOptions):
 
 if __name__ == "__main__":
     setupoptions = SetupOptions()
-    Window.size = (600, 500)
+    Window.size = (750, 725)
     Builder.load_file(f"TrainNewDataUI.kv")
     SetupUI().run()
     main(setupoptions)

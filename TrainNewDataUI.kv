@@ -12,14 +12,75 @@
         padding: dp(48)
         spacing: 15
 
-        
-        # MDRoundFlatIconButton:
-        #     id: fileManager
-        #     text: "Choose File"
-        #     icon: "folder"
-        #     pos_hint: {'center_x': .5, 'center_y': .6}
-        #     on_release: app.file_manager_open()
-                
+        MDBoxLayout:
+            orientation: "horizontal"
+            adaptive_height: True
+            padding: 0
+            spacing: 10
+
+            MDTextField:
+                id: trainAnnotationDictPath
+                multiline: True
+                color: 0, 0, 0, 1    # black text color
+                focus: False
+                hint_text: "Train Annotation Dictionary"
+                size_hint_x: 0.75
+
+
+            MDRoundFlatIconButton:
+                id: fileManager_Train
+                text: "Choose File"
+                icon: "folder"
+                size_hint_x: 0.25
+                pos_hint: {'center_x': .5, 'center_y': .5}
+                on_release: app.file_manager_open('trainAnnotationDictPath', 'file', 'Annotation Train Dict List in text file')
+
+        MDBoxLayout:
+            orientation: "horizontal"
+            adaptive_height: True
+            padding: 0
+            spacing: 10
+
+            MDTextField:
+                id: validateAnnotationDictPath
+                multiline: True
+                color: 0, 0, 0, 1    # black text color
+                focus: False
+                hint_text: "Validation Annotation Dictionary"
+                size_hint_x: 0.75
+
+
+            MDRoundFlatIconButton:
+                id: fileManager_Validate
+                text: "Choose File"
+                icon: "folder"
+                size_hint_x: 0.25
+                pos_hint: {'center_x': .5, 'center_y': .5}
+                on_release: app.file_manager_open('validateAnnotationDictPath', 'file', 'Annotation Validation Dict List in text file')
+
+        MDBoxLayout:
+            orientation: "horizontal"
+            adaptive_height: True
+            padding: 0
+            spacing: 10
+
+            MDTextField:
+                id: rawImagesPath
+                multiline: True
+                color: 0, 0, 0, 1    # black text color
+                focus: False
+                hint_text: "Raw Images Directory"
+                size_hint_x: 0.75
+
+
+            MDRoundFlatIconButton:
+                id: fileManager_Images
+                text: "Choose File"
+                icon: "folder"
+                size_hint_x: 0.25
+                pos_hint: {'center_x': .5, 'center_y': .5}
+                on_release: app.file_manager_open('rawImagesPath', 'folder', "Select folder with Training and Validation folders")
+
         MDBoxLayout:
             orientation: "horizontal"
             adaptive_height: True
