@@ -162,7 +162,11 @@ class SetupUI(MDApp):
         return self.root
 
     def setLastIteration(self, fullModelDirPath):
-        self.root.ids['iterationsComplete'].text = str(getLastIteration(fullModelDirPath) + 1)
+        lastIteration = getLastIteration(fullModelDirPath)
+        if lastIteration > 0:
+            self.root.ids['iterationsComplete'].text = str(lastIteration + 1)
+        else:
+            self.root.ids['iterationsComplete'].text = str(lastIteration)
 
     def on_start(self):
         # print("\non_start:")
