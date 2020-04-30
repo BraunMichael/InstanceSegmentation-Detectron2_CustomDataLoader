@@ -258,7 +258,7 @@ def setDatasetAndMetadata(baseStr: str, setupoptions: SetupOptions):
 
     annotationTrainListFileName = setupoptions.trainDictPath
     annotationValidateListFileName = setupoptions.validationDictPath
-    InputDirectoryName = setupoptions.rawImagesPath
+    inputDirectoryName = setupoptions.rawImagesPath
 
     # Need to make a train and a validation list of dicts separately in InstanceSegmentationDatasetDict
     annotationTrainDicts, maskType = fileHandling(annotationTrainListFileName)
@@ -270,7 +270,7 @@ def setDatasetAndMetadata(baseStr: str, setupoptions: SetupOptions):
     annotationDicts = [annotationTrainDicts, annotationValidateDicts]
 
     # dirnames should return ['Train', 'Validation']
-    (dirpath, dirnames, rawFileNames) = next(os.walk(InputDirectoryName))
+    (dirpath, dirnames, rawFileNames) = next(os.walk(inputDirectoryName))
     if 'Train' not in dirnames or 'Validation' not in dirnames:
         print('You are missing either a Train or Validation directory')
         quit()
