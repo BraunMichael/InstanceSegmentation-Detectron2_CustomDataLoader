@@ -227,8 +227,8 @@ def setConfigurator(outputModelFolder: str = 'model', continueTraining: bool = F
     cfg.SOLVER.MAX_ITER = 150000  # balloon test used 300 iterations, likely need to train longer for a practical dataset
     cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512   # (default: 512, balloon test used 128)
 
-    # cfg.INPUT.MIN_SIZE_TRAIN = (1179,)  # (default: (800,))
-    # cfg.INPUT.MAX_SIZE_TRAIN = 1366  # (default: 1333)
+    cfg.INPUT.MIN_SIZE_TRAIN = (1179,)  # (default: (800,))
+    cfg.INPUT.MAX_SIZE_TRAIN = 1366  # (default: 1333)
     cfg.TEST.DETECTIONS_PER_IMAGE = 200  # Increased from COCO default, should never have more than 200 wires per image (default: 100)
     cfg.SOLVER.CHECKPOINT_PERIOD = 1000
     cfg.MODEL.RPN.PRE_NMS_TOPK_TRAIN = 12000  # (default: 12000)
@@ -328,7 +328,7 @@ def main(setupoptions: SetupOptions):
     maskType = setDatasetAndMetadata(baseStr, setupoptions)
     configurator = setConfigurator(outputModelFolder, continueTraining, baseStr, modelType, numClasses, maskType)
     trainer = DefaultTrainer(configurator)
-    trainer.resume_or_load(resume=True)  # Only if starting from a model checkpoint
+    trainer.resume_or_load(resume=continueTraining)  # Only if starting from a model checkpoint
     trainer.train()
 
 
