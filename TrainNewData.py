@@ -328,7 +328,7 @@ def main(setupoptions: SetupOptions):
     maskType = setDatasetAndMetadata(baseStr, setupoptions)
     configurator = setConfigurator(outputModelFolder, continueTraining, baseStr, modelType, numClasses, maskType)
     trainer = DefaultTrainer(configurator)
-    trainer.resume_or_load(resume=continueTraining)  # Only if starting from a model checkpoint
+    trainer.resume_or_load(resume=continueTraining)
     trainer.train()
 
 
