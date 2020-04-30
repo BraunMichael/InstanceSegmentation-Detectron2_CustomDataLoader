@@ -97,7 +97,6 @@ def getLastIteration(saveDir) -> int:
             return 0
 
     latestIteration = torchload(latestModel, map_location=torchdevice("cpu")).get("iteration", -1)
-    print(latestIteration)
     return latestIteration
 
 
@@ -179,7 +178,7 @@ class SetupUI(MDApp):
             for key in store:
                 if key in self.root.ids:
                     entry = self.root.ids[key]
-                    print("\tid={0}, obj={1}".format(key, entry))
+                    # print("\tid={0}, obj={1}".format(key, entry))
                     if isinstance(entry, MDTextField):
                         if key == 'rawImagesPath' or key == 'validateAnnotationDictPath' or key == 'trainAnnotationDictPath':
                             entry.text = store.get(key)['text'].replace(os.path.expanduser('~'), '~')
