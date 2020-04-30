@@ -162,9 +162,13 @@ class SetupUI(MDApp):
 
     def setLastIteration(self, fullModelDirPath):
         lastIteration = getLastIteration(fullModelDirPath)
+        self.root.ids['iterationsComplete'].theme_text_color = "Custom"
+
         if lastIteration > 0:
+            self.root.ids['iterationsComplete'].text_color = 0, 200/255, 83/255, 1
             self.root.ids['iterationsComplete'].text = str(lastIteration + 1)
         else:
+            self.root.ids['iterationsComplete'].text_color = 255/255, 234/255, 0, 1
             self.root.ids['iterationsComplete'].text = str(lastIteration)
 
     def on_start(self):
