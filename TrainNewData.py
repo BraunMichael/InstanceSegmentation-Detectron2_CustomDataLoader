@@ -19,7 +19,9 @@ from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.dropdownitem import MDDropDownItem
 from kivymd.uix.button import MDRoundFlatIconButton
 from kivy.core.window import Window
-
+from torch import load as torchload
+from torch import device as torchdevice
+from glob import glob
 from detectron2 import model_zoo
 from detectron2.engine import DefaultPredictor, DefaultTrainer
 from detectron2.config import get_cfg
@@ -318,10 +320,38 @@ def textToBool(text):
         return False
 
 
+def getLastIteration(saveDir) -> int:
+    """
+    Returns:
+        int : Number of iterations performed from model in target directory.
+    """
+    fullSaveDir = os.path.join(os.getcwd(), 'OutputModels', saveDir)
+    checkpointFilePath = os.path.join(os.getcwd(), 'OutputModels', fullSaveDir, "last_checkpoint")
+
+    # get file from checkpointFilePath as latestModel
+    if os.path.exists(checkpointFilePath):
+        with open(checkpointFilePath) as f:
+            latestModel = os.path.join(fullSaveDir, f.read().strip())
+    elif os.path.exists(os.path.join(fullSaveDir, 'model_final.pth')):
+        latestModel = os.path.join(fullSaveDir, 'model_final.pth')
+    else:
+        fileList = glob("*.pth")
+        if fileList:
+            latestModel = sorted(fileList, reverse=True)[0]
+        else:
+            return 0
+
+    latestIteration = torchload(latestModel, map_location=torchdevice("cpu")).get("iteration", -1)
+    print(latestIteration)
+    return latestIteration
+
+
 def main(setupoptions: SetupOptions):
     modelType = setupoptions.modelType # options are 'PointRend' or 'MaskRCNN'
     continueTraining = setupoptions.continueTraining
     outputModelFolder = modelType+"Model_" + setupoptions.folderSuffix
+    # Incorporate into UI now
+    numIter = getLastIteration(outputModelFolder)
     numClasses = setupoptions.numClasses  # only has one class (VerticalNanowires)
     baseStr = 'VerticalNanowires'
 
