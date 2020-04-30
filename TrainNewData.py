@@ -7,9 +7,11 @@ from tkinter import Tk, filedialog
 import multiprocessing
 from detectron2.data import DatasetCatalog, MetadataCatalog
 import random
-
+import locale
 from kivy.lang import Builder
 from kivy.factory import Factory
+from kivy.properties import NumericProperty
+from kivy.uix.textinput import TextInput
 from kivymd.app import MDApp
 from kivymd.uix.textfield import MDTextField
 from kivy.storage.jsonstore import JsonStore
@@ -30,6 +32,8 @@ import sys
 sys.path.insert(1, os.path.join(os.getcwd(),"detectron2_repo", "projects", "PointRend"))
 import point_rend
 
+
+locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
 def setConfigurator(outputModelFolder: str = 'model', continueTraining: bool = False, baseStr: str = '', modelType: str = 'maskrcnn', numClasses: int = 1, maskType: str = 'polygon'):
     cfg = get_cfg()
@@ -60,13 +64,13 @@ def setConfigurator(outputModelFolder: str = 'model', continueTraining: bool = F
     cfg.DATALOADER.NUM_WORKERS = multiprocessing.cpu_count()
     cfg.SOLVER.IMS_PER_BATCH = 1
     cfg.SOLVER.BASE_LR = 0.00025  # pick a good LR
-    cfg.SOLVER.MAX_ITER = 100000  # balloon test used 300 iterations, likely need to train longer for a practical dataset
+    cfg.SOLVER.MAX_ITER = 150000  # balloon test used 300 iterations, likely need to train longer for a practical dataset
     cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512   # (default: 512, balloon test used 128)
 
     # cfg.INPUT.MIN_SIZE_TRAIN = (1179,)  # (default: (800,))
     # cfg.INPUT.MAX_SIZE_TRAIN = 1366  # (default: 1333)
     cfg.TEST.DETECTIONS_PER_IMAGE = 200  # Increased from COCO default, should never have more than 200 wires per image (default: 100)
-    cfg.SOLVER.CHECKPOINT_PERIOD = 5000
+    cfg.SOLVER.CHECKPOINT_PERIOD = 1000
     cfg.MODEL.RPN.PRE_NMS_TOPK_TRAIN = 12000  # (default: 12000)
     cfg.MODEL.RPN.PRE_NMS_TOPK_TEST = 6000  # (default: 6000)
 
@@ -152,6 +156,30 @@ def textToBool(text):
         return False
 
 
+class CenteredMDTextField(MDTextField):
+    '''
+    A centered TextInput.
+    '''
+
+    text_width = NumericProperty()
+    '''The text width
+    '''
+
+    def update_padding(self, *args):
+        '''
+        Update the padding so the text is centered
+        '''
+        if len(self.text) > 0:
+            charFreeStr = ''.join(ch for ch in self.text if ch.isdigit() or ch == '.' or ch == ',')
+            self.text = format(int(float(locale.atof(charFreeStr))), ",.0f")
+        self.text_width = self._get_text_width(
+            self.text,
+            self.tab_width,
+            self._label_cached
+        )
+
+
+
 class SetupOptions:
     def __init__(self):
         self.showPlots = False
@@ -159,6 +187,8 @@ class SetupOptions:
         self.modelType = "maskrcnn"
         self.numClasses = 1
         self.folderSuffix = "output"
+        self.totalIterations = 10000
+        self.iterationCheckpointPeriod = 1000
 
 
 class SetupUI(MDApp):
@@ -166,7 +196,7 @@ class SetupUI(MDApp):
         self.title = "KivyMD Examples - Text Fields"
         self.theme_cls.primary_palette = "Blue"
         super().__init__(**kwargs)
-        self.root = Factory.ExampleTextFields()
+        self.root = Factory.SetupUI()
 
         modelTypeMenu_items = [{"text": "MaskRCNN"}, {"text": "PointRend"}]
         # technically grows always from the bottom left (closest to (0,0)), I think there is possibly something in menu.py or animation.py, especially related to
@@ -252,6 +282,10 @@ class SetupUI(MDApp):
                 setupoptions.folderSuffix = entry.text
             elif key == 'modelTypeButton':
                 setupoptions.modelType = entry.current_item
+            elif key == 'iterationCheckpointPeriod':
+                setupoptions.iterationCheckpointPeriod = entry.text
+            elif key == 'totalIterations':
+                setupoptions.totalIterations = entry.text
 
 
 def main(setupoptions: SetupOptions):
@@ -271,7 +305,7 @@ def main(setupoptions: SetupOptions):
 
 if __name__ == "__main__":
     setupoptions = SetupOptions()
-    Window.size = (600, 350)
+    Window.size = (600, 500)
     Builder.load_file(f"TrainNewDataUI.kv")
     SetupUI().run()
     main(setupoptions)
