@@ -244,7 +244,7 @@ def main():
             if name.endswith(('.png', '.jpg', '.jpeg')):
                 rawImageNames.append(os.path.join(rawDirpath, name))
         for name in binaryRawFileNames:
-            if name.endswith(('.png')):
+            if name.endswith('.png'):
                 binaryImageNames.append(os.path.join(binaryDirpath, name))
 
         rawImageNames = sorted(rawImageNames)
