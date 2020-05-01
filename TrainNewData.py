@@ -67,7 +67,6 @@ class SetupOptions:
         self.iterationCheckpointPeriod = 1000
         self.validationDictPath = ''
         self.trainDictPath = ''
-        self.rawImagesPath = ''
 
 
 def getLastIteration(saveDir) -> int:
@@ -164,7 +163,6 @@ class SetupUI(MDApp):
     def on_start(self):
         self.root.ids['fileManager_Train'].ids['lbl_txt'].halign = 'center'
         self.root.ids['fileManager_Validate'].ids['lbl_txt'].halign = 'center'
-        self.root.ids['fileManager_Images'].ids['lbl_txt'].halign = 'center'
 
         store = JsonStore('SavedSetupOptions.json')
         if store.count() > 0:
@@ -172,7 +170,7 @@ class SetupUI(MDApp):
                 if key in self.root.ids:
                     entry = self.root.ids[key]
                     if isinstance(entry, MDTextField):
-                        if key == 'rawImagesPath' or key == 'validateAnnotationDictPath' or key == 'trainAnnotationDictPath':
+                        if key == 'validateAnnotationDictPath' or key == 'trainAnnotationDictPath':
                             entry.text = store.get(key)['text'].replace(os.path.expanduser('~'), '~')
                         else:
                             entry.text = store.get(key)['text']
@@ -187,7 +185,7 @@ class SetupUI(MDApp):
         for key in self.root.ids:
             entry = self.root.ids[key]
             if isinstance(entry, MDTextField):
-                if key == 'rawImagesPath' or key == 'validateAnnotationDictPath' or key == 'trainAnnotationDictPath':
+                if key == 'validateAnnotationDictPath' or key == 'trainAnnotationDictPath':
                     store.put(key, text=entry.text.replace('~', os.path.expanduser('~')))
                 else:
                     store.put(key, text=entry.text)
@@ -212,8 +210,6 @@ class SetupUI(MDApp):
                 setupoptions.trainDictPath = entry.text.replace('~', os.path.expanduser('~'))
             elif key == 'validateAnnotationDictPath':
                 setupoptions.validationDictPath = entry.text.replace('~', os.path.expanduser('~'))
-            elif key == 'rawImagesPath':
-                setupoptions.rawImagesPath = entry.text.replace('~', os.path.expanduser('~'))
 
         self.root_window.close()
 
@@ -286,7 +282,6 @@ def setDatasetAndMetadata(baseStr: str, setupoptions: SetupOptions):
 
     annotationTrainListFileName = setupoptions.trainDictPath
     annotationValidateListFileName = setupoptions.validationDictPath
-    inputDirectoryName = setupoptions.rawImagesPath
 
     # Need to make a train and a validation list of dicts separately in InstanceSegmentationDatasetDict
     annotationTrainDicts, maskType = fileHandling(annotationTrainListFileName)
@@ -297,13 +292,19 @@ def setDatasetAndMetadata(baseStr: str, setupoptions: SetupOptions):
 
     annotationDicts = [annotationTrainDicts, annotationValidateDicts]
 
-    # dirnames should return ['Train', 'Validation']
-    (dirpath, dirnames, rawFileNames) = next(os.walk(inputDirectoryName))
-    if 'Train' not in dirnames or 'Validation' not in dirnames:
-        print('You are missing either a Train or Validation directory')
+    # Just loop through each dict and get the file name, split the path to get the parent dir then check if those are Train and Validation
+    dirNameSet = set()
+    for annotationDictList in annotationDicts:
+        for annotationDict in annotationDictList:
+            parentDirName = os.path.split(os.path.split(annotationDict['file_name'])[0])[-1]
+            if parentDirName not in dirNameSet:
+                dirNameSet.add(parentDirName)
+
+    # dirNameSet should return {'Train', 'Validation'}
+    if 'Train' not in dirNameSet or 'Validation' not in dirNameSet:
+        print('You are missing either a Train or Validation directory in your annotations ')
         quit()
-    dirnames = ['Train',
-                'Validation']  # After making sure these are directories as expected, lets force the order to match the annotationDicts order
+    dirnames = ['Train', 'Validation']  # After making sure these are directories as expected, lets force the order to match the annotationDicts order
 
     for d in range(len(dirnames)):
         if baseStr + "_" + dirnames[d] not in DatasetCatalog.__dict__['_REGISTERED']:
