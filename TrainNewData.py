@@ -121,8 +121,7 @@ class SetupUI(MDApp):
         )
 
     def file_manager_open(self, destinationField, openType, message):
-        print("use getFileOrDirList() here to launch file manager, then but text in a neighboring text field. Could also grab text from that field as an initialdir")
-        listName = getFileOrDirList(openType, message, '.txt')
+        listName = getFileOrDirList(openType, message, '.txt', self.root.ids[destinationField].text.replace('~', os.path.expanduser('~')))
         self.root.ids[destinationField].text = listName.replace(os.path.expanduser('~'), '~')
 
     def set_model(self, instance):
@@ -325,16 +324,20 @@ def setDatasetAndMetadata(baseStr: str, setupoptions: SetupOptions):
     return maskType
 
 
-def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file', fileTypes: str = None):
+def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file', fileTypes: str = None, initialDirOrFile: str = os.getcwd()):
+    if os.path.isdir(initialDirOrFile):
+        initialDir = initialDirOrFile
+    if os.path.isfile(initialDirOrFile):
+        initialDir = os.path.split(initialDirOrFile)[0]
     root = Tk()
     root.withdraw()
     assert fileOrFolder.lower() == 'file' or fileOrFolder.lower() == 'folder', "Only file or folder is an allowed string choice for fileOrFolder"
     if fileOrFolder.lower() == 'file':
-        fileOrFolderList = filedialog.askopenfilename(initialdir=os.getcwd(), title=titleStr, filetypes=[(fileTypes + "file", fileTypes)])
+        fileOrFolderList = filedialog.askopenfilename(initialdir=initialDir, title=titleStr, filetypes=[(fileTypes + "file", fileTypes)])
     else:  # Must be folder from assert statement
-        fileOrFolderList = filedialog.askdirectory(initialdir=os.getcwd(), title=titleStr)
+        fileOrFolderList = filedialog.askdirectory(initialdir=initialDir, title=titleStr)
     if not fileOrFolderList:
-        quit()
+        fileOrFolderList = initialDirOrFile
     root.destroy()
     return fileOrFolderList
 
