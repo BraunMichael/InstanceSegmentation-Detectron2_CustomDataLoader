@@ -265,16 +265,7 @@ def setConfigurator(setupoptions: SetupOptions, baseStr: str = '', maskType: str
 def fileHandling(annotationFileName):
     with open(annotationFileName, 'rb') as handle:
         fileContents = pickle.loads(handle.read())
-        try:
-            annotationDicts, maskType = fileContents
-        except ValueError as e:
-            if str(e) == 'too many values to unpack (expected 2)':
-                # Using old version of dict
-                maskType = 'polygon'
-                annotationDicts = fileContents
-            else:
-                raise
-    return annotationDicts, maskType
+    return fileContents
 
 
 def setDatasetAndMetadata(baseStr: str, setupoptions: SetupOptions):
@@ -284,11 +275,8 @@ def setDatasetAndMetadata(baseStr: str, setupoptions: SetupOptions):
     annotationValidateListFileName = setupoptions.validationDictPath
 
     # Need to make a train and a validation list of dicts separately in InstanceSegmentationDatasetDict
-    annotationTrainDicts, maskType = fileHandling(annotationTrainListFileName)
-    annotationValidateDicts, altMaskType = fileHandling(annotationValidateListFileName)
-
-    assert maskType == altMaskType, "The stated mask type from the Train and Validation annotation dicts do not match"
-    assert maskType.lower() == 'bitmask' or maskType.lower() == 'polygon', "The valid maskType options are 'bitmask' and 'polygon'"
+    annotationTrainDicts = fileHandling(annotationTrainListFileName)
+    annotationValidateDicts = fileHandling(annotationValidateListFileName)
 
     annotationDicts = [annotationTrainDicts, annotationValidateDicts]
 
@@ -312,7 +300,7 @@ def setDatasetAndMetadata(baseStr: str, setupoptions: SetupOptions):
 
     # dirNameSet should return {'Train', 'Validation'}
     assert len(maskTypeSet) == 1, "The number of detected mask types is not 1, check your annotation creation and file choice."
-    maskTypeTest = list(maskTypeSet)[0]  # There is only 1 entry, assert checks that above
+    maskType = list(maskTypeSet)[0]  # There is only 1 entry, assert checks that above
 
     assert 'Train' in dirNameSet and 'Validation' in dirNameSet, 'You are missing either a Train or Validation directory in your annotations'
     dirnames = ['Train', 'Validation']  # After making sure these are directories as expected, lets force the order to match the annotationDicts order
