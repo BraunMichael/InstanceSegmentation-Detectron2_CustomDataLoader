@@ -204,9 +204,11 @@ class SetupUI(MDApp):
             elif key == 'modelTypeButton':
                 setupoptions.modelType = entry.current_item
             elif key == 'iterationCheckpointPeriod':
-                setupoptions.iterationCheckpointPeriod = entry.text
+                charFreeStr = ''.join(ch for ch in entry.text if ch.isdigit() or ch == '.' or ch == ',')
+                setupoptions.iterationCheckpointPeriod = int(float(locale.atof(charFreeStr)))
             elif key == 'totalIterations':
-                setupoptions.totalIterations = entry.text
+                charFreeStr = ''.join(ch for ch in entry.text if ch.isdigit() or ch == '.' or ch == ',')
+                setupoptions.totalIterations = int(float(locale.atof(charFreeStr)))
             elif key == 'trainAnnotationDictPath':
                 setupoptions.trainDictPath = entry.text.replace('~', os.path.expanduser('~'))
             elif key == 'validateAnnotationDictPath':
