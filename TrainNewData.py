@@ -294,16 +294,27 @@ def setDatasetAndMetadata(baseStr: str, setupoptions: SetupOptions):
 
     # Just loop through each dict and get the file name, split the path to get the parent dir then check if those are Train and Validation
     dirNameSet = set()
+    maskTypeSet = set()
     for annotationDictList in annotationDicts:
         for annotationDict in annotationDictList:
             parentDirName = os.path.split(os.path.split(annotationDict['file_name'])[0])[-1]
             if parentDirName not in dirNameSet:
                 dirNameSet.add(parentDirName)
+            if isinstance(annotationDict['annotations'][0], list):
+                fileMaskType = 'polygon'
+            elif isinstance(annotationDict['annotations'][0], dict):
+                fileMaskType = 'bitmask'
+            else:
+                fileMaskType = ''
+            assert fileMaskType, 'The annotation dict annotations did not match the expected pattern for polygon or bitmask encoding. Check your annotation creation.'
+            if fileMaskType not in maskTypeSet:
+                maskTypeSet.add(fileMaskType)
 
     # dirNameSet should return {'Train', 'Validation'}
-    if 'Train' not in dirNameSet or 'Validation' not in dirNameSet:
-        print('You are missing either a Train or Validation directory in your annotations ')
-        quit()
+    assert len(maskTypeSet) == 1, "The number of detected mask types is not 1, check your annotation creation and file choice."
+    maskTypeTest = list(maskTypeSet)[0]  # There is only 1 entry, assert checks that above
+
+    assert 'Train' in dirNameSet and 'Validation' in dirNameSet, 'You are missing either a Train or Validation directory in your annotations'
     dirnames = ['Train', 'Validation']  # After making sure these are directories as expected, lets force the order to match the annotationDicts order
 
     for d in range(len(dirnames)):
