@@ -364,7 +364,7 @@ def main(setupoptions: SetupOptions):
 
 if __name__ == "__main__":
     setupoptions = SetupOptions()
-    Window.size = (750, 750)
+    Window.size = (750, 670)
     Builder.load_file(f"TrainNewDataUI.kv")
     SetupUI().run()
     main(setupoptions)
