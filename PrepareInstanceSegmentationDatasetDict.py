@@ -255,8 +255,6 @@ def main():
         with tqdm_joblib(tqdm(desc="Annotating" + dirName + "Images", total=totalImages)) as progress_bar:
             allAnnotations = joblib.Parallel(n_jobs=num_cores)(joblib.delayed(annotateSingleImage)(rawImageName, binaryImageName, maskType, parentFolder) for (rawImageName, binaryImageName) in zip(rawImageNames, binaryImageNames))
 
-        # allAnnotationsDict = {key: value for i in allAnnotations for key, value in i.items()}
-        # annotationDictFileName = 'new_annotations_dict_bitmask_' + dirName + '.txt'
         annotationDictFileName = 'annotations_' + dirName + '.txt'
         with open(annotationDictFileName, 'wb') as handle:
             pickle.dump(allAnnotations, handle)
