@@ -1,38 +1,38 @@
 import os
 import pickle
 import matplotlib.pyplot as plt
-import numpy as np  # (pip install numpy)
-from PIL import Image, ImageOps
+import numpy as np
+from PIL import Image
 from tkinter import Tk, filedialog
 import multiprocessing
-from detectron2.data import DatasetCatalog, MetadataCatalog
 import random
 import locale
 from kivy.lang import Builder
 from kivy.factory import Factory
 from kivy.properties import NumericProperty
 from kivymd.app import MDApp
-from kivymd.uix.textfield import MDTextField
 from kivy.storage.jsonstore import JsonStore
+from kivymd.uix.textfield import MDTextField
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.dropdownitem import MDDropDownItem
-from kivymd.uix.button import MDRoundFlatIconButton
 from kivy.core.window import Window
+
 from torch import load as torchload
 from torch import device as torchdevice
 from glob import glob
+
 from detectron2 import model_zoo
-from detectron2.engine import DefaultPredictor, DefaultTrainer
+from detectron2.data import DatasetCatalog, MetadataCatalog
+from detectron2.engine import DefaultTrainer
 from detectron2.config import get_cfg
 from detectron2.utils.visualizer import Visualizer, ColorMode
-from detectron2.data import MetadataCatalog, build_detection_test_loader
 from detectron2.utils.logger import setup_logger
-setup_logger()
 
 # import PointRend project
 import sys
-sys.path.insert(1, os.path.join(os.getcwd(),"detectron2_repo", "projects", "PointRend"))
+sys.path.insert(1, os.path.join(os.getcwd(), "detectron2_repo", "projects", "PointRend"))
 import point_rend
+setup_logger()
 
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
@@ -42,18 +42,10 @@ def outputModelFolderConverter(prefix: str, suffix: str):
 
 
 class CenteredMDTextField(MDTextField):
-    '''
-    A centered TextInput.
-    '''
-
     text_width = NumericProperty()
-    '''The text width
-    '''
 
-    def update_padding(self, *args):
-        '''
-        Update the padding so the text is centered
-        '''
+    def update_padding(self):
+        # Update the padding so the text is centered
         if len(self.text) > 0:
             charFreeStr = ''.join(ch for ch in self.text if ch.isdigit() or ch == '.' or ch == ',')
             self.text = format(int(float(locale.atof(charFreeStr))), ",.0f")
@@ -130,13 +122,6 @@ class SetupUI(MDApp):
             callback=self.set_showPlots,
             width_mult=4,
         )
-        self.continueTrainingMenu = MDDropdownMenu(
-            caller=self.root.ids['continueTrainingButton'],
-            items=trueFalseMenu_items,
-            position="auto",
-            callback=self.set_continueTraining,
-            width_mult=4,
-        )
 
     def file_manager_open(self, destinationField, openType, message):
         print("use getFileOrDirList() here to launch file manager, then but text in a neighboring text field. Could also grab text from that field as an initialdir")
@@ -151,20 +136,18 @@ class SetupUI(MDApp):
     def set_model(self, instance):
         self.root.ids['modelTypeButton'].set_item(instance.text)
         self.root.ids['folderSuffixField'].helper_text = "Folder prefix currently is: " + outputModelFolderConverter(instance.text, '')
+        self.setLastIteration(self.setOutputModelFolderConverter(instance.text, self.root.ids['folderSuffixField'].text))
         self.modelTypeMenu.dismiss()
 
     def set_showPlots(self, instance):
         self.root.ids['showPlotsButton'].set_item(instance.text)
         self.showPlotsMenu.dismiss()
 
-    def set_continueTraining(self, instance):
-        self.root.ids['continueTrainingButton'].set_item(instance.text)
-        self.continueTrainingMenu.dismiss()
-
     def build(self):
         return self.root
 
-    def setOutputModelFolderConverter(self, prefix: str, suffix: str):
+    @staticmethod
+    def setOutputModelFolderConverter(prefix: str, suffix: str):
         return outputModelFolderConverter(prefix, suffix)
 
     def setLastIteration(self, modelDir):
@@ -178,13 +161,14 @@ class SetupUI(MDApp):
             self.root.ids['iterationsComplete'].text = str(lastIteration + 1)
             self.root.ids['iterationsCompleteLabel'].text_color = 0, 0, 0, 1
             self.root.ids['iterationsCompleteLabel'].text = "Completed iterations on chosen model"
-
+            setupoptions.continueTraining = True
         else:
             warningColor = (241/255, 196/255, 15/255, 1)
             self.root.ids['iterationsComplete'].line_color_focus = warningColor
             self.root.ids['iterationsComplete'].text = str(lastIteration)
             self.root.ids['iterationsCompleteLabel'].text_color = warningColor
             self.root.ids['iterationsCompleteLabel'].text = "Warning, there are no detected iterations on chosen model path. Will start from pre-trained model only."
+            setupoptions.continueTraining = False
 
     def on_start(self):
         # print("\non_start:")
@@ -228,8 +212,6 @@ class SetupUI(MDApp):
 
             if key == 'showPlotsButton':
                 setupoptions.showPlots = textToBool(entry.current_item)
-            elif key == 'continueTrainingButton':
-                setupoptions.continueTraining = textToBool(entry.current_item)
             elif key == 'numClassesField':
                 setupoptions.numClasses = int(entry.text)
             elif key == 'folderSuffixField':
@@ -374,14 +356,10 @@ def textToBool(text):
         return False
 
 
-
-
 def main(setupoptions: SetupOptions):
-    modelType = setupoptions.modelType # options are 'PointRend' or 'MaskRCNN'
+    modelType = setupoptions.modelType
     continueTraining = setupoptions.continueTraining
     outputModelFolder = outputModelFolderConverter(modelType, setupoptions.folderSuffix)
-    # Incorporate into UI now
-    numIter = getLastIteration(outputModelFolder)
     numClasses = setupoptions.numClasses  # only has one class (VerticalNanowires)
     baseStr = 'VerticalNanowires'
 

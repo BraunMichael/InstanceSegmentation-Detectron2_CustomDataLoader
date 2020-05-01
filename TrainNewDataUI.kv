@@ -188,22 +188,6 @@
             spacing: 10
             
             MDLabel:
-                text: 'Continue training chosen model in output folder?'
-                
-            
-            MDDropDownItem:
-                id: continueTrainingButton
-                pos_hint: {'center_x': 0.5, 'center_y': .5}
-                text: "True"
-                on_release: app.continueTrainingMenu.open()
-
-        MDBoxLayout:
-            orientation: "horizontal"
-            adaptive_height: True
-            padding: 0
-            spacing: 10
-            
-            MDLabel:
                 text: 'Show plots with annotated images before training?'
             MDDropDownItem:
                 id: showPlotsButton
