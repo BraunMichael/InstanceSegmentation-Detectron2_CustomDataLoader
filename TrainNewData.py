@@ -219,7 +219,6 @@ class SetupUI(MDApp):
 
 def setConfigurator(setupoptions: SetupOptions, baseStr: str = '', maskType: str = ''):
     modelType = setupoptions.modelType
-    continueTraining = setupoptions.continueTraining
     outputModelFolder = outputModelFolderConverter(modelType, setupoptions.folderSuffix)
     numClasses = setupoptions.numClasses  # only has one class (VerticalNanowires)
 
@@ -232,14 +231,14 @@ def setConfigurator(setupoptions: SetupOptions, baseStr: str = '', maskType: str
         point_rend.add_pointrend_config(cfg)
         cfg.merge_from_file(os.path.join(os.getcwd(), "detectron2_repo", "projects", "PointRend", "configs", "InstanceSegmentation", "pointrend_rcnn_R_50_FPN_3x_coco.yaml"))
         cfg.MODEL.POINT_HEAD.NUM_CLASSES = numClasses  # PointRend has to match num classes
-        if continueTraining:
+        if setupoptions.continueTraining:
             cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")
         else:
             cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, 'model_final_3c3198.pkl')
     elif modelType.lower() == 'maskrcnn':
         print('MaskRCNN Model')
         cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
-        if continueTraining:
+        if setupoptions.continueTraining:
             cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")
         else:
             cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
@@ -251,13 +250,13 @@ def setConfigurator(setupoptions: SetupOptions, baseStr: str = '', maskType: str
     cfg.DATALOADER.NUM_WORKERS = multiprocessing.cpu_count()
     cfg.SOLVER.IMS_PER_BATCH = 1
     cfg.SOLVER.BASE_LR = 0.00025  # pick a good LR
-    cfg.SOLVER.MAX_ITER = 150000
+    cfg.SOLVER.MAX_ITER = setupoptions.totalIterations
     cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512   # (default: 512, balloon test used 128)
 
     cfg.INPUT.MIN_SIZE_TRAIN = (1179,)  # (default: (800,))
     cfg.INPUT.MAX_SIZE_TRAIN = 1366  # (default: 1333)
     cfg.TEST.DETECTIONS_PER_IMAGE = 200  # Increased from COCO default, should never have more than 200 wires per image (default: 100)
-    cfg.SOLVER.CHECKPOINT_PERIOD = 1000
+    cfg.SOLVER.CHECKPOINT_PERIOD = setupoptions.iterationCheckpointPeriod
     cfg.MODEL.RPN.PRE_NMS_TOPK_TRAIN = 12000  # (default: 12000)
     cfg.MODEL.RPN.PRE_NMS_TOPK_TEST = 6000  # (default: 6000)
 
