@@ -102,10 +102,7 @@ class SetupUI(MDApp):
         super().__init__(**kwargs)
         self.root = Factory.SetupUI()
         modelTypeMenu_items = [{"text": "MaskRCNN"}, {"text": "PointRend"}]
-        # technically grows always from the bottom left (closest to (0,0)), I think there is possibly something in menu.py or animation.py, especially related to
-        # ver_growth/hor_growth, tar_x, tar_y, _start_coords, and anim=Animation difference of Auto and center/bottom cases and _animated_properties in animation.py
-        # Or with MouseMotionEvent, its getting the 410 190 position and sending that into the animation, which I believe is the bottom left corner of the final widget
-        # The commented lines in menu.py def open get closer, opens from the top left corner, but no items present in the menu
+
         self.modelTypeMenu = MDDropdownMenu(
             caller=self.root.ids['modelTypeButton'],
             items=modelTypeMenu_items,
@@ -127,11 +124,6 @@ class SetupUI(MDApp):
         print("use getFileOrDirList() here to launch file manager, then but text in a neighboring text field. Could also grab text from that field as an initialdir")
         listName = getFileOrDirList(openType, message, '.txt')
         self.root.ids[destinationField].text = listName.replace(os.path.expanduser('~'), '~')
-
-    # def file_manager_open(self, destinationField):
-    #     print("use getFileOrDirList() here to launch file manager, then but text in a neighboring text field. Could also grab text from that field as an initialdir")
-    #     annotationTrainListFileName = getFileOrDirList('file', 'Annotation Train Dict List in text file', '.txt')
-    #     self.root.ids['trainAnnotationDictPath'].text = annotationTrainListFileName
 
     def set_model(self, instance):
         self.root.ids['modelTypeButton'].set_item(instance.text)
@@ -171,7 +163,6 @@ class SetupUI(MDApp):
             setupoptions.continueTraining = False
 
     def on_start(self):
-        # print("\non_start:")
         self.root.ids['fileManager_Train'].ids['lbl_txt'].halign = 'center'
         self.root.ids['fileManager_Validate'].ids['lbl_txt'].halign = 'center'
         self.root.ids['fileManager_Images'].ids['lbl_txt'].halign = 'center'
@@ -181,33 +172,27 @@ class SetupUI(MDApp):
             for key in store:
                 if key in self.root.ids:
                     entry = self.root.ids[key]
-                    # print("\tid={0}, obj={1}".format(key, entry))
                     if isinstance(entry, MDTextField):
                         if key == 'rawImagesPath' or key == 'validateAnnotationDictPath' or key == 'trainAnnotationDictPath':
                             entry.text = store.get(key)['text'].replace(os.path.expanduser('~'), '~')
                         else:
                             entry.text = store.get(key)['text']
-                        # print("\t\ttext=", entry.text)
                     elif isinstance(entry, MDDropDownItem):
                         entry.set_item(store.get(key)['text'])
-                        # print("\t\tvalue=", entry.current_item)
         modelDir = outputModelFolderConverter(self.root.ids['modelTypeButton'].current_item, self.root.ids['folderSuffixField'].text)
         self.setLastIteration(modelDir)
         self.root.ids['folderSuffixField'].helper_text = "Folder prefix currently is: " + outputModelFolderConverter(self.root.ids['modelTypeButton'].current_item, '')
 
     def on_stop(self):
-        # print("\non_stop:")
         store = JsonStore('SavedSetupOptions.json')
         for key in self.root.ids:
             entry = self.root.ids[key]
             if isinstance(entry, MDTextField):
-                # print("\tid={0}, text={1}".format(key, entry.text))
                 if key == 'rawImagesPath' or key == 'validateAnnotationDictPath' or key == 'trainAnnotationDictPath':
                     store.put(key, text=entry.text.replace('~', os.path.expanduser('~')))
                 else:
                     store.put(key, text=entry.text)
             elif isinstance(entry, MDDropDownItem):
-                # print("\tid={0}, current_item={1}".format(key, entry.current_item))
                 store.put(key, text=entry.current_item)
 
             if key == 'showPlotsButton':
@@ -232,22 +217,27 @@ class SetupUI(MDApp):
         self.root_window.close()
 
 
-def setConfigurator(outputModelFolder: str = 'model', continueTraining: bool = False, baseStr: str = '', modelType: str = 'maskrcnn', numClasses: int = 1, maskType: str = 'polygon'):
+def setConfigurator(setupoptions: SetupOptions, baseStr: str = '', maskType: str = ''):
+    modelType = setupoptions.modelType
+    continueTraining = setupoptions.continueTraining
+    outputModelFolder = outputModelFolderConverter(modelType, setupoptions.folderSuffix)
+    numClasses = setupoptions.numClasses  # only has one class (VerticalNanowires)
+
     cfg = get_cfg()
     cfg.OUTPUT_DIR = os.path.join(os.getcwd(), 'OutputModels', outputModelFolder)
 
     if modelType.lower() == 'pointrend':
-        print('pointrend')
+        print('PointRend Model')
         # See params here https://github.com/facebookresearch/detectron2/blob/master/projects/PointRend/point_rend/config.py
         point_rend.add_pointrend_config(cfg)
         cfg.merge_from_file(os.path.join(os.getcwd(), "detectron2_repo", "projects", "PointRend", "configs", "InstanceSegmentation", "pointrend_rcnn_R_50_FPN_3x_coco.yaml"))
         cfg.MODEL.POINT_HEAD.NUM_CLASSES = numClasses  # PointRend has to match num classes
         if continueTraining:
-            cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")  # If continuing training
+            cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")
         else:
             cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, 'model_final_3c3198.pkl')
-    else:
-        print('maskrcnn')
+    elif modelType.lower() == 'maskrcnn':
+        print('MaskRCNN Model')
         cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
         if continueTraining:
             cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")
@@ -261,7 +251,7 @@ def setConfigurator(outputModelFolder: str = 'model', continueTraining: bool = F
     cfg.DATALOADER.NUM_WORKERS = multiprocessing.cpu_count()
     cfg.SOLVER.IMS_PER_BATCH = 1
     cfg.SOLVER.BASE_LR = 0.00025  # pick a good LR
-    cfg.SOLVER.MAX_ITER = 150000  # balloon test used 300 iterations, likely need to train longer for a practical dataset
+    cfg.SOLVER.MAX_ITER = 150000
     cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512   # (default: 512, balloon test used 128)
 
     cfg.INPUT.MIN_SIZE_TRAIN = (1179,)  # (default: (800,))
@@ -357,16 +347,13 @@ def textToBool(text):
 
 
 def main(setupoptions: SetupOptions):
-    modelType = setupoptions.modelType
-    continueTraining = setupoptions.continueTraining
-    outputModelFolder = outputModelFolderConverter(modelType, setupoptions.folderSuffix)
-    numClasses = setupoptions.numClasses  # only has one class (VerticalNanowires)
     baseStr = 'VerticalNanowires'
 
     maskType = setDatasetAndMetadata(baseStr, setupoptions)
-    configurator = setConfigurator(outputModelFolder, continueTraining, baseStr, modelType, numClasses, maskType)
+    # configurator = setConfigurator(outputModelFolder, continueTraining, baseStr, modelType, numClasses, maskType)
+    configurator = setConfigurator(setupoptions, baseStr, maskType)
     trainer = DefaultTrainer(configurator)
-    trainer.resume_or_load(resume=continueTraining)
+    trainer.resume_or_load(resume=setupoptions.continueTraining)
     trainer.train()
 
 
