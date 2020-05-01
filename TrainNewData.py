@@ -353,7 +353,6 @@ def main(setupoptions: SetupOptions):
     baseStr = 'VerticalNanowires'
 
     maskType = setDatasetAndMetadata(baseStr, setupoptions)
-    # configurator = setConfigurator(outputModelFolder, continueTraining, baseStr, modelType, numClasses, maskType)
     configurator = setConfigurator(setupoptions, baseStr, maskType)
     trainer = DefaultTrainer(configurator)
     trainer.resume_or_load(resume=setupoptions.continueTraining)
