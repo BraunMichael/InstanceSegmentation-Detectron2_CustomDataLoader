@@ -261,7 +261,6 @@ def setConfigurator(setupoptions: SetupOptions, baseStr: str = '', maskType: str
     return cfg
 
 
-# maybe can check the dict and determine masktype from the segmentation entry without needing the separate field?
 def fileHandling(annotationFileName):
     with open(annotationFileName, 'rb') as handle:
         fileContents = pickle.loads(handle.read())
