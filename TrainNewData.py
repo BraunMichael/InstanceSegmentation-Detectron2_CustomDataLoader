@@ -11,7 +11,6 @@ import locale
 from kivy.lang import Builder
 from kivy.factory import Factory
 from kivy.properties import NumericProperty
-from kivy.uix.textinput import TextInput
 from kivymd.app import MDApp
 from kivymd.uix.textfield import MDTextField
 from kivy.storage.jsonstore import JsonStore
@@ -36,6 +35,10 @@ sys.path.insert(1, os.path.join(os.getcwd(),"detectron2_repo", "projects", "Poin
 import point_rend
 
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
+
+
+def outputModelFolderConverter(prefix: str, suffix: str):
+    return prefix + "Model_" + suffix
 
 
 class CenteredMDTextField(MDTextField):
@@ -119,7 +122,7 @@ class SetupUI(MDApp):
             width_mult=4,
         )
 
-        trueFalseMenu_items = [{"text":"True"}, {"text":"False"}]
+        trueFalseMenu_items = [{"text": "True"}, {"text": "False"}]
         self.showPlotsMenu = MDDropdownMenu(
             caller=self.root.ids['showPlotsButton'],
             items=trueFalseMenu_items,
@@ -147,6 +150,7 @@ class SetupUI(MDApp):
 
     def set_model(self, instance):
         self.root.ids['modelTypeButton'].set_item(instance.text)
+        self.root.ids['folderSuffixField'].helper_text = "Folder prefix currently is: " + outputModelFolderConverter(instance.text, '')
         self.modelTypeMenu.dismiss()
 
     def set_showPlots(self, instance):
@@ -160,16 +164,27 @@ class SetupUI(MDApp):
     def build(self):
         return self.root
 
-    def setLastIteration(self, fullModelDirPath):
-        lastIteration = getLastIteration(fullModelDirPath)
-        self.root.ids['iterationsComplete'].theme_text_color = "Custom"
+    def setOutputModelFolderConverter(self, prefix: str, suffix: str):
+        return outputModelFolderConverter(prefix, suffix)
+
+    def setLastIteration(self, modelDir):
+        lastIteration = getLastIteration(modelDir)
+        self.root.ids['iterationsComplete'].color_mode = "custom"
+        self.root.ids['iterationsCompleteLabel'].theme_text_color = "Custom"
 
         if lastIteration > 0:
-            self.root.ids['iterationsComplete'].text_color = 0, 200/255, 83/255, 1
+            goodColor = (39/255, 174/255, 96/255, 1)
+            self.root.ids['iterationsComplete'].line_color_focus = goodColor
             self.root.ids['iterationsComplete'].text = str(lastIteration + 1)
+            self.root.ids['iterationsCompleteLabel'].text_color = 0, 0, 0, 1
+            self.root.ids['iterationsCompleteLabel'].text = "Completed iterations on chosen model"
+
         else:
-            self.root.ids['iterationsComplete'].text_color = 255/255, 234/255, 0, 1
+            warningColor = (241/255, 196/255, 15/255, 1)
+            self.root.ids['iterationsComplete'].line_color_focus = warningColor
             self.root.ids['iterationsComplete'].text = str(lastIteration)
+            self.root.ids['iterationsCompleteLabel'].text_color = warningColor
+            self.root.ids['iterationsCompleteLabel'].text = "Warning, there are no detected iterations on chosen model path. Will start from pre-trained model only."
 
     def on_start(self):
         # print("\non_start:")
@@ -192,9 +207,9 @@ class SetupUI(MDApp):
                     elif isinstance(entry, MDDropDownItem):
                         entry.set_item(store.get(key)['text'])
                         # print("\t\tvalue=", entry.current_item)
-
-        fullModelDirPath = self.root.ids['modelTypeButton'].current_item + "Model_" + self.root.ids['folderSuffixField'].text
-        self.setLastIteration(fullModelDirPath)
+        modelDir = outputModelFolderConverter(self.root.ids['modelTypeButton'].current_item, self.root.ids['folderSuffixField'].text)
+        self.setLastIteration(modelDir)
+        self.root.ids['folderSuffixField'].helper_text = "Folder prefix currently is: " + outputModelFolderConverter(self.root.ids['modelTypeButton'].current_item, '')
 
     def on_stop(self):
         # print("\non_stop:")
@@ -359,10 +374,12 @@ def textToBool(text):
         return False
 
 
+
+
 def main(setupoptions: SetupOptions):
     modelType = setupoptions.modelType # options are 'PointRend' or 'MaskRCNN'
     continueTraining = setupoptions.continueTraining
-    outputModelFolder = modelType+"Model_" + setupoptions.folderSuffix
+    outputModelFolder = outputModelFolderConverter(modelType, setupoptions.folderSuffix)
     # Incorporate into UI now
     numIter = getLastIteration(outputModelFolder)
     numClasses = setupoptions.numClasses  # only has one class (VerticalNanowires)
@@ -377,7 +394,7 @@ def main(setupoptions: SetupOptions):
 
 if __name__ == "__main__":
     setupoptions = SetupOptions()
-    Window.size = (750, 725)
+    Window.size = (750, 750)
     Builder.load_file(f"TrainNewDataUI.kv")
     SetupUI().run()
     main(setupoptions)

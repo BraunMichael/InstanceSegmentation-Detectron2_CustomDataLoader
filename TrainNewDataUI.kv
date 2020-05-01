@@ -95,6 +95,35 @@
                 text: "Model"
                 on_release: app.modelTypeMenu.open()
 
+        MDTextField:
+            id: folderSuffixField
+            color: 0, 0, 0, 1    # black text color
+            focus: False
+            hint_text: "Enter desired model output folder name suffix"
+            helper_text: "Folder prefix currently is: "
+            helper_text_mode: "on_focus"
+            on_text: app.setLastIteration(app.setOutputModelFolderConverter(root.ids['modelTypeButton'].current_item, root.ids['folderSuffixField'].text))
+
+        MDBoxLayout:
+            orientation: "horizontal"
+            adaptive_height: True
+            padding: 0
+            spacing: 0
+
+            MDLabel:
+                id: iterationsCompleteLabel
+                text: ''
+                size_hint_x: 0.8
+            CenteredMDTextField:
+                id: iterationsComplete
+                size_hint_x: 0.2
+                color: 0, 0, 0, 1    # black text color
+                focus: False
+                on_text: self.update_padding()
+                # This appears to work for padding, seems not super robust though
+                padding: ((self.width - self.text_width) / 2, self.height / 4)
+                disabled: True
+
         MDBoxLayout:
             orientation: "horizontal"
             adaptive_height: True
@@ -104,10 +133,6 @@
             MDLabel:
                 text: 'Total number of iterations'
                 size_hint_x: 0.6
-            MDLabel:
-                id: iterationsComplete
-                text: ''
-                size_hint_x: 0.2
 
             CenteredMDTextField:
                 id: totalIterations
@@ -154,15 +179,6 @@
                 on_text: self.update_padding()
                 # This appears to work for padding, seems not super robust though
                 padding: ((self.width - self.text_width) / 2, self.height / 4)
-
-        MDTextField:
-            id: folderSuffixField
-            color: 0, 0, 0, 1    # black text color
-            focus: False
-            hint_text: "Enter desired model output folder name suffix"
-            helper_text: "Folder prefix is model type"
-            helper_text_mode: "on_focus"
-            on_text: app.setLastIteration(root.ids['modelTypeButton'].current_item + "Model_" + root.ids['folderSuffixField'].text)
 
 
         MDBoxLayout:
