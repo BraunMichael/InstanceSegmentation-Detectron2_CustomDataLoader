@@ -325,9 +325,7 @@ def setDatasetAndMetadata(baseStr: str, setupoptions: SetupOptions):
 
 
 def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file', fileTypes: str = None, initialDirOrFile: str = os.getcwd()):
-    if os.path.isdir(initialDirOrFile):
-        initialDir = initialDirOrFile
-    if os.path.isfile(initialDirOrFile):
+    if os.path.isfile(initialDirOrFile) or os.path.isdir(initialDirOrFile):
         initialDir = os.path.split(initialDirOrFile)[0]
     root = Tk()
     root.withdraw()
