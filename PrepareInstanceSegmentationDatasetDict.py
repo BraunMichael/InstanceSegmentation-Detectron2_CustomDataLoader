@@ -259,7 +259,7 @@ def main():
         # annotationDictFileName = 'new_annotations_dict_bitmask_' + dirName + '.txt'
         annotationDictFileName = 'annotations_' + dirName + '.txt'
         with open(annotationDictFileName, 'wb') as handle:
-            pickle.dump(annotationDictFileName, handle)
+            pickle.dump(allAnnotations, handle)
 
 
 if __name__ == "__main__":
