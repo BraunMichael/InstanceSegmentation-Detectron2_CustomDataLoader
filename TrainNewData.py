@@ -27,11 +27,18 @@ from detectron2.engine import DefaultTrainer
 from detectron2.config import get_cfg
 from detectron2.utils.visualizer import Visualizer
 from detectron2.utils.logger import setup_logger
-
 # import PointRend project
-import sys
-sys.path.insert(1, os.path.join(os.getcwd(), "detectron2_repo", "projects", "PointRend"))
-import point_rend
+# import importlib
+# import sys
+# spec = importlib.util.spec_from_file_location('point_rend', os.path.join(os.getcwd(), 'detectron2_repo', 'projects', 'PointRend', 'point_rend', '__init__.py'))
+# module = importlib.util.module_from_spec(spec)
+# sys.modules[spec.name] = module
+# spec.loader.exec_module(module)
+
+from detectron2_repo.projects.PointRend import point_rend
+
+# sys.path.insert(1, os.path.join(os.getcwd(), "detectron2_repo", "projects", "PointRend"))
+# import point_rend
 setup_logger()
 
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
