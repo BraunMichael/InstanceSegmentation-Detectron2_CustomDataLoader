@@ -6,7 +6,5 @@
 *.pth
 *.pkl
 
-
-
 /SavedSetupOptions.json
 /venv/
