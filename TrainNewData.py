@@ -231,7 +231,7 @@ def setConfigurator(setupoptions: SetupOptions, baseStr: str = '', maskType: str
         if setupoptions.continueTraining:
             cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")
         else:
-            cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, 'model_final_3c3198.pkl')
+            cfg.MODEL.WEIGHTS = os.path.join('https://dl.fbaipublicfiles.com/detectron2/PointRend/InstanceSegmentation/pointrend_rcnn_R_50_FPN_3x_coco/164955410/model_final_3c3198.pkl')
     elif modelType.lower() == 'maskrcnn':
         print('MaskRCNN Model')
         cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
