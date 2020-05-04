@@ -20,6 +20,7 @@ from tkinter import Tk, filedialog
 # from detectron2.utils.logger import setup_logger
 showPlots = False
 isVerticalSubSection = True
+parallelProcessing = True
 
 
 @contextlib.contextmanager
@@ -300,14 +301,15 @@ def main():
         boundingBoxDict[instanceNumber] = npBoundingBox
         maskDict[instanceNumber] = npMask
 
-
-    with tqdm_joblib(tqdm(desc="Analyzing Instances", total=numInstances)) as progress_bar:
-        allMeasCoordsSetList = joblib.Parallel(n_jobs=multiprocessing.cpu_count())(
-            joblib.delayed(analyzeSingleInstance)(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection) for
-            instanceNumber in range(numInstances))
-    # allMeasCoordsSetList = []
-    # for instanceNumber in range(numInstances):
-    #     allMeasCoordsSetList.append(analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection))
+    if parallelProcessing:
+        with tqdm_joblib(tqdm(desc="Analyzing Instances", total=numInstances)) as progress_bar:
+            allMeasCoordsSetList = joblib.Parallel(n_jobs=multiprocessing.cpu_count())(
+                joblib.delayed(analyzeSingleInstance)(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection) for
+                instanceNumber in range(numInstances))
+    else:
+        allMeasCoordsSetList = []
+        for instanceNumber in range(numInstances):
+            allMeasCoordsSetList.append(analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection))
 
     allMeasCoordsSetList = [entry for entry in allMeasCoordsSetList if entry != set()]
     measMask = np.zeros(npImage.shape)[:, :, 0]
