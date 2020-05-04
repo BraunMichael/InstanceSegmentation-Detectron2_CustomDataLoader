@@ -311,13 +311,10 @@ def main():
 
     allMeasCoordsSetList = [entry for entry in allMeasCoordsSetList if entry != set()]
     measMask = np.zeros(npImage.shape)[:, :, 0]
-    allMeasCoordsSet = set()
     numMeasInstances = len(allMeasCoordsSetList)
     for coordsSet, instanceNumber in zip(allMeasCoordsSetList, range(numMeasInstances)):
-        # print(int(instanceNumber * 255/numMeasInstances))
         for row, col in coordsSet:
             measMask[row][col] = (1 + instanceNumber) / numMeasInstances
-        # allMeasCoordsSet = allMeasCoordsSet.union(coordsSet)
 
     # https://stackoverflow.com/questions/17170229/setting-transparency-based-on-pixel-values-in-matplotlib
     measMask = np.ma.masked_where(measMask == 0, measMask)
