@@ -73,8 +73,7 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
         # subMaskCoords as [row, col] ie [y, x]
         subMaskCoords = []
         for row, col in maskCoords:
-            if pointInsidePolygon(col, row,
-                                  newBoundingBoxPoly):  # Had to switch x/y here due to conventions apparently
+            if pointInsidePolygon(col, row, newBoundingBoxPoly):
                 subMask[row][col] = 1
                 subMaskCoords.append((row, col))
         return subMask, subMaskCoords
@@ -235,7 +234,7 @@ for (mask, boundingBox, instanceNumber) in zip(outputs['instances'].pred_masks, 
     boundingBoxDict[instanceNumber] = npBoundingBox
     maskDict[instanceNumber] = npMask
 
-allMeasCoordsDict = {}
+allMeasCoordsSet = set()
 for (mask, boundingBox, instanceNumber) in zip(maskDict.values(), boundingBoxDict.values(), range(numInstances)):
     print('Working on instanceNumber: ', instanceNumber)
     if showPlots:
@@ -274,14 +273,14 @@ for (mask, boundingBox, instanceNumber) in zip(maskDict.values(), boundingBoxDic
                         measCoords.append((line, value))
                     else:
                         measCoords.append((value, line))
-            allMeasCoordsDict[instanceNumber] = measCoords
-print('done')
-# subMask = np.zeros(binaryNPImage.shape)
-# for pixelXY in measCoords:
-#     subMask[pixelXY[0]][pixelXY[1]] = 1
-#
-# fig, ax = plt.subplots(figsize=(10, 8))
-# plt.imshow(npImage, 'gray', interpolation='none')
-# plt.imshow(np.uint8(np.multiply(image_label_overlay, 255)), 'jet', interpolation='none', alpha = 0.5)
-# plt.show()
+            allMeasCoordsSet.add(measCoords)
+measMask = np.zeros(mask.shape)
+
+for row, col in allMeasCoordsSet:
+    measMask[row][col] = 1
+
+fig, ax = plt.subplots(figsize=(10, 8))
+plt.imshow(npImage, 'gray', interpolation='none')
+plt.imshow(np.uint8(np.multiply(measMask, 255)), 'jet', interpolation='none', alpha=0.5)
+plt.show()
 # Then put all this in above for loop for (mask, boundingBox, instanceNumber) in zip(outputs['instances'].pred_masks, outputs['instances'].pred_boxes, range(len(outputs['instances']))):
