@@ -145,10 +145,11 @@ def isValidLine(boundingBoxDict, maskDict, instanceNum, minCoords, maxCoords, is
     for checkNumber, checkBoundingBox in boundingBoxDict.items():
         if checkNumber != instanceNum:
             # Check if the start and end of the line hit another bounding box
-            minCoordInvalid = pointInsidePolygon(minCoords[0], minCoords[1],
+            # coords are row, col but pointInsidePolygon is x, y
+            minCoordInvalid = pointInsidePolygon(minCoords[1], minCoords[0],
                                                  bboxToPoly(checkBoundingBox[0], checkBoundingBox[1],
                                                             checkBoundingBox[2], checkBoundingBox[3]))
-            maxCoordInvalid = pointInsidePolygon(maxCoords[0], maxCoords[1],
+            maxCoordInvalid = pointInsidePolygon(maxCoords[1], maxCoords[0],
                                                  bboxToPoly(checkBoundingBox[0], checkBoundingBox[1],
                                                             checkBoundingBox[2], checkBoundingBox[3]))
 
@@ -255,16 +256,16 @@ if showPlots:
 subMaskCoordsDict = makeSubMaskCoordsDict(subMaskCoords, isVerticalSubSection)
 #  coords as [x, y]
 
-
-if not isEdgeInstance(boundingBoxDict, maskDict, instanceNum, isVerticalSubSection):
-    validLineList = set()
-    for line, linePixelsList in subMaskCoordsDict.items():
-        if isVerticalSubSection:
-            minCoords = (min(linePixelsList), line)
-            maxCoords = (max(linePixelsList), line)
-        else:
-            minCoords = (line, min(linePixelsList))
-            maxCoords = (line, max(linePixelsList))
+        if not isEdgeInstance(mask, boundingBox, isVerticalSubSection):
+            validLineSet = set()
+            for line, linePixelsList in subMaskCoordsDict.items():
+                if isVerticalSubSection:
+                    # Coords as row, col
+                    minCoords = (line, min(linePixelsList))
+                    maxCoords = (line, max(linePixelsList))
+                else:
+                    minCoords = (min(linePixelsList), line)
+                    maxCoords = (max(linePixelsList), line)
 
         if isValidLine(boundingBoxDict, maskDict, instanceNum, minCoords, maxCoords, isVerticalSubSection):
             validLineList.add(line)
