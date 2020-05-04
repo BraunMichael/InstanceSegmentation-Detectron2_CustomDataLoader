@@ -1,6 +1,11 @@
 import os
 import pickle
 import cv2
+import joblib
+import contextlib
+from tqdm import tqdm
+import multiprocessing
+
 import matplotlib.pyplot as plt
 import numpy as np
 from os import path
@@ -16,6 +21,28 @@ from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 from detectron2.utils.logger import setup_logger
 showPlots = False
 isVerticalSubSection = True
+
+
+@contextlib.contextmanager
+def tqdm_joblib(tqdm_object):
+    """Context manager to patch joblib to report into tqdm progress bar given as argument"""
+    class TqdmBatchCompletionCallback:
+        def __init__(self, time, index, parallel):
+            self.index = index
+            self.parallel = parallel
+
+        def __call__(self, index):
+            tqdm_object.update()
+            if self.parallel._original_iterator is not None:
+                self.parallel.dispatch_next()
+
+    old_batch_callback = joblib.parallel.BatchCompletionCallBack
+    joblib.parallel.BatchCompletionCallBack = TqdmBatchCompletionCallback
+    try:
+        yield tqdm_object
+    finally:
+        joblib.parallel.BatchCompletionCallBack = old_batch_callback
+        tqdm_object.close()
 
 
 def pointInsidePolygon(x, y, poly):
@@ -205,6 +232,49 @@ def isEdgeInstance(mask, boundingBox, isVerticalSubSection):
     return False
 
 
+def analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection):
+    mask = maskDict[instanceNumber]
+    boundingBox = boundingBoxDict[instanceNumber]
+    # measCoords will be [row, col]
+    measCoordsSet = set()
+    if showPlots:
+        fig, ax = plt.subplots()
+        ax.imshow(mask)
+        plt.show(block=False)
+
+    # maskCoords are [row,col] ie [y,x]
+    subMask, subMaskCoords = centerXPercentofWire(mask, 0.5, isVerticalSubSection)
+    if subMask is not None:
+        if showPlots:
+            fig2, ax2 = plt.subplots()
+            ax2.imshow(subMask)
+            plt.show(block=False)
+
+        subMaskCoordsDict = makeSubMaskCoordsDict(subMaskCoords, isVerticalSubSection)
+
+        if not isEdgeInstance(mask, boundingBox, isVerticalSubSection):
+            validLineSet = set()
+            for line, linePixelsList in subMaskCoordsDict.items():
+                if isVerticalSubSection:
+                    # Coords as row, col
+                    minCoords = (line, min(linePixelsList))
+                    maxCoords = (line, max(linePixelsList))
+                else:
+                    minCoords = (min(linePixelsList), line)
+                    maxCoords = (max(linePixelsList), line)
+
+                if isValidLine(boundingBoxDict, maskDict, instanceNumber, minCoords, maxCoords, isVerticalSubSection):
+                    validLineSet.add(line)
+            for line in validLineSet:
+                for value in subMaskCoordsDict[line]:
+                    if isVerticalSubSection:
+                        measCoordsSet.add((line, value))
+                    else:
+                        measCoordsSet.add((value, line))
+
+    return measCoordsSet
+
+
 # outputsFileName = getFileOrDirList('file', 'Choose outputs pickle file')
 outputsFileName = '/home/mbraun/Downloads/outputmaskstest'
 outputs = fileHandling(outputsFileName)
@@ -235,47 +305,13 @@ for (mask, boundingBox, instanceNumber) in zip(outputs['instances'].pred_masks, 
     maskDict[instanceNumber] = npMask
 
 allMeasCoordsSet = set()
-for (mask, boundingBox, instanceNumber) in zip(maskDict.values(), boundingBoxDict.values(), range(numInstances)):
-    print('Working on instanceNumber: ', instanceNumber)
-    if showPlots:
-        fig, ax = plt.subplots()
-        ax.imshow(mask)
-        plt.show(block=False)
 
-    # maskCoords are [row,col] ie [y,x]
-    subMask, subMaskCoords = centerXPercentofWire(mask, 0.5, isVerticalSubSection)
-    if subMask is not None:
-        if showPlots:
-            fig2, ax2 = plt.subplots()
-            ax2.imshow(subMask)
-            plt.show(block=False)
+with tqdm_joblib(tqdm(desc="Analyzing Instances", total=numInstances)) as progress_bar:
+    allMeasCoordsSet = allMeasCoordsSet.union(joblib.Parallel(n_jobs=multiprocessing.cpu_count())(
+        joblib.delayed(analyzeSingleInstance)(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection) for
+        instanceNumber in range(numInstances)))
 
-        subMaskCoordsDict = makeSubMaskCoordsDict(subMaskCoords, isVerticalSubSection)
-
-        if not isEdgeInstance(mask, boundingBox, isVerticalSubSection):
-            validLineSet = set()
-            for line, linePixelsList in subMaskCoordsDict.items():
-                if isVerticalSubSection:
-                    # Coords as row, col
-                    minCoords = (line, min(linePixelsList))
-                    maxCoords = (line, max(linePixelsList))
-                else:
-                    minCoords = (min(linePixelsList), line)
-                    maxCoords = (max(linePixelsList), line)
-
-                if isValidLine(boundingBoxDict, maskDict, instanceNumber, minCoords, maxCoords, isVerticalSubSection):
-                    validLineSet.add(line)
-            # measCoords will be [row, col]
-            measCoords = []
-            for line in validLineSet:
-                for value in subMaskCoordsDict[line]:
-                    if isVerticalSubSection:
-                        measCoords.append((line, value))
-                    else:
-                        measCoords.append((value, line))
-            allMeasCoordsSet.add(measCoords)
-measMask = np.zeros(mask.shape)
-
+measMask = np.zeros(npImage.shape)
 for row, col in allMeasCoordsSet:
     measMask[row][col] = 1
 

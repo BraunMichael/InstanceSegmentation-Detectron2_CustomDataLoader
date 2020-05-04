@@ -3,6 +3,7 @@
     <words>
       <w>coords</w>
       <w>detectron</w>
+      <w>joblib</w>
       <w>segmentations</w>
       <w>torchdevice</w>
       <w>torchload</w>
