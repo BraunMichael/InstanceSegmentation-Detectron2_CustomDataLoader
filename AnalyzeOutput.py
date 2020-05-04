@@ -14,9 +14,8 @@ from detectron2.utils.visualizer import Visualizer, ColorMode
 from detectron2.data import MetadataCatalog, DatasetCatalog, build_detection_test_loader
 from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 from detectron2.utils.logger import setup_logger
-showPlots = True
+showPlots = False
 isVerticalSubSection = True
-instanceNum = 8
 
 
 def pointInsidePolygon(x, y, poly):
@@ -156,7 +155,6 @@ def isValidLine(boundingBoxDict, maskDict, instanceNum, minCoords, maxCoords, is
             # May need to do more...something with checking average and deviation from average width of the 2 wires?
             if minCoordInvalid or maxCoordInvalid:
                 imageBottom = maskDict[instanceNum].shape[0]
-                imageRight = maskDict[instanceNum].shape[1]
 
                 instanceTop = boundingBoxDict[instanceNum][1]
                 instanceBottom = boundingBoxDict[instanceNum][3]
@@ -227,34 +225,33 @@ if npImage.ndim < 3:
 
 boundingBoxDict = {}
 maskDict = {}
-for (mask, boundingBox, instanceNumber) in zip(outputs['instances'].pred_masks, outputs['instances'].pred_boxes, range(len(outputs['instances']))):
+numInstances = len(outputs['instances'])
+# Loop once to generate dict for checking each instance against all others
+for (mask, boundingBox, instanceNumber) in zip(outputs['instances'].pred_masks, outputs['instances'].pred_boxes, range(numInstances)):
     npMask = np.asarray(mask.cpu())
 
     # 0,0 at top left, and box is [left top right bottom] position ie [xmin ymin xmax ymax] (ie XYXY not XYWH)
     npBoundingBox = np.asarray(boundingBox.cpu())
     boundingBoxDict[instanceNumber] = npBoundingBox
     maskDict[instanceNumber] = npMask
-    print("mask size:", npMask.shape, "box:", npBoundingBox)
-# https://stackoverflow.com/questions/36399381/whats-the-fastest-way-of-checking-if-a-point-is-inside-a-polygon-in-python
 
-npMask = np.asarray(outputs['instances'].pred_masks[instanceNum].cpu())
-npBoundingBox = np.asarray(outputs['instances'].pred_boxes[instanceNum])
-if showPlots:
-    fig, ax = plt.subplots()
-    ax.imshow(npMask)
-    plt.show(block=False)
+allMeasCoordsDict = {}
+for (mask, boundingBox, instanceNumber) in zip(maskDict.values(), boundingBoxDict.values(), range(numInstances)):
+    print('Working on instanceNumber: ', instanceNumber)
+    if showPlots:
+        fig, ax = plt.subplots()
+        ax.imshow(mask)
+        plt.show(block=False)
 
-# Ray tracing from https://stackoverflow.com/questions/36399381/whats-the-fastest-way-of-checking-if-a-point-is-inside-a-polygon-in-python
+    # maskCoords are [row,col] ie [y,x]
+    subMask, subMaskCoords = centerXPercentofWire(mask, 0.5, isVerticalSubSection)
+    if subMask is not None:
+        if showPlots:
+            fig2, ax2 = plt.subplots()
+            ax2.imshow(subMask)
+            plt.show(block=False)
 
-# maskCoords are [row,col] ie [y,x]
-subMask, subMaskCoords = centerXPercentofWire(npMask, 0.5, isVerticalSubSection)
-if showPlots:
-    fig2, ax2 = plt.subplots()
-    ax2.imshow(subMask)
-    plt.show(block=False)
-
-subMaskCoordsDict = makeSubMaskCoordsDict(subMaskCoords, isVerticalSubSection)
-#  coords as [x, y]
+        subMaskCoordsDict = makeSubMaskCoordsDict(subMaskCoords, isVerticalSubSection)
 
         if not isEdgeInstance(mask, boundingBox, isVerticalSubSection):
             validLineSet = set()
@@ -267,17 +264,18 @@ subMaskCoordsDict = makeSubMaskCoordsDict(subMaskCoords, isVerticalSubSection)
                     minCoords = (min(linePixelsList), line)
                     maxCoords = (max(linePixelsList), line)
 
-        if isValidLine(boundingBoxDict, maskDict, instanceNum, minCoords, maxCoords, isVerticalSubSection):
-            validLineList.add(line)
-    # measCoords will be [row, col]
-    measCoords = []
-    for line in validLineList:
-        for value in maskDict[line]:
-            if isVerticalSubSection:
-                measCoords.append((line, value))
-            else:
-                measCoords.append((value, line))
-
+                if isValidLine(boundingBoxDict, maskDict, instanceNumber, minCoords, maxCoords, isVerticalSubSection):
+                    validLineSet.add(line)
+            # measCoords will be [row, col]
+            measCoords = []
+            for line in validLineSet:
+                for value in subMaskCoordsDict[line]:
+                    if isVerticalSubSection:
+                        measCoords.append((line, value))
+                    else:
+                        measCoords.append((value, line))
+            allMeasCoordsDict[instanceNumber] = measCoords
+print('done')
 # subMask = np.zeros(binaryNPImage.shape)
 # for pixelXY in measCoords:
 #     subMask[pixelXY[0]][pixelXY[1]] = 1
