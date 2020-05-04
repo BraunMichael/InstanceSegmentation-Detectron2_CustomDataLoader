@@ -14,8 +14,7 @@ from detectron2.utils.visualizer import Visualizer, ColorMode
 from detectron2.data import MetadataCatalog, DatasetCatalog, build_detection_test_loader
 from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 from detectron2.utils.logger import setup_logger
-
-showPlots = False
+showPlots = True
 isVerticalSubSection = True
 instanceNum = 8
 
@@ -62,14 +61,19 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
             xmax = xmax - 0.5 * (originalbboxWidth - newbboxWidth)
         # newBoundingBoxPoly = [[xmin, ymin], [xmax, ymin], [xmax, ymax], [xmin, ymax]]
         newBoundingBoxPoly = bboxToPoly(xmin, ymin, xmax, ymax)
+        # maskCords as [row, col] ie [y, x]
         maskCoords = region.coords
-        for pixelXY in maskCoords:
-            if pointInsidePolygon(pixelXY[1], pixelXY[0],
+
+        # subMaskCoords as [row, col] ie [y, x]
+        subMaskCoords = []
+        for row, col in maskCoords:
+            if pointInsidePolygon(col, row,
                                   newBoundingBoxPoly):  # Had to switch x/y here due to conventions apparently
-                subMask[pixelXY[0]][pixelXY[1]] = 1
+                subMask[row][col] = 1
+                subMaskCoords.append((row, col))
     else:
         print("Found more than 1 region in mask, skipping this mask")
-    return subMask, maskCoords
+    return subMask, subMaskCoords
 
 
 def fileHandling(annotationFileName):
@@ -83,19 +87,20 @@ def bboxToPoly(xmin, ymin, xmax, ymax):
 
 
 def makeSubMaskCoordsDict(maskCoords, isVerticalSubSection):
+    # maskCoords are [row, col]
     assert isinstance(isVerticalSubSection,
                       bool), "isVerticalSubSection must be a boolean, True if you want a vertical subsection, False if you want a horizontal subsection"
     subMaskCoordsDict = {}
 
-    for coords in maskCoords:
+    for row, col in maskCoords:
         if isVerticalSubSection:
-            if coords[0] not in subMaskCoordsDict:
-                subMaskCoordsDict[coords[0]] = []
-            subMaskCoordsDict[coords[0]].append(coords[1])
+            if row not in subMaskCoordsDict:
+                subMaskCoordsDict[row] = []
+            subMaskCoordsDict[row].append(col)
         else:
-            if coords[1] not in subMaskCoordsDict:
-                subMaskCoordsDict[coords[1]] = []
-            subMaskCoordsDict[coords[1]].append(coords[0])
+            if col not in subMaskCoordsDict:
+                subMaskCoordsDict[col] = []
+            subMaskCoordsDict[col].append(row)
     return subMaskCoordsDict
 
 
@@ -196,6 +201,19 @@ def isEdgeInstance(boundingBoxDict, maskDict, instanceNum, isVerticalSubSection)
 # outputsFileName = getFileOrDirList('file', 'Choose outputs pickle file')
 outputsFileName = '/home/mbraun/Downloads/outputmaskstest'
 outputs = fileHandling(outputsFileName)
+inputFileName = 'tiltedSEM/2020_02_06_MB0232_Reflectometry_002_cropped.jpg'
+if not path.isfile(inputFileName):
+    quit()
+rawImage = Image.open(inputFileName)
+npImage = np.array(rawImage)
+
+if npImage.ndim < 3:
+    if npImage.ndim == 2:
+        # Assuming black and white image, just copy to all 3 color channels
+        npImage = np.repeat(npImage[:, :, np.newaxis], 3, axis=2)
+    else:
+        print('The imported rawImage is 1 dimensional for some reason, check it out.')
+        quit()
 
 boundingBoxDict = {}
 maskDict = {}
@@ -214,18 +232,18 @@ npBoundingBox = np.asarray(outputs['instances'].pred_boxes[instanceNum])
 if showPlots:
     fig, ax = plt.subplots()
     ax.imshow(npMask)
-    plt.show(block=True)
+    plt.show(block=False)
 
 # Ray tracing from https://stackoverflow.com/questions/36399381/whats-the-fastest-way-of-checking-if-a-point-is-inside-a-polygon-in-python
 
-
-subMask, maskCoords = centerXPercentofWire(npMask, 0.5, isVerticalSubSection)
+# maskCoords are [row,col] ie [y,x]
+subMask, subMaskCoords = centerXPercentofWire(npMask, 0.5, isVerticalSubSection)
 if showPlots:
     fig2, ax2 = plt.subplots()
     ax2.imshow(subMask)
-    plt.show(block=True)
+    plt.show(block=False)
 
-subMaskCoordsDict = makeSubMaskCoordsDict(maskCoords, isVerticalSubSection)
+subMaskCoordsDict = makeSubMaskCoordsDict(subMaskCoords, isVerticalSubSection)
 #  coords as [x, y]
 
 
@@ -241,6 +259,21 @@ if not isEdgeInstance(boundingBoxDict, maskDict, instanceNum, isVerticalSubSecti
 
         if isValidLine(boundingBoxDict, maskDict, instanceNum, minCoords, maxCoords, isVerticalSubSection):
             validLineList.add(line)
-# Plot valid lines on plot
+    # measCoords will be [row, col]
+    measCoords = []
+    for line in validLineList:
+        for value in maskDict[line]:
+            if isVerticalSubSection:
+                measCoords.append((line, value))
+            else:
+                measCoords.append((value, line))
 
+# subMask = np.zeros(binaryNPImage.shape)
+# for pixelXY in measCoords:
+#     subMask[pixelXY[0]][pixelXY[1]] = 1
+#
+# fig, ax = plt.subplots(figsize=(10, 8))
+# plt.imshow(npImage, 'gray', interpolation='none')
+# plt.imshow(np.uint8(np.multiply(image_label_overlay, 255)), 'jet', interpolation='none', alpha = 0.5)
+# plt.show()
 # Then put all this in above for loop for (mask, boundingBox, instanceNumber) in zip(outputs['instances'].pred_masks, outputs['instances'].pred_boxes, range(len(outputs['instances']))):
