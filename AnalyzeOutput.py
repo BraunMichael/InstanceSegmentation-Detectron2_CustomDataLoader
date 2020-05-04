@@ -1,11 +1,10 @@
 import os
 import pickle
-import cv2
 import joblib
 import contextlib
 from tqdm import tqdm
 import multiprocessing
-
+from skimage import color
 import matplotlib.pyplot as plt
 import numpy as np
 from os import path
@@ -105,7 +104,6 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
                 subMaskCoords.append((row, col))
         return subMask, subMaskCoords
     # else:
-    print("Found more than 1 region in mask, skipping this mask")
     return None, None
 
 
@@ -232,6 +230,7 @@ def isEdgeInstance(mask, boundingBox, isVerticalSubSection):
     return False
 
 
+@profile
 def analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection):
     mask = maskDict[instanceNumber]
     boundingBox = boundingBoxDict[instanceNumber]
@@ -275,48 +274,76 @@ def analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalS
     return measCoordsSet
 
 
-# outputsFileName = getFileOrDirList('file', 'Choose outputs pickle file')
-outputsFileName = '/home/mbraun/Downloads/outputmaskstest'
-outputs = fileHandling(outputsFileName)
-inputFileName = 'tiltedSEM/2020_02_06_MB0232_Reflectometry_002_cropped.jpg'
-if not path.isfile(inputFileName):
-    quit()
-rawImage = Image.open(inputFileName)
-npImage = np.array(rawImage)
-
-if npImage.ndim < 3:
-    if npImage.ndim == 2:
-        # Assuming black and white image, just copy to all 3 color channels
-        npImage = np.repeat(npImage[:, :, np.newaxis], 3, axis=2)
-    else:
-        print('The imported rawImage is 1 dimensional for some reason, check it out.')
+def main():
+    # outputsFileName = getFileOrDirList('file', 'Choose outputs pickle file')
+    outputsFileName = '/home/mbraun/Downloads/outputmaskstest'
+    outputs = fileHandling(outputsFileName)
+    inputFileName = 'tiltedSEM/2020_02_06_MB0232_Reflectometry_002_cropped.jpg'
+    if not path.isfile(inputFileName):
         quit()
+    rawImage = Image.open(inputFileName)
+    npImage = np.array(rawImage)
 
-boundingBoxDict = {}
-maskDict = {}
-numInstances = len(outputs['instances'])
-# Loop once to generate dict for checking each instance against all others
-for (mask, boundingBox, instanceNumber) in zip(outputs['instances'].pred_masks, outputs['instances'].pred_boxes, range(numInstances)):
-    npMask = np.asarray(mask.cpu())
+    if npImage.ndim < 3:
+        if npImage.ndim == 2:
+            # Assuming black and white image, just copy to all 3 color channels
+            npImage = np.repeat(npImage[:, :, np.newaxis], 3, axis=2)
+        else:
+            print('The imported rawImage is 1 dimensional for some reason, check it out.')
+            quit()
 
-    # 0,0 at top left, and box is [left top right bottom] position ie [xmin ymin xmax ymax] (ie XYXY not XYWH)
-    npBoundingBox = np.asarray(boundingBox.cpu())
-    boundingBoxDict[instanceNumber] = npBoundingBox
-    maskDict[instanceNumber] = npMask
+    boundingBoxDict = {}
+    maskDict = {}
+    numInstances = len(outputs['instances'])
+    # Loop once to generate dict for checking each instance against all others
+    for (mask, boundingBox, instanceNumber) in zip(outputs['instances'].pred_masks, outputs['instances'].pred_boxes, range(numInstances)):
+        npMask = np.asarray(mask.cpu())
 
-allMeasCoordsSet = set()
+        # 0,0 at top left, and box is [left top right bottom] position ie [xmin ymin xmax ymax] (ie XYXY not XYWH)
+        npBoundingBox = np.asarray(boundingBox.cpu())
+        boundingBoxDict[instanceNumber] = npBoundingBox
+        maskDict[instanceNumber] = npMask
 
-with tqdm_joblib(tqdm(desc="Analyzing Instances", total=numInstances)) as progress_bar:
-    allMeasCoordsSet = allMeasCoordsSet.union(joblib.Parallel(n_jobs=multiprocessing.cpu_count())(
-        joblib.delayed(analyzeSingleInstance)(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection) for
-        instanceNumber in range(numInstances)))
 
-measMask = np.zeros(npImage.shape)
-for row, col in allMeasCoordsSet:
-    measMask[row][col] = 1
+    with tqdm_joblib(tqdm(desc="Analyzing Instances", total=numInstances)) as progress_bar:
+        allMeasCoordsSetList = joblib.Parallel(n_jobs=multiprocessing.cpu_count())(
+            joblib.delayed(analyzeSingleInstance)(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection) for
+            instanceNumber in range(numInstances))
 
-fig, ax = plt.subplots(figsize=(10, 8))
-plt.imshow(npImage, 'gray', interpolation='none')
-plt.imshow(np.uint8(np.multiply(measMask, 255)), 'jet', interpolation='none', alpha=0.5)
-plt.show()
-# Then put all this in above for loop for (mask, boundingBox, instanceNumber) in zip(outputs['instances'].pred_masks, outputs['instances'].pred_boxes, range(len(outputs['instances']))):
+    allMeasCoordsSetList = [entry for entry in allMeasCoordsSetList if entry != set()]
+    measMask = np.zeros(npImage.shape)[:, :, 0]
+    allMeasCoordsSet = set()
+    numMeasInstances = len(allMeasCoordsSetList)
+    for coordsSet, instanceNumber in zip(allMeasCoordsSetList, range(numMeasInstances)):
+        # print(int(instanceNumber * 255/numMeasInstances))
+        for row, col in coordsSet:
+            measMask[row][col] = instanceNumber / numMeasInstances
+        # allMeasCoordsSet = allMeasCoordsSet.union(coordsSet)
+
+
+    # https://stackoverflow.com/questions/9193603/applying-a-coloured-overlay-to-an-image-in-either-pil-or-imagemagik
+    # Convert the input image and color mask to Hue Saturation Value (HSV)
+    # colorspace
+    # img_hsv = color.rgb2hsv(img_color)
+    # color_mask_hsv = color.rgb2hsv(color_mask)
+    #
+    # # Replace the hue and saturation of the original image
+    # # with that of the color mask
+    # img_hsv[..., 0] = color_mask_hsv[..., 0]
+    # img_hsv[..., 1] = color_mask_hsv[..., 1] * alpha
+    #
+    # img_masked = color.hsv2rgb(img_hsv)
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+    # plt.imshow(npImage, cmap=plt.get_cmap('Greys'), interpolation='none')
+    plt.imshow(npImage, interpolation='none')
+
+    plt.imshow(measMask, cmap=plt.get_cmap('plasma'), interpolation='none', alpha=0.5)
+
+    # plt.imshow(np.uint8(np.multiply(measMask, 255)), 'jet', interpolation='none', alpha=0.5)
+    plt.show()
+    # Then put all this in above for loop for (mask, boundingBox, instanceNumber) in zip(outputs['instances'].pred_masks, outputs['instances'].pred_boxes, range(len(outputs['instances']))):
+
+
+if __name__ == "__main__":
+    main()
