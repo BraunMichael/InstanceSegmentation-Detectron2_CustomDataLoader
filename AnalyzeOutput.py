@@ -76,7 +76,7 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
     largeRegionsNums = set()
     regionNum = 0
     for region in allRegionProperties:
-        #ignore small regions or if an instance got split into a major and minor part
+        # Ignore small regions or if an instance got split into a major and minor part
         if region.area > 100:
             largeRegionsNums.add(regionNum)
         regionNum += 1
@@ -93,10 +93,10 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
             newbboxWidth = originalbboxWidth * percentSize
             xmin = xmin + 0.5 * (originalbboxWidth - newbboxWidth)
             xmax = xmax - 0.5 * (originalbboxWidth - newbboxWidth)
-        # newBoundingBoxPoly = [[xmin, ymin], [xmax, ymin], [xmax, ymax], [xmin, ymax]]
         newBoundingBoxPoly = bboxToPoly(xmin, ymin, xmax, ymax)
         # maskCords as [row, col] ie [y, x]
         maskCoords = region.coords
+        maskAngle = np.rad2deg(region.orientation)
 
         # subMaskCoords as [row, col] ie [y, x]
         subMaskCoords = []
@@ -104,10 +104,9 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
             if pointInsidePolygon(col, row, newBoundingBoxPoly):
                 subMask[row][col] = 1
                 subMaskCoords.append((row, col))
-        return subMask, subMaskCoords
+        return subMask, subMaskCoords, maskAngle
     # else:
-    return None, None
-
+    return None, None, None
 
 
 def fileHandling(annotationFileName):
@@ -240,7 +239,7 @@ def analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalS
         plt.show(block=False)
 
     # maskCoords are [row,col] ie [y,x]
-    subMask, subMaskCoords = centerXPercentofWire(mask, 0.5, isVerticalSubSection)
+    subMask, subMaskCoords, maskAngle = centerXPercentofWire(mask, 0.5, isVerticalSubSection)
     if subMask is not None:
         if showPlots:
             fig2, ax2 = plt.subplots()
@@ -268,7 +267,7 @@ def analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalS
                         measCoordsSet.add((line, value))
                     else:
                         measCoordsSet.add((value, line))
-    return measCoordsSet
+    return measCoordsSet, maskAngle
 
 
 def main():
@@ -303,15 +302,16 @@ def main():
 
     if parallelProcessing:
         with tqdm_joblib(tqdm(desc="Analyzing Instances", total=numInstances)) as progress_bar:
-            allMeasCoordsSetList = joblib.Parallel(n_jobs=multiprocessing.cpu_count())(
-                joblib.delayed(analyzeSingleInstance)(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection) for
+            analysisOutput = joblib.Parallel(n_jobs=multiprocessing.cpu_count())(
+                joblib.delayed(analyzeSingleInstance)(maskDict, boundingBoxDict, instanceNumber,
+                                                      isVerticalSubSection) for
                 instanceNumber in range(numInstances))
     else:
-        allMeasCoordsSetList = []
+        analysisOutput = []
         for instanceNumber in range(numInstances):
-            allMeasCoordsSetList.append(analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection))
-
-    allMeasCoordsSetList = [entry for entry in allMeasCoordsSetList if entry != set()]
+            analysisOutput.append(analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection))
+    allMeasCoordsSetList = [entry[0] for entry in analysisOutput if entry[0] != set()]
+    allMeasAnglesList = [entry[1] for entry in analysisOutput if entry[0] != set()]
     measMask = np.zeros(npImage.shape)[:, :, 0]
     numMeasInstances = len(allMeasCoordsSetList)
     for coordsSet, instanceNumber in zip(allMeasCoordsSetList, range(numMeasInstances)):
@@ -320,7 +320,7 @@ def main():
 
     # https://stackoverflow.com/questions/17170229/setting-transparency-based-on-pixel-values-in-matplotlib
     measMask = np.ma.masked_where(measMask == 0, measMask)
-    plt.subplots(figsize=(10, 8))
+    plt.subplots(figsize=(15, 12))
     plt.imshow(npImage, interpolation='none')
     plt.imshow(measMask, cmap=plt.get_cmap('plasma'), interpolation='none', alpha=0.5)
     plt.show()
