@@ -11,13 +11,13 @@ from os import path
 from PIL import Image
 from skimage.measure import label, regionprops
 from tkinter import Tk, filedialog
-from detectron2 import model_zoo
-from detectron2.engine import DefaultPredictor
-from detectron2.config import get_cfg
-from detectron2.utils.visualizer import Visualizer, ColorMode
-from detectron2.data import MetadataCatalog, DatasetCatalog, build_detection_test_loader
-from detectron2.evaluation import COCOEvaluator, inference_on_dataset
-from detectron2.utils.logger import setup_logger
+# from detectron2 import model_zoo
+# from detectron2.engine import DefaultPredictor
+# from detectron2.config import get_cfg
+# from detectron2.utils.visualizer import Visualizer, ColorMode
+# from detectron2.data import MetadataCatalog, DatasetCatalog, build_detection_test_loader
+# from detectron2.evaluation import COCOEvaluator, inference_on_dataset
+# from detectron2.utils.logger import setup_logger
 showPlots = False
 isVerticalSubSection = True
 
@@ -63,7 +63,7 @@ def pointInsidePolygon(x, y, poly):
     return inside
 
 
-@profile
+# @profile
 def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
     assert 0 <= percentSize <= 1, "Percent size of section has to be between 0 and 1"
     assert isinstance(isVerticalSubSection,
@@ -213,25 +213,21 @@ def isEdgeInstance(mask, boundingBox, isVerticalSubSection):
     if isVerticalSubSection:
         if boundingBox[0] < 20:
             # too close to left side
-            print('too close to left side')
             return True
         elif abs(boundingBox[2] - imageRight) < 20:
             # too close to right side
-            print('too close to right side')
             return True
     else:  # HorizontalSubSection
         if boundingBox[1] < 20:
             # too close to top side
-            print('too close to top side')
             return True
         elif abs(boundingBox[3] - imageBottom) < 20:
             # too close to bottom side
-            print('too close to bottom side')
             return True
     return False
 
 
-@profile
+# @profile
 def analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection):
     mask = maskDict[instanceNumber]
     boundingBox = boundingBoxDict[instanceNumber]
@@ -271,7 +267,6 @@ def analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalS
                         measCoordsSet.add((line, value))
                     else:
                         measCoordsSet.add((value, line))
-
     return measCoordsSet
 
 
@@ -306,13 +301,13 @@ def main():
         maskDict[instanceNumber] = npMask
 
 
-    # with tqdm_joblib(tqdm(desc="Analyzing Instances", total=numInstances)) as progress_bar:
-    #     allMeasCoordsSetList = joblib.Parallel(n_jobs=multiprocessing.cpu_count())(
-    #         joblib.delayed(analyzeSingleInstance)(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection) for
-    #         instanceNumber in range(numInstances))
-    allMeasCoordsSetList = []
-    for instanceNumber in range(numInstances):
-        allMeasCoordsSetList.append(analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection))
+    with tqdm_joblib(tqdm(desc="Analyzing Instances", total=numInstances)) as progress_bar:
+        allMeasCoordsSetList = joblib.Parallel(n_jobs=multiprocessing.cpu_count())(
+            joblib.delayed(analyzeSingleInstance)(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection) for
+            instanceNumber in range(numInstances))
+    # allMeasCoordsSetList = []
+    # for instanceNumber in range(numInstances):
+    #     allMeasCoordsSetList.append(analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection))
 
     allMeasCoordsSetList = [entry for entry in allMeasCoordsSetList if entry != set()]
     measMask = np.zeros(npImage.shape)[:, :, 0]
@@ -321,32 +316,15 @@ def main():
     for coordsSet, instanceNumber in zip(allMeasCoordsSetList, range(numMeasInstances)):
         # print(int(instanceNumber * 255/numMeasInstances))
         for row, col in coordsSet:
-            measMask[row][col] = instanceNumber / numMeasInstances
+            measMask[row][col] = (1 + instanceNumber) / numMeasInstances
         # allMeasCoordsSet = allMeasCoordsSet.union(coordsSet)
 
-
-    # https://stackoverflow.com/questions/9193603/applying-a-coloured-overlay-to-an-image-in-either-pil-or-imagemagik
-    # Convert the input image and color mask to Hue Saturation Value (HSV)
-    # colorspace
-    # img_hsv = color.rgb2hsv(img_color)
-    # color_mask_hsv = color.rgb2hsv(color_mask)
-    #
-    # # Replace the hue and saturation of the original image
-    # # with that of the color mask
-    # img_hsv[..., 0] = color_mask_hsv[..., 0]
-    # img_hsv[..., 1] = color_mask_hsv[..., 1] * alpha
-    #
-    # img_masked = color.hsv2rgb(img_hsv)
-
-    fig, ax = plt.subplots(figsize=(10, 8))
-    # plt.imshow(npImage, cmap=plt.get_cmap('Greys'), interpolation='none')
+    # https://stackoverflow.com/questions/17170229/setting-transparency-based-on-pixel-values-in-matplotlib
+    measMask = np.ma.masked_where(measMask == 0, measMask)
+    plt.subplots(figsize=(10, 8))
     plt.imshow(npImage, interpolation='none')
-
     plt.imshow(measMask, cmap=plt.get_cmap('plasma'), interpolation='none', alpha=0.5)
-
-    # plt.imshow(np.uint8(np.multiply(measMask, 255)), 'jet', interpolation='none', alpha=0.5)
     plt.show()
-    # Then put all this in above for loop for (mask, boundingBox, instanceNumber) in zip(outputs['instances'].pred_masks, outputs['instances'].pred_boxes, range(len(outputs['instances']))):
 
 
 if __name__ == "__main__":
