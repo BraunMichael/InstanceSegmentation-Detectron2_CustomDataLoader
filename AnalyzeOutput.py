@@ -184,24 +184,24 @@ def isValidLine(boundingBoxDict, maskDict, instanceNum, minCoords, maxCoords, is
     return False
 
 
-def isEdgeInstance(boundingBoxDict, maskDict, instanceNum, isVerticalSubSection):
-    imageRight = maskDict[instanceNum].shape[1]
-    imageBottom = maskDict[instanceNum].shape[0]
+def isEdgeInstance(mask, boundingBox, isVerticalSubSection):
+    imageRight = mask.shape[1]
+    imageBottom = mask.shape[0]
     if isVerticalSubSection:
-        if boundingBoxDict[instanceNum][0] < 20:
+        if boundingBox[0] < 20:
             # too close to left side
             print('too close to left side')
             return True
-        elif abs(boundingBoxDict[instanceNum][2] - imageRight) < 20:
+        elif abs(boundingBox[2] - imageRight) < 20:
             # too close to right side
             print('too close to right side')
             return True
     else:  # HorizontalSubSection
-        if boundingBoxDict[instanceNum][1] < 20:
+        if boundingBox[1] < 20:
             # too close to top side
             print('too close to top side')
             return True
-        elif abs(boundingBoxDict[instanceNum][3] - imageBottom) < 20:
+        elif abs(boundingBox[3] - imageBottom) < 20:
             # too close to bottom side
             print('too close to bottom side')
             return True
