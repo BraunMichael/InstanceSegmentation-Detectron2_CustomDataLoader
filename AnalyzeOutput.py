@@ -20,6 +20,7 @@ instanceNum = 8
 
 
 def pointInsidePolygon(x, y, poly):
+    # Ray tracing from https://stackoverflow.com/questions/36399381/whats-the-fastest-way-of-checking-if-a-point-is-inside-a-polygon-in-python
     n = len(poly)
     inside = False
     p1x, p1y = poly[0]
@@ -45,9 +46,15 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
     label_image = label(npMaskFunc, connectivity=1)
     allRegionProperties = regionprops(label_image)
     subMask = np.zeros(npMaskFunc.shape)
-
-    if len(allRegionProperties) == 1:
-        region = allRegionProperties[0]
+    largeRegionsNums = set()
+    regionNum = 0
+    for region in allRegionProperties:
+        #ignore small regions or if an instance got split into a major and minor part
+        if region.area > 100:
+            largeRegionsNums.add(regionNum)
+        regionNum += 1
+    if len(largeRegionsNums) == 1:
+        region = allRegionProperties[list(largeRegionsNums)[0]]
         ymin, xmin, ymax, xmax = region.bbox
         if isVerticalSubSection:
             originalbboxHeight = ymax - ymin
@@ -71,9 +78,11 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
                                   newBoundingBoxPoly):  # Had to switch x/y here due to conventions apparently
                 subMask[row][col] = 1
                 subMaskCoords.append((row, col))
-    else:
-        print("Found more than 1 region in mask, skipping this mask")
-    return subMask, subMaskCoords
+        return subMask, subMaskCoords
+    # else:
+    print("Found more than 1 region in mask, skipping this mask")
+    return None, None
+
 
 
 def fileHandling(annotationFileName):
