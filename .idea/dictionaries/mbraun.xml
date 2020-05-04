@@ -1,6 +1,7 @@
 <component name="ProjectDictionaryState">
   <dictionary name="mbraun">
     <words>
+      <w>coords</w>
       <w>detectron</w>
       <w>segmentations</w>
       <w>torchdevice</w>
