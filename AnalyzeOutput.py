@@ -63,6 +63,7 @@ def pointInsidePolygon(x, y, poly):
     return inside
 
 
+@profile
 def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
     assert 0 <= percentSize <= 1, "Percent size of section has to be between 0 and 1"
     assert isinstance(isVerticalSubSection,
@@ -305,10 +306,13 @@ def main():
         maskDict[instanceNumber] = npMask
 
 
-    with tqdm_joblib(tqdm(desc="Analyzing Instances", total=numInstances)) as progress_bar:
-        allMeasCoordsSetList = joblib.Parallel(n_jobs=multiprocessing.cpu_count())(
-            joblib.delayed(analyzeSingleInstance)(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection) for
-            instanceNumber in range(numInstances))
+    # with tqdm_joblib(tqdm(desc="Analyzing Instances", total=numInstances)) as progress_bar:
+    #     allMeasCoordsSetList = joblib.Parallel(n_jobs=multiprocessing.cpu_count())(
+    #         joblib.delayed(analyzeSingleInstance)(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection) for
+    #         instanceNumber in range(numInstances))
+    allMeasCoordsSetList = []
+    for instanceNumber in range(numInstances):
+        allMeasCoordsSetList.append(analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection))
 
     allMeasCoordsSetList = [entry for entry in allMeasCoordsSetList if entry != set()]
     measMask = np.zeros(npImage.shape)[:, :, 0]
