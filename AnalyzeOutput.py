@@ -6,6 +6,7 @@ from tqdm import tqdm
 import multiprocessing
 from skimage import color
 import matplotlib.pyplot as plt
+import matplotlib.path as mpltPath
 import numpy as np
 from os import path
 from PIL import Image
@@ -19,7 +20,7 @@ from tkinter import Tk, filedialog
 # from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 # from detectron2.utils.logger import setup_logger
 showPlots = False
-isVerticalSubSection = True
+isVerticalSubSection = False
 parallelProcessing = True
 
 
@@ -64,6 +65,27 @@ def pointInsidePolygon(x, y, poly):
     return inside
 
 
+def npPointInsidePolygon(x, y, poly):
+    n = len(poly)
+    inside = np.zeros(len(x), np.bool_)
+    p2x = 0.0
+    p2y = 0.0
+    xints = 0.0
+    p1x, p1y = poly[0]
+    for i in range(n + 1):
+        p2x, p2y = poly[i % n]
+        idx = np.nonzero((y > min(p1y, p2y)) & (y <= max(p1y, p2y)) & (x <= max(p1x, p2x)))[0]
+        if p1y != p2y:
+            xints = (y[idx] - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+        if p1x == p2x:
+            inside[idx] = ~inside[idx]
+        else:
+            idxx = idx[x[idx] <= xints]
+            inside[idxx] = ~inside[idxx]
+
+        p1x, p1y = p2x, p2y
+    return inside
+
 # @profile
 def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
     assert 0 <= percentSize <= 1, "Percent size of section has to be between 0 and 1"
@@ -97,13 +119,28 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
         # maskCords as [row, col] ie [y, x]
         maskCoords = region.coords
         maskAngle = np.rad2deg(region.orientation)
+        flippedMaskCoords = [(entry[1], entry[0]) for entry in maskCoords]
+        subMaskCoords = []
+        path = mpltPath.Path(newBoundingBoxPoly)
+        subMaskCoordsBoolList = path.contains_points(flippedMaskCoords)
+        for inPoly, coord in zip(subMaskCoordsBoolList, maskCoords):
+            if inPoly:
+                subMask[coord[0]][coord[1]] = 1
+                subMaskCoords.append((coord[0], coord[1]))
+
+        # subMaskTest2 = subMask.copy()
+        # subMaskCoordsTest2 = []
+        #
+        # xcoords = np.asarray([entry[1] for entry in maskCoords])
+        # ycoords = np.asarray([entry[0] for entry in maskCoords])
+        # # outputtest = npPointInsidePolygon(xcoords, ycoords, newBoundingBoxPoly)
 
         # subMaskCoords as [row, col] ie [y, x]
-        subMaskCoords = []
-        for row, col in maskCoords:
-            if pointInsidePolygon(col, row, newBoundingBoxPoly):
-                subMask[row][col] = 1
-                subMaskCoords.append((row, col))
+        # subMaskCoords = []
+        # for row, col in maskCoords:
+        #     if pointInsidePolygon(col, row, newBoundingBoxPoly):
+        #         subMask[row][col] = 1
+        #         subMaskCoords.append((row, col))
         return subMask, subMaskCoords, maskAngle
     # else:
     return None, None, None
@@ -156,36 +193,31 @@ def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file'
     return fileOrFolderList
 
 
+# @profile
 def isValidLine(boundingBoxDict, maskDict, instanceNum, minCoords, maxCoords, isVerticalSubSection):
-    # Could use shapeNum (with math for each index call) to eliminate isVerticalSubSection ifs later on
-    if isVerticalSubSection:
-        shapeNum = 1
-    else:
-        shapeNum = 0
-    # I think this is only working for isVerticalSubSection = True
-
+    revMinMaxCoords = [(minCoords[1], minCoords[0]), (maxCoords[1], maxCoords[0])]
     # Check min and max coords of each line if it is in any bbox in boundingBoxDict except for the current instanceNum (key in boundingBoxDict)
     validForInstanceList = []
     for checkNumber, checkBoundingBox in boundingBoxDict.items():
         if checkNumber != instanceNum:
+            checkPoly = bboxToPoly(checkBoundingBox[0], checkBoundingBox[1], checkBoundingBox[2], checkBoundingBox[3])
+
+            path = mpltPath.Path(checkPoly)
+            [minCoordInvalid, maxCoordInvalid] = path.contains_points(revMinMaxCoords)
             # Check if the start and end of the line hit another bounding box
             # coords are row, col but pointInsidePolygon is x, y
-            minCoordInvalid = pointInsidePolygon(minCoords[1], minCoords[0],
-                                                 bboxToPoly(checkBoundingBox[0], checkBoundingBox[1],
-                                                            checkBoundingBox[2], checkBoundingBox[3]))
-            maxCoordInvalid = pointInsidePolygon(maxCoords[1], maxCoords[0],
-                                                 bboxToPoly(checkBoundingBox[0], checkBoundingBox[1],
-                                                            checkBoundingBox[2], checkBoundingBox[3]))
+            # minCoordInvalid = pointInsidePolygon(minCoords[1], minCoords[0], checkPoly)
+            # maxCoordInvalid = pointInsidePolygon(maxCoords[1], maxCoords[0], checkPoly)
 
             # May need to do more...something with checking average and deviation from average width of the 2 wires?
             if minCoordInvalid or maxCoordInvalid:
                 imageBottom = maskDict[instanceNum].shape[0]
-
-                instanceTop = boundingBoxDict[instanceNum][1]
                 instanceBottom = boundingBoxDict[instanceNum][3]
-                checkInstanceTop = checkBoundingBox[1]
                 checkInstanceBottom = checkBoundingBox[3]
                 if abs(imageBottom - instanceBottom) < 20:
+                    instanceTop = boundingBoxDict[instanceNum][1]
+                    checkInstanceTop = checkBoundingBox[1]
+
                     # the box of interest is too close to the bottom
                     if instanceTop < checkInstanceTop:
                         # Good assumption that instance of interest is in front, since all wires ~same length and the top is lower than the check instance
@@ -269,7 +301,7 @@ def analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalS
                         measCoordsSet.add((value, line))
     return measCoordsSet, maskAngle
 
-
+# @profile
 def main():
     # outputsFileName = getFileOrDirList('file', 'Choose outputs pickle file')
     outputsFileName = '/home/mbraun/Downloads/outputmaskstest'
@@ -303,8 +335,7 @@ def main():
     if parallelProcessing:
         with tqdm_joblib(tqdm(desc="Analyzing Instances", total=numInstances)) as progress_bar:
             analysisOutput = joblib.Parallel(n_jobs=multiprocessing.cpu_count())(
-                joblib.delayed(analyzeSingleInstance)(maskDict, boundingBoxDict, instanceNumber,
-                                                      isVerticalSubSection) for
+                joblib.delayed(analyzeSingleInstance)(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection) for
                 instanceNumber in range(numInstances))
     else:
         analysisOutput = []
