@@ -6,6 +6,8 @@ from tqdm import tqdm
 import multiprocessing
 import matplotlib.pyplot as plt
 import matplotlib.path as mpltPath
+import matplotlib as mpl
+import matplotlib.patches as patches
 import numpy as np
 from os import path
 from PIL import Image
@@ -21,8 +23,9 @@ from MinimumBoundingBox import MinimumBoundingBox
 # from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 # from detectron2.utils.logger import setup_logger
 showPlots = False
+showBoundingBoxPlots = True
 isVerticalSubSection = True
-parallelProcessing = True
+parallelProcessing = False
 
 
 @contextlib.contextmanager
@@ -70,6 +73,29 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
 
         # pip install git+git://github.com/BraunMichael/MinimumBoundingBox.git@master
         mbbOutput = MinimumBoundingBox(maskCoords)
+        # Do this in isVerticalSubSection is False for length calculations...or maybe also everywhere for less restrictive overlap measures?
+        mbbCenter = mbbOutput['rectangle_center']
+        mbbLength = max(mbbOutput['length_orthogonal'], mbbOutput['length_parallel'])
+        if isVerticalSubSection:
+            mbbWidth = min(mbbOutput['length_orthogonal'], mbbOutput['length_parallel'])
+        else:
+            mbbWidth = min(mbbOutput['length_orthogonal'], mbbOutput['length_parallel']) * percentSize
+
+        mbbRotation = mbbOutput['cardinal_angle_deg']
+        if showBoundingBoxPlots:
+            fig = plt.figure(figsize=(15, 12))
+            ax = fig.add_subplot(111)
+            ax.imshow(npMaskFunc)
+            r1 = patches.Rectangle((xmin, ymax), xmax-xmin, -(ymax-ymin), fill=False, edgecolor="blue", alpha=1, linewidth=1)
+            r2 = patches.Rectangle((mbbCenter[1]-mbbWidth/2, mbbCenter[0]+mbbLength/2), mbbWidth, -mbbLength, fill=False, edgecolor="red", alpha=1, linewidth=1)
+
+            t2 = mpl.transforms.Affine2D().rotate_deg_around(mbbCenter[1], mbbCenter[0], -mbbRotation) + ax.transData
+            r2.set_transform(t2)
+            ax.axis('equal')
+            ax.add_patch(r1)
+            ax.add_patch(r2)
+            plt.autoscale()
+            plt.show()
 
         if isVerticalSubSection:
             originalbboxHeight = ymax - ymin
@@ -77,6 +103,7 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
             ymin = ymin + 0.5 * (originalbboxHeight - newbboxHeight)
             ymax = ymax - 0.5 * (originalbboxHeight - newbboxHeight)
         else:
+            # Switch to rotated bounding box
             originalbboxWidth = xmax - xmin
             newbboxWidth = originalbboxWidth * percentSize
             xmin = xmin + 0.5 * (originalbboxWidth - newbboxWidth)
