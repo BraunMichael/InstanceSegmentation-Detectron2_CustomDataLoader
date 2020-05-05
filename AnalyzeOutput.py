@@ -4,14 +4,16 @@ import joblib
 import contextlib
 from tqdm import tqdm
 import multiprocessing
-from skimage import color
+import cv2 as cv
 import matplotlib.pyplot as plt
 import matplotlib.path as mpltPath
 import numpy as np
 from os import path
-from PIL import Image
+from PIL import Image, ImageOps
 from skimage.measure import label, regionprops
 from tkinter import Tk, filedialog
+
+from MinimumBoundingBox import MinimumBoundingBox
 # from detectron2 import model_zoo
 # from detectron2.engine import DefaultPredictor
 # from detectron2.config import get_cfg
@@ -20,7 +22,7 @@ from tkinter import Tk, filedialog
 # from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 # from detectron2.utils.logger import setup_logger
 showPlots = False
-isVerticalSubSection = False
+isVerticalSubSection = True
 parallelProcessing = True
 
 
@@ -51,7 +53,8 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
     assert 0 <= percentSize <= 1, "Percent size of section has to be between 0 and 1"
     assert isinstance(isVerticalSubSection,
                       bool), "isVerticalSubSection must be a boolean, True if you want a vertical subsection, False if you want a horizontal subsection"
-
+    # originalMask = npMaskFunc.copy()
+    # originalMask2 = npMaskFunc.copy().astype(int)*255
     label_image = label(npMaskFunc, connectivity=1)
     allRegionProperties = regionprops(label_image)
     subMask = np.zeros(npMaskFunc.shape)
@@ -65,6 +68,44 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
     if len(largeRegionsNums) == 1:
         region = allRegionProperties[list(largeRegionsNums)[0]]
         ymin, xmin, ymax, xmax = region.bbox
+        maskCoords = region.coords
+        maskAngle = np.rad2deg(region.orientation)
+
+        # pip install git+git://github.com/BraunMichael/MinimumBoundingBox.git@master
+        mbbOutput = MinimumBoundingBox(maskCoords)
+        #
+        # subMaskImage = Image.fromarray(np.uint8(npMaskFunc.astype(int)*255))
+        # # This fixes the corner issue of diagonally cutting across the mask since edge pixels had no neighboring black pixels
+        # sub_mask_bordered = ImageOps.expand(subMaskImage, border=1)
+        # contours, hierarchy = cv.findContours(np.asarray(sub_mask_bordered), cv.RETR_CCOMP, cv.CHAIN_APPROX_NONE)
+        # # cnt = contours[0]
+        # # rect = cv.minAreaRect(cnt)
+        # # box = cv.boxPoints(rect)
+        # # box = np.int0(box)
+        # # outimg = cv.drawContours(npMaskFunc.astype(float), [box], 0, (0, 0, 255), 2)
+        #
+        # cnts = contours[0]
+        # rect = cv.minAreaRect(cnts[0])
+        # box = np.int0(cv.boxPoints(rect))
+        # cv.drawContours(originalMask.astype(float)*255, [box], 0, (36, 255, 12), 3)
+        #
+        # scale_percent = 25  # percent of original size
+        # width = int(originalMask.shape[1] * scale_percent / 100)
+        # height = int(originalMask.shape[0] * scale_percent / 100)
+        # dim = (width, height)
+        # outimgRS = cv.resize(originalMask.astype(float)*255, dim)
+        # cv.imshow('contours',outimgRS)
+        # cv.waitKey(0)
+        # print('maskangle:', maskAngle, 'Rect:', rect)
+        # #
+        # # fig, ax = plt.subplots(figsize=(8, 6))
+        # # ax.imshow(outimg, interpolation='none')
+        # # plt.show(block=False)
+        #
+        # fig2, ax2 = plt.subplots(figsize=(8, 6))
+        # ax2.imshow(originalMask2, interpolation='none')
+        # plt.show(block=True)
+
         if isVerticalSubSection:
             originalbboxHeight = ymax - ymin
             newbboxHeight = originalbboxHeight * percentSize
@@ -76,9 +117,8 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
             xmin = xmin + 0.5 * (originalbboxWidth - newbboxWidth)
             xmax = xmax - 0.5 * (originalbboxWidth - newbboxWidth)
         newBoundingBoxPoly = bboxToPoly(xmin, ymin, xmax, ymax)
+
         # maskCords as [row, col] ie [y, x]
-        maskCoords = region.coords
-        maskAngle = np.rad2deg(region.orientation)
         flippedMaskCoords = [(entry[1], entry[0]) for entry in maskCoords]
         subMaskCoords = []
         path = mpltPath.Path(newBoundingBoxPoly)
@@ -87,9 +127,9 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
             if inPoly:
                 subMask[coord[0]][coord[1]] = 1
                 subMaskCoords.append((coord[0], coord[1]))
-        return subMask, subMaskCoords, maskAngle
+        return subMask, subMaskCoords, maskAngle, mbbOutput
     # else:
-    return None, None, None
+    return None, None, None, None
 
 
 def fileHandling(annotationFileName):
@@ -214,7 +254,7 @@ def analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalS
         plt.show(block=False)
 
     # maskCoords are [row,col] ie [y,x]
-    subMask, subMaskCoords, maskAngle = centerXPercentofWire(mask, 0.5, isVerticalSubSection)
+    subMask, subMaskCoords, maskAngle, mbbOutput = centerXPercentofWire(mask, 0.5, isVerticalSubSection)
     if subMask is not None:
         if showPlots:
             fig2, ax2 = plt.subplots()
@@ -242,7 +282,7 @@ def analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalS
                         measCoordsSet.add((line, value))
                     else:
                         measCoordsSet.add((value, line))
-    return measCoordsSet, maskAngle
+    return measCoordsSet, maskAngle, mbbOutput
 
 
 # @profile
@@ -287,6 +327,8 @@ def main():
             analysisOutput.append(analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection))
     allMeasCoordsSetList = [entry[0] for entry in analysisOutput if entry[0] != set()]
     allMeasAnglesList = [entry[1] for entry in analysisOutput if entry[0] != set()]
+    allrbbList = [entry[2] for entry in analysisOutput if entry[0] != set()]
+    allrbbAngleList = [entry['cardinal_angle_deg'] for entry in allrbbList]
     measMask = np.zeros(npImage.shape)[:, :, 0]
     numMeasInstances = len(allMeasCoordsSetList)
     for coordsSet, instanceNumber in zip(allMeasCoordsSetList, range(numMeasInstances)):
@@ -300,6 +342,7 @@ def main():
     plt.imshow(measMask, cmap=plt.get_cmap('plasma'), interpolation='none', alpha=0.5)
     plt.show()
 
+    print('done')
 
 if __name__ == "__main__":
     main()
