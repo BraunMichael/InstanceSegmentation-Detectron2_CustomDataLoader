@@ -46,46 +46,6 @@ def tqdm_joblib(tqdm_object):
         tqdm_object.close()
 
 
-def pointInsidePolygon(x, y, poly):
-    # Ray tracing from https://stackoverflow.com/questions/36399381/whats-the-fastest-way-of-checking-if-a-point-is-inside-a-polygon-in-python
-    n = len(poly)
-    inside = False
-    p1x, p1y = poly[0]
-    for i in range(n + 1):
-        p2x, p2y = poly[i % n]
-        if y > min(p1y, p2y):
-            if y <= max(p1y, p2y):
-                if x <= max(p1x, p2x):
-                    if p1y != p2y:
-                        xints = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
-                    if p1x == p2x or x <= xints:
-                        inside = not inside
-        p1x, p1y = p2x, p2y
-
-    return inside
-
-
-def npPointInsidePolygon(x, y, poly):
-    n = len(poly)
-    inside = np.zeros(len(x), np.bool_)
-    p2x = 0.0
-    p2y = 0.0
-    xints = 0.0
-    p1x, p1y = poly[0]
-    for i in range(n + 1):
-        p2x, p2y = poly[i % n]
-        idx = np.nonzero((y > min(p1y, p2y)) & (y <= max(p1y, p2y)) & (x <= max(p1x, p2x)))[0]
-        if p1y != p2y:
-            xints = (y[idx] - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
-        if p1x == p2x:
-            inside[idx] = ~inside[idx]
-        else:
-            idxx = idx[x[idx] <= xints]
-            inside[idxx] = ~inside[idxx]
-
-        p1x, p1y = p2x, p2y
-    return inside
-
 # @profile
 def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
     assert 0 <= percentSize <= 1, "Percent size of section has to be between 0 and 1"
@@ -127,20 +87,6 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
             if inPoly:
                 subMask[coord[0]][coord[1]] = 1
                 subMaskCoords.append((coord[0], coord[1]))
-
-        # subMaskTest2 = subMask.copy()
-        # subMaskCoordsTest2 = []
-        #
-        # xcoords = np.asarray([entry[1] for entry in maskCoords])
-        # ycoords = np.asarray([entry[0] for entry in maskCoords])
-        # # outputtest = npPointInsidePolygon(xcoords, ycoords, newBoundingBoxPoly)
-
-        # subMaskCoords as [row, col] ie [y, x]
-        # subMaskCoords = []
-        # for row, col in maskCoords:
-        #     if pointInsidePolygon(col, row, newBoundingBoxPoly):
-        #         subMask[row][col] = 1
-        #         subMaskCoords.append((row, col))
         return subMask, subMaskCoords, maskAngle
     # else:
     return None, None, None
@@ -203,11 +149,8 @@ def isValidLine(boundingBoxDict, maskDict, instanceNum, minCoords, maxCoords, is
             checkPoly = bboxToPoly(checkBoundingBox[0], checkBoundingBox[1], checkBoundingBox[2], checkBoundingBox[3])
 
             path = mpltPath.Path(checkPoly)
-            [minCoordInvalid, maxCoordInvalid] = path.contains_points(revMinMaxCoords)
             # Check if the start and end of the line hit another bounding box
-            # coords are row, col but pointInsidePolygon is x, y
-            # minCoordInvalid = pointInsidePolygon(minCoords[1], minCoords[0], checkPoly)
-            # maxCoordInvalid = pointInsidePolygon(maxCoords[1], maxCoords[0], checkPoly)
+            [minCoordInvalid, maxCoordInvalid] = path.contains_points(revMinMaxCoords)
 
             # May need to do more...something with checking average and deviation from average width of the 2 wires?
             if minCoordInvalid or maxCoordInvalid:
@@ -300,6 +243,7 @@ def analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalS
                     else:
                         measCoordsSet.add((value, line))
     return measCoordsSet, maskAngle
+
 
 # @profile
 def main():
