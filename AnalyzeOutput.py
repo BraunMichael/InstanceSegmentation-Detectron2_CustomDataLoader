@@ -4,12 +4,11 @@ import joblib
 import contextlib
 from tqdm import tqdm
 import multiprocessing
-import cv2 as cv
 import matplotlib.pyplot as plt
 import matplotlib.path as mpltPath
 import numpy as np
 from os import path
-from PIL import Image, ImageOps
+from PIL import Image
 from skimage.measure import label, regionprops
 from tkinter import Tk, filedialog
 
@@ -53,8 +52,6 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
     assert 0 <= percentSize <= 1, "Percent size of section has to be between 0 and 1"
     assert isinstance(isVerticalSubSection,
                       bool), "isVerticalSubSection must be a boolean, True if you want a vertical subsection, False if you want a horizontal subsection"
-    # originalMask = npMaskFunc.copy()
-    # originalMask2 = npMaskFunc.copy().astype(int)*255
     label_image = label(npMaskFunc, connectivity=1)
     allRegionProperties = regionprops(label_image)
     subMask = np.zeros(npMaskFunc.shape)
@@ -73,38 +70,6 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
 
         # pip install git+git://github.com/BraunMichael/MinimumBoundingBox.git@master
         mbbOutput = MinimumBoundingBox(maskCoords)
-        #
-        # subMaskImage = Image.fromarray(np.uint8(npMaskFunc.astype(int)*255))
-        # # This fixes the corner issue of diagonally cutting across the mask since edge pixels had no neighboring black pixels
-        # sub_mask_bordered = ImageOps.expand(subMaskImage, border=1)
-        # contours, hierarchy = cv.findContours(np.asarray(sub_mask_bordered), cv.RETR_CCOMP, cv.CHAIN_APPROX_NONE)
-        # # cnt = contours[0]
-        # # rect = cv.minAreaRect(cnt)
-        # # box = cv.boxPoints(rect)
-        # # box = np.int0(box)
-        # # outimg = cv.drawContours(npMaskFunc.astype(float), [box], 0, (0, 0, 255), 2)
-        #
-        # cnts = contours[0]
-        # rect = cv.minAreaRect(cnts[0])
-        # box = np.int0(cv.boxPoints(rect))
-        # cv.drawContours(originalMask.astype(float)*255, [box], 0, (36, 255, 12), 3)
-        #
-        # scale_percent = 25  # percent of original size
-        # width = int(originalMask.shape[1] * scale_percent / 100)
-        # height = int(originalMask.shape[0] * scale_percent / 100)
-        # dim = (width, height)
-        # outimgRS = cv.resize(originalMask.astype(float)*255, dim)
-        # cv.imshow('contours',outimgRS)
-        # cv.waitKey(0)
-        # print('maskangle:', maskAngle, 'Rect:', rect)
-        # #
-        # # fig, ax = plt.subplots(figsize=(8, 6))
-        # # ax.imshow(outimg, interpolation='none')
-        # # plt.show(block=False)
-        #
-        # fig2, ax2 = plt.subplots(figsize=(8, 6))
-        # ax2.imshow(originalMask2, interpolation='none')
-        # plt.show(block=True)
 
         if isVerticalSubSection:
             originalbboxHeight = ymax - ymin
