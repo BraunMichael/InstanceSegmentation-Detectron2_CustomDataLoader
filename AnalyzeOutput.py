@@ -8,12 +8,14 @@ import matplotlib.pyplot as plt
 import matplotlib.path as mpltPath
 import matplotlib as mpl
 import matplotlib.patches as patches
-from shapely.geometry import Polygon, LineString
+from shapely.geometry import Point, LineString, MultiLineString, Polygon
 import numpy as np
 from os import path
 from PIL import Image
 from skimage.measure import label, regionprops
 from tkinter import Tk, filedialog
+import sys
+from collections import OrderedDict
 
 from MinimumBoundingBox import MinimumBoundingBox
 # from detectron2 import model_zoo
@@ -237,6 +239,48 @@ def isEdgeInstance(mask, boundingBox, isVerticalSubSection):
     return False
 
 
+def longestLineInPolygon(maskPolygon, startCoordsRaw, endCoordsRaw):
+    startCoord = Point(startCoordsRaw)
+    endCoord = Point(endCoordsRaw)
+    lineTest = LineString([startCoord, endCoord])
+    testSegments = lineTest.intersection(maskPolygon)  # without .boundary, get the lines immediately
+
+    LineLength = None
+    if isinstance(testSegments, LineString):
+        if not testSegments.is_empty:
+            # The line is entirely inside the mask polygon
+            LineLength = testSegments.length
+    elif isinstance(testSegments, MultiLineString):
+        # The line crosses the boundary of the mask polygon
+        LineLength = 0
+        for segment in testSegments:
+            if segment.length > LineLength:
+                LineLength = segment.length
+    return LineLength
+
+
+def getLinePoints(startCoordRaw, endCoordRaw):
+    startCoord = Point(startCoordRaw)
+    endCoord = Point(endCoordRaw)
+    lineTest = LineString([startCoord, endCoord])
+
+    xy = set()
+    if sys.version_info < (3, 7):
+        uniqTest = OrderedDict()
+    else:
+        # in Python 3.7 and newer dicts are ordered by default
+        uniqTest = {}
+    for f in range(int(np.ceil(lineTest.length)) + 1):
+        p = lineTest.interpolate(f).coords[0]
+        pr = map(round, p)
+        xy.add(pr)
+        uniqTest[tuple(pr)] = ''
+    # # Can iterated through via:
+    # for key in uniqTest.keys():
+    #     print(key)
+    return uniqTest
+
+
 # @profile
 def analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection):
     mask = maskDict[instanceNumber]
@@ -249,7 +293,7 @@ def analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalS
         plt.show(block=False)
 
     # maskCoords are [row,col] ie [y,x]
-    subMask, subMaskCoords, maskAngle, mbbOutput = centerXPercentofWire(mask, 0.5, isVerticalSubSection)
+    subMask, subMaskCoords, maskAngle, mbbOutput = centerXPercentofWire(mask, 0.7, isVerticalSubSection)
     if subMask is not None:
         if showPlots:
             fig2, ax2 = plt.subplots()
