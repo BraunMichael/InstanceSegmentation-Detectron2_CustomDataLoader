@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import matplotlib.path as mpltPath
 import matplotlib as mpl
 import matplotlib.patches as patches
+from shapely.geometry import Polygon, LineString
 import numpy as np
 from os import path
 from PIL import Image
@@ -23,9 +24,9 @@ from MinimumBoundingBox import MinimumBoundingBox
 # from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 # from detectron2.utils.logger import setup_logger
 showPlots = False
-showBoundingBoxPlots = True
+showBoundingBoxPlots = False
 isVerticalSubSection = True
-parallelProcessing = False
+parallelProcessing = True
 
 
 @contextlib.contextmanager
@@ -108,6 +109,7 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
             newbboxWidth = originalbboxWidth * percentSize
             xmin = xmin + 0.5 * (originalbboxWidth - newbboxWidth)
             xmax = xmax - 0.5 * (originalbboxWidth - newbboxWidth)
+
         newBoundingBoxPoly = bboxToPoly(xmin, ymin, xmax, ymax)
 
         # maskCords as [row, col] ie [y, x]
@@ -115,6 +117,7 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
         subMaskCoords = []
         path = mpltPath.Path(newBoundingBoxPoly)
         subMaskCoordsBoolList = path.contains_points(flippedMaskCoords)
+
         for inPoly, coord in zip(subMaskCoordsBoolList, maskCoords):
             if inPoly:
                 subMask[coord[0]][coord[1]] = 1
@@ -172,20 +175,20 @@ def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file'
 
 
 # @profile
-def isValidLine(boundingBoxDict, maskDict, instanceNum, minCoords, maxCoords, isVerticalSubSection):
-    revMinMaxCoords = [(minCoords[1], minCoords[0]), (maxCoords[1], maxCoords[0])]
-    # Check min and max coords of each line if it is in any bbox in boundingBoxDict except for the current instanceNum (key in boundingBoxDict)
+def isValidLine(boundingBoxDict, maskDict, instanceNum, minCoords, maxCoords):
+    # Check if line is contained in a different bounding box, need to check which instance is in front (below)
+    # Don't check for the current instanceNum (key in boundingBoxDict)
     validForInstanceList = []
+    # coords are row, col, ie (y,x)
+    instanceLine = LineString([[minCoords[1], minCoords[0]], [maxCoords[1], maxCoords[0]]])
     for checkNumber, checkBoundingBox in boundingBoxDict.items():
         if checkNumber != instanceNum:
-            checkPoly = bboxToPoly(checkBoundingBox[0], checkBoundingBox[1], checkBoundingBox[2], checkBoundingBox[3])
-
-            path = mpltPath.Path(checkPoly)
-            # Check if the start and end of the line hit another bounding box
-            [minCoordInvalid, maxCoordInvalid] = path.contains_points(revMinMaxCoords)
+            checkPoly = Polygon(bboxToPoly(checkBoundingBox[0], checkBoundingBox[1], checkBoundingBox[2], checkBoundingBox[3]))
+            # Check if line is contained in a different bounding box, need to check which instance is in front (below)
+            lineInvalid = instanceLine.intersects(checkPoly)
 
             # May need to do more...something with checking average and deviation from average width of the 2 wires?
-            if minCoordInvalid or maxCoordInvalid:
+            if lineInvalid:
                 imageBottom = maskDict[instanceNum].shape[0]
                 instanceBottom = boundingBoxDict[instanceNum][3]
                 checkInstanceBottom = checkBoundingBox[3]
@@ -256,23 +259,23 @@ def analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalS
         subMaskCoordsDict = makeSubMaskCoordsDict(subMaskCoords, isVerticalSubSection)
 
         if not isEdgeInstance(mask, boundingBox, isVerticalSubSection):
-            validLineSet = set()
-            for line, linePixelsList in subMaskCoordsDict.items():
-                if isVerticalSubSection:
+            if isVerticalSubSection:
+                validLineSet = set()
+                for line, linePixelsList in subMaskCoordsDict.items():
                     # Coords as row, col
                     minCoords = (line, min(linePixelsList))
                     maxCoords = (line, max(linePixelsList))
-                else:
-                    minCoords = (min(linePixelsList), line)
-                    maxCoords = (max(linePixelsList), line)
-
-                if isValidLine(boundingBoxDict, maskDict, instanceNumber, minCoords, maxCoords, isVerticalSubSection):
-                    validLineSet.add(line)
-            for line in validLineSet:
-                for value in subMaskCoordsDict[line]:
-                    if isVerticalSubSection:
+                    if isValidLine(boundingBoxDict, maskDict, instanceNumber, minCoords, maxCoords):
+                        validLineSet.add(line)
+                for line in validLineSet:
+                    for value in subMaskCoordsDict[line]:
                         measCoordsSet.add((line, value))
-                    else:
+
+            else:
+                minCoords = (min(linePixelsList), line)
+                maxCoords = (max(linePixelsList), line)
+                for line in validLineSet:
+                    for value in subMaskCoordsDict[line]:
                         measCoordsSet.add((value, line))
     return measCoordsSet, maskAngle, mbbOutput
 
