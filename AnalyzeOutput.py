@@ -9,6 +9,7 @@ import matplotlib.path as mpltPath
 import matplotlib as mpl
 import matplotlib.patches as patches
 from shapely.geometry import Point, LineString, MultiLineString, Polygon
+from shapely import affinity
 import numpy as np
 from os import path
 from PIL import Image
@@ -26,9 +27,9 @@ from MinimumBoundingBox import MinimumBoundingBox
 # from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 # from detectron2.utils.logger import setup_logger
 showPlots = False
-showBoundingBoxPlots = False
+showBoundingBoxPlots = True
 isVerticalSubSection = True
-parallelProcessing = True
+parallelProcessing = False
 
 
 @contextlib.contextmanager
@@ -139,7 +140,7 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
             if inPoly:
                 subMask[coord[0]][coord[1]] = 1
                 subMaskCoords.append((coord[0], coord[1]))
-        return subMask, subMaskCoords, maskAngle, mbbOutput
+        return subMask, subMaskCoords, maskAngle, rotatedNewMBB
     # else:
     return None, None, None, None
 
@@ -299,31 +300,32 @@ def analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalS
     mask = maskDict[instanceNumber]
     boundingBox = boundingBoxDict[instanceNumber]
     # measCoords will be [row, col]
-    measCoordsSet = set()
+
     if showPlots:
         fig, ax = plt.subplots()
         ax.imshow(mask)
         plt.show(block=False)
 
     # maskCoords are [row,col] ie [y,x]
-    subMask, subMaskCoords, maskAngle, mbbOutput = centerXPercentofWire(mask, 0.7, isVerticalSubSection)
+    subMask, subMaskCoords, maskAngle, rotatedNewMBB = centerXPercentofWire(mask, 0.7, isVerticalSubSection)
     if subMask is not None:
         if showPlots:
             fig2, ax2 = plt.subplots()
             ax2.imshow(subMask)
             plt.show(block=False)
 
-        subMaskCoordsDict = makeSubMaskCoordsDict(subMaskCoords, isVerticalSubSection)
-
+        validLineSet = set()
+        lengthList = []
         if not isEdgeInstance(mask, boundingBox, isVerticalSubSection):
             if isVerticalSubSection:
-                validLineSet = set()
+                subMaskCoordsDict = makeSubMaskCoordsDict(subMaskCoords, isVerticalSubSection)
                 for line, linePixelsList in subMaskCoordsDict.items():
                     # Coords as row, col
                     minCoords = (line, min(linePixelsList))
                     maxCoords = (line, max(linePixelsList))
                     if isValidLine(boundingBoxDict, maskDict, instanceNumber, minCoords, maxCoords):
                         validLineSet.add(line)
+                measCoordsSet = set()
                 for line in validLineSet:
                     for value in subMaskCoordsDict[line]:
                         measCoordsSet.add((line, value))
@@ -378,8 +380,9 @@ def main():
         for instanceNumber in range(numInstances):
             analysisOutput.append(analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection))
     allMeasCoordsSetList = [entry[0] for entry in analysisOutput if entry[0] != set()]
-    allMeasAnglesList = [entry[1] for entry in analysisOutput if entry[0] != set()]
-    allrbbList = [entry[2] for entry in analysisOutput if entry[0] != set()]
+    allMeasLengthList = [entry[1] for entry in analysisOutput if entry[0] != set()]
+    allMeasAnglesList = [entry[2] for entry in analysisOutput if entry[0] != set()]
+    allrbbList = [entry[3] for entry in analysisOutput if entry[0] != set()]
     allrbbAngleList = [entry['cardinal_angle_deg'] for entry in allrbbList]
     measMask = np.zeros(npImage.shape)[:, :, 0]
     numMeasInstances = len(allMeasCoordsSetList)
