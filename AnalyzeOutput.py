@@ -331,12 +331,20 @@ def analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalS
                         measCoordsSet.add((line, value))
 
             else:
-                minCoords = (min(linePixelsList), line)
-                maxCoords = (max(linePixelsList), line)
+                # Coords are row, col ie (y,x)
+                bottomLeftCoords = (rotatedNewMBB.exterior.coords.xy[1][0], rotatedNewMBB.exterior.coords.xy[0][0])
+                bottomRightCoords = (rotatedNewMBB.exterior.coords.xy[1][1],rotatedNewMBB.exterior.coords.xy[0][1])
+                topRightCoords = (rotatedNewMBB.exterior.coords.xy[1][2], rotatedNewMBB.exterior.coords.xy[0][2])
+                topLeftCoords = (rotatedNewMBB.exterior.coords.xy[1][3], rotatedNewMBB.exterior.coords.xy[0][3])
+                bottomLine = getLinePoints(bottomLeftCoords, bottomRightCoords)
+                topLine = getLinePoints(topLeftCoords, topRightCoords)
+                for bottomLinePoint, topLinePoint in zip(bottomLine.keys(), topLine.keys()):
+                    if isValidLine(boundingBoxDict, maskDict, instanceNumber, bottomLinePoint, topLinePoint):
+                        validLineSet.add((bottomLinePoint, topLinePoint))
                 for line in validLineSet:
-                    for value in subMaskCoordsDict[line]:
-                        measCoordsSet.add((value, line))
-    return measCoordsSet, maskAngle, mbbOutput
+                    pass
+
+    return measCoordsSet, lengthList, maskAngle, rotatedNewMBB
 
 
 # @profile
