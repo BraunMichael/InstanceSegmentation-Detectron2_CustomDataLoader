@@ -90,7 +90,7 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
     label_image = label(npMaskFunc, connectivity=1)
     allRegionProperties = regionprops(label_image)
     subMask = np.zeros(npMaskFunc.shape)
-    maskCTest = subMask.copy()
+    # maskCTest = subMask.copy()
     largeRegionsNums = set()
     regionNum = 0
     for region in allRegionProperties:
@@ -107,7 +107,6 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
         flippedMaskCoords = maskCoords.copy()
         flippedMaskCoords[:, 0], flippedMaskCoords[:, 1] = flippedMaskCoords[:, 1], flippedMaskCoords[:, 0].copy()
         maskAngle = np.rad2deg(region.orientation)
-
 
         # pip install git+git://github.com/BraunMichael/MinimumBoundingBox.git@master
         # This is much slower
@@ -139,7 +138,6 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
             # Use the minimum rotated bounding box and scale the width
             subBundingBoxPoly = affinity.scale(maskPolygon.minimum_rotated_rectangle, percentSize, 1)
         outputSubMaskPoly = maskPolygon.intersection(subBundingBoxPoly)
-
 
         # # Do this in isVerticalSubSection is False for length calculations...or maybe also everywhere for less restrictive overlap measures?
         # mbbCenter = outputMinimumBoundingBox['rectangle_center']
