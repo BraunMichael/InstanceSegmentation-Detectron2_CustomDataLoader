@@ -160,6 +160,9 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
         rotatedNewMBB = affinity.rotate(newMBB, -mbbRotation)
 
         if showBoundingBoxPlots:
+            # Blue rectangle is standard bounding box
+            # Red rectangle is rotated bounding box from MinimumBoundingBox
+            # Multicolored points are either standard (isVerticalSubsection=True) or rotated bounding box (isVerticalSubsection=False)
             fig = plt.figure(figsize=(15, 12))
             ax = fig.add_subplot(111)
             ax.imshow(npMaskFunc)
@@ -175,7 +178,7 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
             # 5, since we have 4 points for a rectangle but don't want to have 1st = 4th
             phi = -1 * np.linspace(0, 2*np.pi, 5)
             rgb_cycle = np.vstack((.5 * (1. + np.cos(phi)), .5 * (1. + np.cos(phi + 2 * np.pi / 3)), .5 * (1. + np.cos(phi - 2 * np.pi / 3)))).T
-            plt.scatter(rotatedNewMBB.exterior.coords.xy[0][:-1], rotatedNewMBB.exterior.coords.xy[1][:-1], c=rgb_cycle[:4])
+            plt.scatter(subBundingBoxPoly.exterior.coords.xy[0][:-1], subBundingBoxPoly.exterior.coords.xy[1][:-1], c=rgb_cycle[:4])
             plt.autoscale()
             plt.show()
 
