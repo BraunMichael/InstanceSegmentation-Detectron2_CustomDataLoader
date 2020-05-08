@@ -86,7 +86,7 @@ def create_sub_mask_annotation(sub_mask, region, category_id, annotation_id, is_
 
             # Make a polygon and simplify it
             poly = Polygon(contour)
-            poly = poly.simplify(1.0, preserve_topology=False)
+            poly = poly.simplify(1.0, preserve_topology=False)  # should use preserve_topology=True?
             polygons.append(poly)
             # print("Annotation ID:", annotation_id, "poly.geom_type:", poly.geom_type)
             segmentation = np.array(poly.exterior.coords).ravel().tolist()
