@@ -31,9 +31,9 @@ from MinimumBoundingBox import MinimumBoundingBox
 # from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 # from detectron2.utils.logger import setup_logger
 showPlots = False
-showBoundingBoxPlots = False
+showBoundingBoxPlots = True
 plotPolylidar = False
-isVerticalSubSection = True
+isVerticalSubSection = False
 parallelProcessing = False
 
 
@@ -100,11 +100,13 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
         regionNum += 1
     if len(largeRegionsNums) == 1:
         region = allRegionProperties[list(largeRegionsNums)[0]]
-        ymin, xmin, ymax, xmax = region.bbox
+        ymin, xmin, ymax, xmax = region.bbox  # may not need this line
 
         # maskCords as [row, col] ie [y, x]
-        maskCoords = region.coords
-        flippedMaskCoords = [(entry[1], entry[0]) for entry in maskCoords]
+        maskCoords = np.array(region.coords)
+        flippedMaskCoords = maskCoords.copy()
+        flippedMaskCoords[:, 0], flippedMaskCoords[:, 1] = flippedMaskCoords[:, 1], flippedMaskCoords[:, 0].copy()
+        # flippedMaskCoords = [(entry[1], entry[0]) for entry in maskCoords]
         maskAngle = np.rad2deg(region.orientation)
 
 
@@ -117,21 +119,29 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
         outputMinimumBoundingBox = MinimumBoundingBox(maskCoords)
 
         # Will need to use Polygon subtraction to convert to subMask and final rotated bounding box
-        # polylidarPolygon = extractPolygons(flippedMaskCoords)
         # Extracts planes and polygons, time
-        points = np.array(flippedMaskCoords)
-        polygons = extractPolygons(points)
-        for poly in polygons:
-            shell_coords = [get_point(pi, points) for pi in poly.shell]
-            outline = Polygon(shell=shell_coords)
+        polygonsList = extractPolygons(flippedMaskCoords)
+        assert len(polygonsList) == 1, "There was more than 1 polygon extracted from extractPolygons."
+        shell_coords = [get_point(pi, flippedMaskCoords) for pi in polygonsList[0].shell]
+        maskPolygon = Polygon(shell=shell_coords)
         if plotPolylidar:
             fig, ax = plt.subplots(figsize=(8, 8), nrows=1, ncols=1)
             # plot points
-            plot_points(np.array(flippedMaskCoords), ax)
+            plot_points(flippedMaskCoords, ax)
             # plot polygons...doesn't use 2nd argument
-            plot_polygons(polygons, 0, np.array(flippedMaskCoords), ax)
+            plot_polygons(maskPolygon, 0, flippedMaskCoords, ax)
             plt.axis('equal')
             plt.show()
+
+        # for testing, remove
+        percentSize = 1
+        if isVerticalSubSection:
+            # Keep a squared bounding box (envelope) and scale the height
+            subBundingBoxPoly = affinity.scale(maskPolygon.envelope, 1, percentSize)
+        else:
+            # Use the minimum rotated bounding box and scale the width
+            subBundingBoxPoly = affinity.scale(maskPolygon.minimum_rotated_rectangle, percentSize, 1)
+
 
         # Do this in isVerticalSubSection is False for length calculations...or maybe also everywhere for less restrictive overlap measures?
         mbbCenter = outputMinimumBoundingBox['rectangle_center']
@@ -396,7 +406,8 @@ def analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalS
                     if isValidLine(boundingBoxDict, maskDict, instanceNumber, bottomLinePoint, topLinePoint):
                         validLineSet.add((bottomLinePoint, topLinePoint))
                 for line in validLineSet:
-                    pixelLengthList.append(longestLineLengthInPolygon())
+                    # pixelLengthList.append(longestLineLengthInPolygon())
+                    pass
 
     return measCoordsSet, pixelLengthList, maskAngle, rotatedNewMBB
 
