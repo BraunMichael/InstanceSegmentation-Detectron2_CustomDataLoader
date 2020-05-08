@@ -12,12 +12,16 @@ from shapely.geometry import Point, LineString, MultiLineString, Polygon
 from shapely import affinity
 import numpy as np
 from os import path
-from PIL import Image
-from skimage.measure import label, regionprops
+from PIL import Image, ImageOps
+from skimage.measure import label, regionprops, find_contours
 from tkinter import Tk, filedialog
 import sys
 from collections import OrderedDict
+from polylidar import extractPlanesAndPolygons
+from polylidarutil import (generate_test_points, plot_points, plot_triangles, get_estimated_lmax,
+                           plot_triangle_meshes, get_triangles_from_he, get_plane_triangles, plot_polygons, get_point)
 
+from polylidar import extractPolygons
 from MinimumBoundingBox import MinimumBoundingBox
 # from detectron2 import model_zoo
 # from detectron2.engine import DefaultPredictor
@@ -27,7 +31,8 @@ from MinimumBoundingBox import MinimumBoundingBox
 # from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 # from detectron2.utils.logger import setup_logger
 showPlots = False
-showBoundingBoxPlots = True
+showBoundingBoxPlots = False
+plotPolylidar = False
 isVerticalSubSection = True
 parallelProcessing = False
 
@@ -54,6 +59,29 @@ def tqdm_joblib(tqdm_object):
         tqdm_object.close()
 
 
+def createPolygonFromCoordList(coordList, blankMask):
+    # Lets try to find contours and make that a polygon which we need later, and gives us minimum_rotated_rectangle as well
+    for coord in coordList:
+        blankMask[coord[0]][coord[1]] = 255
+    maskCImage = Image.fromarray(np.uint8(blankMask))
+    # This fixes the corner issue of diagonally cutting across the mask since edge pixels had no neighboring black pixels
+    maskCImage_bordered = ImageOps.expand(maskCImage, border=1)
+    contour = find_contours(maskCImage_bordered, 0.5, positive_orientation='low')[0]
+
+    # Flip from (row, col) representation to (x, y)
+    # and subtract the padding pixel (not doing that, we didn't buffer)
+
+    # The 2nd line is needed for the correct orientation in the TrainNewData.py file
+    # If wanting to showPlots here and get correct orientation, need to change something in the plotting code
+    # contour[:, 0], contour[:, 1] = contour[:, 1], sub_mask.size[1] - contour[:, 0].copy()
+    contour[:, 0], contour[:, 1] = contour[:, 1], contour[:, 0].copy()
+
+    # Make a polygon and simplify it
+    poly = Polygon(contour)
+    poly = poly.simplify(1.0, preserve_topology=False)  # should use preserve_topology=True?
+    return poly
+
+
 # @profile
 def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
     assert 0 <= percentSize <= 1, "Percent size of section has to be between 0 and 1"
@@ -62,6 +90,7 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
     label_image = label(npMaskFunc, connectivity=1)
     allRegionProperties = regionprops(label_image)
     subMask = np.zeros(npMaskFunc.shape)
+    maskCTest = subMask.copy()
     largeRegionsNums = set()
     regionNum = 0
     for region in allRegionProperties:
@@ -72,13 +101,37 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
     if len(largeRegionsNums) == 1:
         region = allRegionProperties[list(largeRegionsNums)[0]]
         ymin, xmin, ymax, xmax = region.bbox
+
+        # maskCords as [row, col] ie [y, x]
         maskCoords = region.coords
+        flippedMaskCoords = [(entry[1], entry[0]) for entry in maskCoords]
         maskAngle = np.rad2deg(region.orientation)
 
+
         # pip install git+git://github.com/BraunMichael/MinimumBoundingBox.git@master
-        outputMinimumBoundingBox = MinimumBoundingBox(maskCoords)
         # This is much slower
         # shapelyTestRect = MultiPoint(maskCoords).minimum_rotated_rectangle
+        # This is a bit faster, but polylidar is faster still
+        # maskPolygon = createPolygonFromCoordList(maskCoords, maskCTest)
+        # This is actually faster for just the bounding box, but I think slower overall as we need the contour Polygon later
+        outputMinimumBoundingBox = MinimumBoundingBox(maskCoords)
+
+        # Will need to use Polygon subtraction to convert to subMask and final rotated bounding box
+        # polylidarPolygon = extractPolygons(flippedMaskCoords)
+        # Extracts planes and polygons, time
+        points = np.array(flippedMaskCoords)
+        polygons = extractPolygons(points)
+        for poly in polygons:
+            shell_coords = [get_point(pi, points) for pi in poly.shell]
+            outline = Polygon(shell=shell_coords)
+        if plotPolylidar:
+            fig, ax = plt.subplots(figsize=(8, 8), nrows=1, ncols=1)
+            # plot points
+            plot_points(np.array(flippedMaskCoords), ax)
+            # plot polygons...doesn't use 2nd argument
+            plot_polygons(polygons, 0, np.array(flippedMaskCoords), ax)
+            plt.axis('equal')
+            plt.show()
 
         # Do this in isVerticalSubSection is False for length calculations...or maybe also everywhere for less restrictive overlap measures?
         mbbCenter = outputMinimumBoundingBox['rectangle_center']
@@ -130,8 +183,7 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
 
         newBoundingBoxPoly = bboxToPoly(xmin, ymin, xmax, ymax)
 
-        # maskCords as [row, col] ie [y, x]
-        flippedMaskCoords = [(entry[1], entry[0]) for entry in maskCoords]
+
         subMaskCoords = []
         path = mpltPath.Path(newBoundingBoxPoly)
         subMaskCoordsBoolList = path.contains_points(flippedMaskCoords)
@@ -255,7 +307,7 @@ def isEdgeInstance(mask, boundingBox, isVerticalSubSection):
     return False
 
 
-def longestLineInPolygon(maskPolygon, startCoordsRaw, endCoordsRaw):
+def longestLineLengthInPolygon(maskPolygon, startCoordsRaw, endCoordsRaw):
     startCoord = Point(startCoordsRaw)
     endCoord = Point(endCoordsRaw)
     lineTest = LineString([startCoord, endCoord])
@@ -300,6 +352,8 @@ def analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalS
     mask = maskDict[instanceNumber]
     boundingBox = boundingBoxDict[instanceNumber]
     # measCoords will be [row, col]
+    measCoordsSet = set()
+    pixelLengthList = []
 
     if showPlots:
         fig, ax = plt.subplots()
@@ -315,7 +369,6 @@ def analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalS
             plt.show(block=False)
 
         validLineSet = set()
-        lengthList = []
         if not isEdgeInstance(mask, boundingBox, isVerticalSubSection):
             if isVerticalSubSection:
                 subMaskCoordsDict = makeSubMaskCoordsDict(subMaskCoords, isVerticalSubSection)
@@ -325,8 +378,9 @@ def analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalS
                     maxCoords = (line, max(linePixelsList))
                     if isValidLine(boundingBoxDict, maskDict, instanceNumber, minCoords, maxCoords):
                         validLineSet.add(line)
-                measCoordsSet = set()
+
                 for line in validLineSet:
+                    pixelLengthList.append(len(subMaskCoordsDict[line]))
                     for value in subMaskCoordsDict[line]:
                         measCoordsSet.add((line, value))
 
@@ -342,9 +396,9 @@ def analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalS
                     if isValidLine(boundingBoxDict, maskDict, instanceNumber, bottomLinePoint, topLinePoint):
                         validLineSet.add((bottomLinePoint, topLinePoint))
                 for line in validLineSet:
-                    pass
+                    pixelLengthList.append(longestLineLengthInPolygon())
 
-    return measCoordsSet, lengthList, maskAngle, rotatedNewMBB
+    return measCoordsSet, pixelLengthList, maskAngle, rotatedNewMBB
 
 
 # @profile
@@ -387,6 +441,7 @@ def main():
         analysisOutput = []
         for instanceNumber in range(numInstances):
             analysisOutput.append(analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection))
+    quit()
     allMeasCoordsSetList = [entry[0] for entry in analysisOutput if entry[0] != set()]
     allMeasLengthList = [entry[1] for entry in analysisOutput if entry[0] != set()]
     allMeasAnglesList = [entry[2] for entry in analysisOutput if entry[0] != set()]
