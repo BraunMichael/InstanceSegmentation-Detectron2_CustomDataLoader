@@ -31,7 +31,7 @@ from MinimumBoundingBox import MinimumBoundingBox
 # from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 # from detectron2.utils.logger import setup_logger
 showPlots = False
-showBoundingBoxPlots = True
+showBoundingBoxPlots = False
 plotPolylidar = False
 isVerticalSubSection = False
 parallelProcessing = False
@@ -143,21 +143,21 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
             subBundingBoxPoly = affinity.scale(maskPolygon.minimum_rotated_rectangle, percentSize, 1)
 
 
-        # Do this in isVerticalSubSection is False for length calculations...or maybe also everywhere for less restrictive overlap measures?
-        mbbCenter = outputMinimumBoundingBox['rectangle_center']
-        mbbLength = max(outputMinimumBoundingBox['length_orthogonal'], outputMinimumBoundingBox['length_parallel'])
-        if isVerticalSubSection:
-            mbbWidth = min(outputMinimumBoundingBox['length_orthogonal'], outputMinimumBoundingBox['length_parallel'])
-        else:
-            mbbWidth = min(outputMinimumBoundingBox['length_orthogonal'], outputMinimumBoundingBox['length_parallel']) * percentSize
-        lowerLeft = (mbbCenter[1] - mbbWidth / 2, mbbCenter[0] + mbbLength / 2)
-        lowerRight = (mbbCenter[1] + mbbWidth / 2, mbbCenter[0] + mbbLength / 2)
-        upperRight = (mbbCenter[1] + mbbWidth / 2, mbbCenter[0] - mbbLength / 2)
-        upperLeft = (mbbCenter[1] - mbbWidth / 2, mbbCenter[0] - mbbLength / 2)
-        newMBB = Polygon([lowerLeft, lowerRight, upperRight, upperLeft])
-
-        mbbRotation = outputMinimumBoundingBox['cardinal_angle_deg']
-        rotatedNewMBB = affinity.rotate(newMBB, -mbbRotation)
+        # # Do this in isVerticalSubSection is False for length calculations...or maybe also everywhere for less restrictive overlap measures?
+        # mbbCenter = outputMinimumBoundingBox['rectangle_center']
+        # mbbLength = max(outputMinimumBoundingBox['length_orthogonal'], outputMinimumBoundingBox['length_parallel'])
+        # if isVerticalSubSection:
+        #     mbbWidth = min(outputMinimumBoundingBox['length_orthogonal'], outputMinimumBoundingBox['length_parallel'])
+        # else:
+        #     mbbWidth = min(outputMinimumBoundingBox['length_orthogonal'], outputMinimumBoundingBox['length_parallel']) * percentSize
+        # lowerLeft = (mbbCenter[1] - mbbWidth / 2, mbbCenter[0] + mbbLength / 2)
+        # lowerRight = (mbbCenter[1] + mbbWidth / 2, mbbCenter[0] + mbbLength / 2)
+        # upperRight = (mbbCenter[1] + mbbWidth / 2, mbbCenter[0] - mbbLength / 2)
+        # upperLeft = (mbbCenter[1] - mbbWidth / 2, mbbCenter[0] - mbbLength / 2)
+        # newMBB = Polygon([lowerLeft, lowerRight, upperRight, upperLeft])
+        #
+        # mbbRotation = outputMinimumBoundingBox['cardinal_angle_deg']
+        # rotatedNewMBB = affinity.rotate(newMBB, -mbbRotation)
 
         if showBoundingBoxPlots:
             # Blue rectangle is standard bounding box
@@ -167,13 +167,13 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
             ax = fig.add_subplot(111)
             ax.imshow(npMaskFunc)
             r1 = patches.Rectangle((xmin, ymax), xmax-xmin, -(ymax-ymin), fill=False, edgecolor="blue", alpha=1, linewidth=1)
-            r2 = patches.Rectangle(lowerLeft, mbbWidth, -mbbLength, fill=False, edgecolor="red", alpha=1, linewidth=1)
-
-            t2 = mpl.transforms.Affine2D().rotate_deg_around(mbbCenter[1], mbbCenter[0], -mbbRotation) + ax.transData
-            r2.set_transform(t2)
+            # r2 = patches.Rectangle(lowerLeft, mbbWidth, -mbbLength, fill=False, edgecolor="red", alpha=1, linewidth=1)
+            #
+            # t2 = mpl.transforms.Affine2D().rotate_deg_around(mbbCenter[1], mbbCenter[0], -mbbRotation) + ax.transData
+            # r2.set_transform(t2)
             ax.axis('equal')
             ax.add_patch(r1)
-            ax.add_patch(r2)
+            # ax.add_patch(r2)
 
             # 5, since we have 4 points for a rectangle but don't want to have 1st = 4th
             phi = -1 * np.linspace(0, 2*np.pi, 5)
