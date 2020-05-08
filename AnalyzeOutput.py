@@ -82,7 +82,7 @@ def createPolygonFromCoordList(coordList, blankMask):
     return poly
 
 
-# @profile
+@profile
 def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
     assert 0 <= percentSize <= 1, "Percent size of section has to be between 0 and 1"
     assert isinstance(isVerticalSubSection,
@@ -106,7 +106,6 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
         maskCoords = np.array(region.coords)
         flippedMaskCoords = maskCoords.copy()
         flippedMaskCoords[:, 0], flippedMaskCoords[:, 1] = flippedMaskCoords[:, 1], flippedMaskCoords[:, 0].copy()
-        # flippedMaskCoords = [(entry[1], entry[0]) for entry in maskCoords]
         maskAngle = np.rad2deg(region.orientation)
 
 
@@ -116,7 +115,7 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
         # This is a bit faster, but polylidar is faster still
         # maskPolygon = createPolygonFromCoordList(maskCoords, maskCTest)
         # This is actually faster for just the bounding box, but I think slower overall as we need the contour Polygon later
-        outputMinimumBoundingBox = MinimumBoundingBox(maskCoords)
+        # outputMinimumBoundingBox = MinimumBoundingBox(maskCoords)
 
         # Will need to use Polygon subtraction to convert to subMask and final rotated bounding box
         # Extracts planes and polygons, time
@@ -133,14 +132,13 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
             plt.axis('equal')
             plt.show()
 
-        # for testing, remove
-        percentSize = 1
         if isVerticalSubSection:
             # Keep a squared bounding box (envelope) and scale the height
             subBundingBoxPoly = affinity.scale(maskPolygon.envelope, 1, percentSize)
         else:
             # Use the minimum rotated bounding box and scale the width
             subBundingBoxPoly = affinity.scale(maskPolygon.minimum_rotated_rectangle, percentSize, 1)
+        outputSubMaskPoly = maskPolygon.intersection(subBundingBoxPoly)
 
 
         # # Do this in isVerticalSubSection is False for length calculations...or maybe also everywhere for less restrictive overlap measures?
@@ -182,29 +180,8 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
             plt.autoscale()
             plt.show()
 
-        if isVerticalSubSection:
-            originalbboxHeight = ymax - ymin
-            newbboxHeight = originalbboxHeight * percentSize
-            ymin = ymin + 0.5 * (originalbboxHeight - newbboxHeight)
-            ymax = ymax - 0.5 * (originalbboxHeight - newbboxHeight)
-        else:
-            # Switch to rotated bounding box
-            originalbboxWidth = xmax - xmin
-            newbboxWidth = originalbboxWidth * percentSize
-            xmin = xmin + 0.5 * (originalbboxWidth - newbboxWidth)
-            xmax = xmax - 0.5 * (originalbboxWidth - newbboxWidth)
-
-        newBoundingBoxPoly = bboxToPoly(xmin, ymin, xmax, ymax)
 
 
-        subMaskCoords = []
-        path = mpltPath.Path(newBoundingBoxPoly)
-        subMaskCoordsBoolList = path.contains_points(flippedMaskCoords)
-
-        for inPoly, coord in zip(subMaskCoordsBoolList, maskCoords):
-            if inPoly:
-                subMask[coord[0]][coord[1]] = 1
-                subMaskCoords.append((coord[0], coord[1]))
         return subMask, subMaskCoords, maskAngle, rotatedNewMBB
     # else:
     return None, None, None, None
