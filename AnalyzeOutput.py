@@ -262,23 +262,21 @@ def longestLineInPolygon(maskPolygon, startCoordsRaw, endCoordsRaw):
 def getLinePoints(startCoordRaw, endCoordRaw):
     startCoord = Point(startCoordRaw)
     endCoord = Point(endCoordRaw)
-    lineTest = LineString([startCoord, endCoord])
+    lineOfInterest = LineString([startCoord, endCoord])
 
-    xy = set()
     if sys.version_info < (3, 7):
-        uniqTest = OrderedDict()
+        xyPoints = OrderedDict()
     else:
         # in Python 3.7 and newer dicts are ordered by default
-        uniqTest = {}
-    for f in range(int(np.ceil(lineTest.length)) + 1):
-        p = lineTest.interpolate(f).coords[0]
-        pr = map(round, p)
-        xy.add(pr)
-        uniqTest[tuple(pr)] = ''
+        xyPoints = {}
+    for pos in range(int(np.ceil(lineOfInterest.length)) + 1):
+        interpolatedPoint = lineOfInterest.interpolate(pos).coords[0]
+        roundedPoint = map(round, interpolatedPoint)
+        xyPoints[tuple(roundedPoint)] = None
     # # Can iterated through via:
-    # for key in uniqTest.keys():
+    # for key in xyPts.keys():
     #     print(key)
-    return uniqTest
+    return xyPoints
 
 
 # @profile
