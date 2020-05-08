@@ -31,9 +31,9 @@ from MinimumBoundingBox import MinimumBoundingBox
 # from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 # from detectron2.utils.logger import setup_logger
 showPlots = False
-showBoundingBoxPlots = True
+showBoundingBoxPlots = False
 plotPolylidar = False
-isVerticalSubSection = False
+isVerticalSubSection = True
 parallelProcessing = False
 
 
@@ -133,11 +133,15 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
 
         if isVerticalSubSection:
             # Keep a squared bounding box (envelope) and scale the height
-            subBundingBoxPoly = affinity.scale(maskPolygon.envelope, 1, percentSize)
+            subBoundingBoxPoly = affinity.scale(maskPolygon.envelope, 1, percentSize)
         else:
-            # Use the minimum rotated bounding box and scale the width
-            subBundingBoxPoly = affinity.scale(maskPolygon.minimum_rotated_rectangle, percentSize, 1)
-        outputSubMaskPoly = maskPolygon.intersection(subBundingBoxPoly)
+            # Scale the width and then skew the squared bounding box by skimage ellipse fitted mask angle about skimage mask centroid
+            # This should ensure a measurement line passes through the centroid, at the ellipse angle, and never starts within the mask itself
+            # Coords are row, col ie (y, x)
+            centroidCoords = region.centroid
+            scaledBoundingBoxPoly = affinity.scale(maskPolygon.envelope, percentSize, 1)
+            subBoundingBoxPoly = affinity.skew(scaledBoundingBoxPoly.envelope, xs=maskAngle, origin=(centroidCoords[1], centroidCoords[0]))
+        outputSubMaskPoly = maskPolygon.intersection(subBoundingBoxPoly)
 
         # # Do this in isVerticalSubSection is False for length calculations...or maybe also everywhere for less restrictive overlap measures?
         # mbbCenter = outputMinimumBoundingBox['rectangle_center']
@@ -174,13 +178,14 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
             # 5, since we have 4 points for a rectangle but don't want to have 1st = 4th
             phi = -1 * np.linspace(0, 2*np.pi, 5)
             rgb_cycle = np.vstack((.5 * (1. + np.cos(phi)), .5 * (1. + np.cos(phi + 2 * np.pi / 3)), .5 * (1. + np.cos(phi - 2 * np.pi / 3)))).T
-            plt.scatter(subBundingBoxPoly.exterior.coords.xy[0][:-1], subBundingBoxPoly.exterior.coords.xy[1][:-1], c=rgb_cycle[:4])
+            plt.scatter(subBoundingBoxPoly.exterior.coords.xy[0][:-1], subBoundingBoxPoly.exterior.coords.xy[1][:-1], c=rgb_cycle[:4])
+            plt.plot(subBoundingBoxPoly.exterior.coords.xy[0], subBoundingBoxPoly.exterior.coords.xy[1])
             plt.autoscale()
             plt.show()
 
-        return outputSubMaskPoly, maskAngle
+        return outputSubMaskPoly, subBoundingBoxPoly, maskAngle
     # else:
-    return None, None
+    return None, None, None
 
 
 def fileHandling(annotationFileName):
@@ -346,7 +351,7 @@ def analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalS
 
     # maskCoords are [row,col] ie [y,x]
     # subMask, subMaskCoords, maskAngle, rotatedNewMBB = centerXPercentofWire(mask, 0.7, isVerticalSubSection)
-    outputSubMaskPoly, maskAngle = centerXPercentofWire(mask, 0.3, isVerticalSubSection)
+    outputSubMaskPoly, subBoundingBoxPoly, maskAngle = centerXPercentofWire(mask, 0.3, isVerticalSubSection)
 
     if outputSubMaskPoly is not None:
         if showPlots:
