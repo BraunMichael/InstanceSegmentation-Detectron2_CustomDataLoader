@@ -178,11 +178,9 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
             plt.autoscale()
             plt.show()
 
-
-
-        return subMask, subMaskCoords, maskAngle, rotatedNewMBB
+        return outputSubMaskPoly, maskAngle
     # else:
-    return None, None, None, None
+    return None, None
 
 
 def fileHandling(annotationFileName):
