@@ -31,7 +31,7 @@ from MinimumBoundingBox import MinimumBoundingBox
 # from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 # from detectron2.utils.logger import setup_logger
 showPlots = False
-showBoundingBoxPlots = False
+showBoundingBoxPlots = True
 plotPolylidar = False
 isVerticalSubSection = False
 parallelProcessing = False
@@ -82,7 +82,7 @@ def createPolygonFromCoordList(coordList, blankMask):
     return poly
 
 
-@profile
+# @profile
 def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
     assert 0 <= percentSize <= 1, "Percent size of section has to be between 0 and 1"
     assert isinstance(isVerticalSubSection,
@@ -273,9 +273,7 @@ def isValidLine(boundingBoxDict, maskDict, instanceNum, minCoords, maxCoords):
     return False
 
 
-def isEdgeInstance(mask, boundingBox, isVerticalSubSection):
-    imageRight = mask.shape[1]
-    imageBottom = mask.shape[0]
+def isEdgeInstance(imageRight, imageBottom, boundingBox, isVerticalSubSection):
     if isVerticalSubSection:
         if boundingBox[0] < 20:
             # too close to left side
@@ -341,51 +339,63 @@ def analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalS
     measCoordsSet = set()
     pixelLengthList = []
 
-    if showPlots:
-        fig, ax = plt.subplots()
-        ax.imshow(mask)
-        plt.show(block=False)
+    # if showPlots:
+    #     fig, ax = plt.subplots()
+    #     ax.imshow(mask)
+    #     plt.show(block=False)
 
     # maskCoords are [row,col] ie [y,x]
-    subMask, subMaskCoords, maskAngle, rotatedNewMBB = centerXPercentofWire(mask, 0.7, isVerticalSubSection)
-    if subMask is not None:
+    # subMask, subMaskCoords, maskAngle, rotatedNewMBB = centerXPercentofWire(mask, 0.7, isVerticalSubSection)
+    outputSubMaskPoly, maskAngle = centerXPercentofWire(mask, 0.3, isVerticalSubSection)
+
+    if outputSubMaskPoly is not None:
         if showPlots:
-            fig2, ax2 = plt.subplots()
-            ax2.imshow(subMask)
-            plt.show(block=False)
+            # Blue rectangle is standard bounding box
+            # Red rectangle is rotated bounding box from MinimumBoundingBox
+            # Multicolored points are either standard (isVerticalSubsection=True) or rotated bounding box (isVerticalSubsection=False)
+            fig = plt.figure(figsize=(15, 12))
+            ax = fig.add_subplot(111)
+            ax.imshow(mask)
+            ax.axis('equal')
+            # 5, since we have 4 points for a rectangle but don't want to have 1st = 4th
+            phi = -1 * np.linspace(0, 2*np.pi, 5)
+            rgb_cycle = np.vstack((.5 * (1. + np.cos(phi)), .5 * (1. + np.cos(phi + 2 * np.pi / 3)), .5 * (1. + np.cos(phi - 2 * np.pi / 3)))).T
+            plt.scatter(outputSubMaskPoly.minimum_rotated_rectangle.exterior.coords.xy[0][:-1], outputSubMaskPoly.minimum_rotated_rectangle.exterior.coords.xy[1][:-1], c=rgb_cycle[:4])
+            plt.autoscale()
+            plt.show()
 
         validLineSet = set()
-        if not isEdgeInstance(mask, boundingBox, isVerticalSubSection):
-            if isVerticalSubSection:
-                subMaskCoordsDict = makeSubMaskCoordsDict(subMaskCoords, isVerticalSubSection)
-                for line, linePixelsList in subMaskCoordsDict.items():
-                    # Coords as row, col
-                    minCoords = (line, min(linePixelsList))
-                    maxCoords = (line, max(linePixelsList))
-                    if isValidLine(boundingBoxDict, maskDict, instanceNumber, minCoords, maxCoords):
-                        validLineSet.add(line)
+        # if not isEdgeInstance(mask.shape[1], mask.shape[0], boundingBox, isVerticalSubSection):
+        #     if isVerticalSubSection:
+        #         subMaskCoordsDict = makeSubMaskCoordsDict(subMaskCoords, isVerticalSubSection)
+        #         for line, linePixelsList in subMaskCoordsDict.items():
+        #             # Coords as row, col
+        #             minCoords = (line, min(linePixelsList))
+        #             maxCoords = (line, max(linePixelsList))
+        #             if isValidLine(boundingBoxDict, maskDict, instanceNumber, minCoords, maxCoords):
+        #                 validLineSet.add(line)
+        #
+        #         for line in validLineSet:
+        #             pixelLengthList.append(len(subMaskCoordsDict[line]))
+        #             for value in subMaskCoordsDict[line]:
+        #                 measCoordsSet.add((line, value))
+        #
+        #     else:
+        #         # Coords are row, col ie (y,x)
+        #         bottomLeftCoords = (rotatedNewMBB.exterior.coords.xy[1][0], rotatedNewMBB.exterior.coords.xy[0][0])
+        #         bottomRightCoords = (rotatedNewMBB.exterior.coords.xy[1][1],rotatedNewMBB.exterior.coords.xy[0][1])
+        #         topRightCoords = (rotatedNewMBB.exterior.coords.xy[1][2], rotatedNewMBB.exterior.coords.xy[0][2])
+        #         topLeftCoords = (rotatedNewMBB.exterior.coords.xy[1][3], rotatedNewMBB.exterior.coords.xy[0][3])
+        #         bottomLine = getLinePoints(bottomLeftCoords, bottomRightCoords)
+        #         topLine = getLinePoints(topLeftCoords, topRightCoords)
+        #         for bottomLinePoint, topLinePoint in zip(bottomLine.keys(), topLine.keys()):
+        #             if isValidLine(boundingBoxDict, maskDict, instanceNumber, bottomLinePoint, topLinePoint):
+        #                 validLineSet.add((bottomLinePoint, topLinePoint))
+        #         for line in validLineSet:
+        #             # pixelLengthList.append(longestLineLengthInPolygon())
+        #             pass
 
-                for line in validLineSet:
-                    pixelLengthList.append(len(subMaskCoordsDict[line]))
-                    for value in subMaskCoordsDict[line]:
-                        measCoordsSet.add((line, value))
-
-            else:
-                # Coords are row, col ie (y,x)
-                bottomLeftCoords = (rotatedNewMBB.exterior.coords.xy[1][0], rotatedNewMBB.exterior.coords.xy[0][0])
-                bottomRightCoords = (rotatedNewMBB.exterior.coords.xy[1][1],rotatedNewMBB.exterior.coords.xy[0][1])
-                topRightCoords = (rotatedNewMBB.exterior.coords.xy[1][2], rotatedNewMBB.exterior.coords.xy[0][2])
-                topLeftCoords = (rotatedNewMBB.exterior.coords.xy[1][3], rotatedNewMBB.exterior.coords.xy[0][3])
-                bottomLine = getLinePoints(bottomLeftCoords, bottomRightCoords)
-                topLine = getLinePoints(topLeftCoords, topRightCoords)
-                for bottomLinePoint, topLinePoint in zip(bottomLine.keys(), topLine.keys()):
-                    if isValidLine(boundingBoxDict, maskDict, instanceNumber, bottomLinePoint, topLinePoint):
-                        validLineSet.add((bottomLinePoint, topLinePoint))
-                for line in validLineSet:
-                    # pixelLengthList.append(longestLineLengthInPolygon())
-                    pass
-
-    return measCoordsSet, pixelLengthList, maskAngle, rotatedNewMBB
+    return measCoordsSet, pixelLengthList, maskAngle
 
 
 # @profile
