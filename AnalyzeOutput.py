@@ -62,29 +62,6 @@ def tqdm_joblib(tqdm_object):
         tqdm_object.close()
 
 
-def createPolygonFromCoordList(coordList, blankMask):
-    # Lets try to find contours and make that a polygon which we need later, and gives us minimum_rotated_rectangle as well
-    for coord in coordList:
-        blankMask[coord[0]][coord[1]] = 255
-    maskCImage = Image.fromarray(np.uint8(blankMask))
-    # This fixes the corner issue of diagonally cutting across the mask since edge pixels had no neighboring black pixels
-    maskCImage_bordered = ImageOps.expand(maskCImage, border=1)
-    contour = find_contours(maskCImage_bordered, 0.5, positive_orientation='low')[0]
-
-    # Flip from (row, col) representation to (x, y)
-    # and subtract the padding pixel (not doing that, we didn't buffer)
-
-    # The 2nd line is needed for the correct orientation in the TrainNewData.py file
-    # If wanting to showPlots here and get correct orientation, need to change something in the plotting code
-    # contour[:, 0], contour[:, 1] = contour[:, 1], sub_mask.size[1] - contour[:, 0].copy()
-    contour[:, 0], contour[:, 1] = contour[:, 1], contour[:, 0].copy()
-
-    # Make a polygon and simplify it
-    poly = Polygon(contour)
-    poly = poly.simplify(1.0, preserve_topology=False)  # should use preserve_topology=True?
-    return poly
-
-
 # @profile
 def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
     assert 0 <= percentSize <= 1, "Percent size of section has to be between 0 and 1"
@@ -92,8 +69,6 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
                       bool), "isVerticalSubSection must be a boolean, True if you want a vertical subsection, False if you want a horizontal subsection"
     label_image = label(npMaskFunc, connectivity=1)
     allRegionProperties = regionprops(label_image)
-    subMask = np.zeros(npMaskFunc.shape)
-    # maskCTest = subMask.copy()
     largeRegionsNums = set()
     regionNum = 0
     for region in allRegionProperties:
@@ -111,16 +86,6 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
         flippedMaskCoords[:, 0], flippedMaskCoords[:, 1] = flippedMaskCoords[:, 1], flippedMaskCoords[:, 0].copy()
         maskAngle = np.rad2deg(region.orientation)
 
-        # pip install git+git://github.com/BraunMichael/MinimumBoundingBox.git@master
-        # This is much slower
-        # shapelyTestRect = MultiPoint(maskCoords).minimum_rotated_rectangle
-        # This is a bit faster, but polylidar is faster still
-        # maskPolygon = createPolygonFromCoordList(maskCoords, maskCTest)
-        # This is actually faster for just the bounding box, but I think slower overall as we need the contour Polygon later
-        # outputMinimumBoundingBox = MinimumBoundingBox(maskCoords)
-
-        # Will need to use Polygon subtraction to convert to subMask and final rotated bounding box
-        # Extracts planes and polygons, time
         polygonsList = extractPolygons(flippedMaskCoords)
         assert len(polygonsList) == 1, "There was more than 1 polygon extracted from extractPolygons."
         shell_coords = [get_point(pi, flippedMaskCoords) for pi in polygonsList[0].shell]
@@ -146,22 +111,6 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
             subBoundingBoxPoly = affinity.skew(scaledBoundingBoxPoly.envelope, xs=maskAngle, origin=(centroidCoords[1], centroidCoords[0]))
         outputSubMaskPoly = maskPolygon.intersection(subBoundingBoxPoly)
 
-        # # Do this in isVerticalSubSection is False for length calculations...or maybe also everywhere for less restrictive overlap measures?
-        # mbbCenter = outputMinimumBoundingBox['rectangle_center']
-        # mbbLength = max(outputMinimumBoundingBox['length_orthogonal'], outputMinimumBoundingBox['length_parallel'])
-        # if isVerticalSubSection:
-        #     mbbWidth = min(outputMinimumBoundingBox['length_orthogonal'], outputMinimumBoundingBox['length_parallel'])
-        # else:
-        #     mbbWidth = min(outputMinimumBoundingBox['length_orthogonal'], outputMinimumBoundingBox['length_parallel']) * percentSize
-        # lowerLeft = (mbbCenter[1] - mbbWidth / 2, mbbCenter[0] + mbbLength / 2)
-        # lowerRight = (mbbCenter[1] + mbbWidth / 2, mbbCenter[0] + mbbLength / 2)
-        # upperRight = (mbbCenter[1] + mbbWidth / 2, mbbCenter[0] - mbbLength / 2)
-        # upperLeft = (mbbCenter[1] - mbbWidth / 2, mbbCenter[0] - mbbLength / 2)
-        # newMBB = Polygon([lowerLeft, lowerRight, upperRight, upperLeft])
-        #
-        # mbbRotation = outputMinimumBoundingBox['cardinal_angle_deg']
-        # rotatedNewMBB = affinity.rotate(newMBB, -mbbRotation)
-
         if showBoundingBoxPlots:
             # Blue rectangle is standard bounding box
             # Red rectangle is rotated bounding box from MinimumBoundingBox
@@ -170,13 +119,9 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
             ax = fig.add_subplot(111)
             ax.imshow(npMaskFunc)
             r1 = patches.Rectangle((xmin, ymax), xmax-xmin, -(ymax-ymin), fill=False, edgecolor="blue", alpha=1, linewidth=1)
-            # r2 = patches.Rectangle(lowerLeft, mbbWidth, -mbbLength, fill=False, edgecolor="red", alpha=1, linewidth=1)
-            #
-            # t2 = mpl.transforms.Affine2D().rotate_deg_around(mbbCenter[1], mbbCenter[0], -mbbRotation) + ax.transData
-            # r2.set_transform(t2)
+
             ax.axis('equal')
             ax.add_patch(r1)
-            # ax.add_patch(r2)
 
             # 5, since we have 4 points for a rectangle but don't want to have 1st = 4th
             phi = -1 * np.linspace(0, 2*np.pi, 5)
@@ -343,16 +288,8 @@ def analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalS
         print("Working on instance number: ", instanceNumber)
     mask = maskDict[instanceNumber]
     boundingBox = boundingBoxDict[instanceNumber]
-    # measCoords will be [row, col]
     measLineList = []
 
-    # if showPlots:
-    #     fig, ax = plt.subplots()
-    #     ax.imshow(mask)
-    #     plt.show(block=False)
-
-    # maskCoords are [row,col] ie [y,x]
-    # subMask, subMaskCoords, maskAngle, rotatedNewMBB = centerXPercentofWire(mask, 0.7, isVerticalSubSection)
     outputSubMaskPoly, subBoundingBoxPoly, maskAngle = centerXPercentofWire(mask, 0.3, isVerticalSubSection)
 
     if outputSubMaskPoly is not None:
@@ -379,7 +316,6 @@ def analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalS
                         measLineList.append(instanceLine)
 
             else:
-                # Coords are row, col ie (y,x)
                 bottomLinePoints = getLinePoints(bottomXY[0], bottomXY[1])
                 topLinePoints = getLinePoints(topXY[0], topXY[1])
                 for bottomLinePoint, topLinePoint in zip(bottomLinePoints, topLinePoints):
