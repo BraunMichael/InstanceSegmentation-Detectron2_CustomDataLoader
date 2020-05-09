@@ -146,24 +146,6 @@ def bboxToPoly(xmin, ymin, xmax, ymax):
     return [[xmin, ymin], [xmax, ymin], [xmax, ymax], [xmin, ymax]]
 
 
-def makeSubMaskCoordsDict(maskCoords, isVerticalSubSection):
-    # maskCoords are [row, col]
-    assert isinstance(isVerticalSubSection,
-                      bool), "isVerticalSubSection must be a boolean, True if you want a vertical subsection, False if you want a horizontal subsection"
-    subMaskCoordsDict = {}
-
-    for row, col in maskCoords:
-        if isVerticalSubSection:
-            if row not in subMaskCoordsDict:
-                subMaskCoordsDict[row] = []
-            subMaskCoordsDict[row].append(col)
-        else:
-            if col not in subMaskCoordsDict:
-                subMaskCoordsDict[col] = []
-            subMaskCoordsDict[col].append(row)
-    return subMaskCoordsDict
-
-
 def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file', fileTypes: str = '*', initialDirOrFile: str = os.getcwd()):
     if os.path.isfile(initialDirOrFile) or os.path.isdir(initialDirOrFile):
         initialDir = os.path.split(initialDirOrFile)[0]
