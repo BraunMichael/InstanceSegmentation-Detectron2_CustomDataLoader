@@ -309,26 +309,19 @@ def analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, isVerti
 
         if not isEdgeInstance(imageWidth, imageHeight, boundingBoxPoly, isVerticalSubSection):
             if isVerticalSubSection:
-                leftLinePoints = getLinePoints(bottomLeft, topLeft)
-                rightLinePoints = getLinePoints(bottomRight, topRight)
-                for leftPoint, rightPoint in zip(leftLinePoints, rightLinePoints):
-                    instanceLine = LineString([leftPoint, rightPoint])
-                    if isValidLine(boundingBoxPolyDict, imageHeight, instanceNumber, instanceLine):
-                        longestLine, lineLength = longestLineAndLengthInPolygon(outputSubMaskPoly, instanceLine)
-                        if longestLine is not None:
-                            measLineList.append(longestLine)
-                            lineLengthList.append(lineLength)
-
+                lineStartPoints = getLinePoints(bottomLeft, topLeft)  # Left line
+                lineEndPoints = getLinePoints(bottomRight, topRight)  # Right line
             else:
-                bottomLinePoints = getLinePoints(bottomLeft, bottomRight)
-                topLinePoints = getLinePoints(topLeft, topRight)
-                for bottomLinePoint, topLinePoint in zip(bottomLinePoints, topLinePoints):
-                    instanceLine = LineString([bottomLinePoint, topLinePoint])
-                    if isValidLine(boundingBoxPolyDict, imageHeight, instanceNumber, instanceLine):
-                        longestLine, lineLength = longestLineAndLengthInPolygon(outputSubMaskPoly, instanceLine)
-                        if longestLine is not None:
-                            measLineList.append(longestLine)
-                            lineLengthList.append(lineLength)
+                lineStartPoints = getLinePoints(bottomLeft, bottomRight)  # Bottom line
+                lineEndPoints = getLinePoints(topLeft, topRight)  # Top line
+
+            for startPoint, endPoint in zip(lineStartPoints, lineEndPoints):
+                instanceLine = LineString([startPoint, endPoint])
+                if isValidLine(boundingBoxPolyDict, imageHeight, instanceNumber, instanceLine):
+                    longestLine, lineLength = longestLineAndLengthInPolygon(outputSubMaskPoly, instanceLine)
+                    if longestLine is not None:
+                        measLineList.append(longestLine)
+                        lineLengthList.append(lineLength)
 
         lineLengthList = np.asarray(lineLengthList)
         lineStd = np.std(lineLengthList, ddof=1)
