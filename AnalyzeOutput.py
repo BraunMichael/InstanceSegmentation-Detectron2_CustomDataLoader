@@ -37,7 +37,7 @@ showPlots = False
 showBoundingBoxPlots = False
 plotPolylidar = False
 isVerticalSubSection = True
-parallelProcessing = True
+parallelProcessing = False
 
 
 @contextlib.contextmanager
@@ -166,26 +166,27 @@ def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file'
 
 
 # @profile
-def isValidLine(boundingBoxDict, maskDict, instanceNum, instanceLine):
+def isValidLine(boundingBoxPolyDict, imageHeight, instanceNum, instanceLine):
     # Check if line is contained in a different bounding box, need to check which instance is in front (below)
     # Don't check for the current instanceNum (key in boundingBoxDict)
     validForInstanceList = []
-    for checkNumber, checkBoundingBox in boundingBoxDict.items():
+    bottomLeft, bottomRight, topLeft, topRight = getXYFromPolyBox(boundingBoxPolyDict[instanceNum])
+    for checkNumber, checkBoundingBoxPoly in boundingBoxPolyDict.items():
         if checkNumber != instanceNum:
-            checkPoly = Polygon(bboxToPoly(checkBoundingBox[0], checkBoundingBox[1], checkBoundingBox[2], checkBoundingBox[3]))
             # Check if line is contained in a different bounding box, need to check which instance is in front (below)
-            lineInvalid = instanceLine.intersects(checkPoly)
+            lineInvalid = instanceLine.intersects(checkBoundingBoxPoly)
 
             # May need to do more...something with checking average and deviation from average width of the 2 wires?
             if lineInvalid:
-                imageBottom = maskDict[instanceNum].shape[0]
-                instanceBottom = boundingBoxDict[instanceNum][3]
-                checkInstanceBottom = checkBoundingBox[3]
-                if abs(imageBottom - instanceBottom) < 20:
-                    instanceTop = boundingBoxDict[instanceNum][1]
-                    checkInstanceTop = checkBoundingBox[1]
+                bottomLeftCheck, bottomRightCheck, topLeftCheck, topRightCheck = getXYFromPolyBox(checkBoundingBoxPoly)
 
+                imageBottom = imageHeight
+                instanceBottom = bottomLeft[1]
+                checkInstanceBottom = bottomLeftCheck[1]
+                if abs(imageBottom - instanceBottom) < 20:
                     # the box of interest is too close to the bottom
+                    instanceTop = topLeft[1]
+                    checkInstanceTop = topLeftCheck[1]
                     if instanceTop < checkInstanceTop:
                         # Good assumption that instance of interest is in front, since all wires ~same length and the top is lower than the check instance
                         validForInstanceList.append(True)
@@ -206,19 +207,24 @@ def isValidLine(boundingBoxDict, maskDict, instanceNum, instanceLine):
     return False
 
 
-def isEdgeInstance(imageRight, imageBottom, boundingBox, isVerticalSubSection):
+def isEdgeInstance(imageRight, imageBottom, boundingBoxPoly, isVerticalSubSection):
+    bottomLeft, bottomRight, topLeft, topRight = getXYFromPolyBox(boundingBoxPoly)
+    instanceBottom = bottomLeft[1]
+    instanceTop = topLeft[1]
+    instanceRight = bottomRight[0]
+    instanceLeft = bottomLeft[0]
     if isVerticalSubSection:
-        if boundingBox[0] < 20:
+        if instanceLeft < 20:
             # too close to left side
             return True
-        elif abs(boundingBox[2] - imageRight) < 20:
+        elif abs(instanceRight - imageRight) < 20:
             # too close to right side
             return True
     else:  # HorizontalSubSection
-        if boundingBox[1] < 20:
+        if instanceTop < 20:
             # too close to top side
             return True
-        elif abs(boundingBox[3] - imageBottom) < 20:
+        elif abs(instanceBottom - imageBottom) < 20:
             # too close to bottom side
             return True
     return False
@@ -264,45 +270,58 @@ def getLinePoints(startXY, endXY):
     return xyPoints
 
 
+def getXYFromPolyBox(boundingBoxPoly):
+    topXY = []
+    bottomXY = []
+    boundingBoxXY = boundingBoxPoly.boundary.coords[:-1]
+    assert len(boundingBoxXY) == 4, "The polygon used did not have 4 sides"
+    for coords in boundingBoxXY:
+        if coords[1] > boundingBoxPoly.boundary.centroid.coords[0][1]:
+            bottomXY.append(coords)
+        else:
+            topXY.append(coords)
+
+    if topXY[0][0] > topXY[1][0]:
+        topXY.reverse()
+    if bottomXY[0][0] > bottomXY[1][0]:
+        bottomXY.reverse()
+    topLeft = topXY[0]
+    topRight = topXY[1]
+    bottomLeft = bottomXY[0]
+    bottomRight = bottomXY[1]
+    return bottomLeft, bottomRight, topLeft, topRight
+
+
 # @profile
-def analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection):
-    if not parallelProcessing:
-        print("Working on instance number: ", instanceNumber)
+def analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, isVerticalSubSection):
+    # if not parallelProcessing:
+    #     print("Working on instance number: ", instanceNumber)
     mask = maskDict[instanceNumber]
-    boundingBox = boundingBoxDict[instanceNumber]
+    imageWidth = mask.shape[1]
+    imageHeight = mask.shape[0]
+    boundingBoxPoly = boundingBoxPolyDict[instanceNumber]
     measLineList = []
 
     outputSubMaskPoly, subBoundingBoxPoly, maskAngle = centerXPercentofWire(mask, 0.3, isVerticalSubSection)
 
     if outputSubMaskPoly is not None:
-        topXY = []
-        bottomXY = []
-        for coords in subBoundingBoxPoly.boundary.coords[:-1]:
-            if coords[1] > subBoundingBoxPoly.boundary.centroid.coords[0][1]:
-                bottomXY.append(coords)
-            else:
-                topXY.append(coords)
+        bottomLeft, bottomRight, topLeft, topRight = getXYFromPolyBox(subBoundingBoxPoly)
 
-        if topXY[0][0] > topXY[1][0]:
-            topXY.reverse()
-        if bottomXY[0][0] > bottomXY[1][0]:
-            bottomXY.reverse()
-
-        if not isEdgeInstance(mask.shape[1], mask.shape[0], boundingBox, isVerticalSubSection):
+        if not isEdgeInstance(imageWidth, imageHeight, boundingBoxPoly, isVerticalSubSection):
             if isVerticalSubSection:
-                leftLinePoints = getLinePoints(bottomXY[0], topXY[0])
-                rightLinePoints = getLinePoints(bottomXY[1], topXY[1])
+                leftLinePoints = getLinePoints(bottomLeft, topLeft)
+                rightLinePoints = getLinePoints(bottomRight, topRight)
                 for leftPoint, rightPoint in zip(leftLinePoints, rightLinePoints):
                     instanceLine = LineString([leftPoint, rightPoint])
-                    if isValidLine(boundingBoxDict, maskDict, instanceNumber, instanceLine):
+                    if isValidLine(boundingBoxPolyDict, imageHeight, instanceNumber, instanceLine):
                         measLineList.append(instanceLine)
 
             else:
-                bottomLinePoints = getLinePoints(bottomXY[0], bottomXY[1])
-                topLinePoints = getLinePoints(topXY[0], topXY[1])
+                bottomLinePoints = getLinePoints(bottomLeft, bottomRight)
+                topLinePoints = getLinePoints(topLeft, topRight)
                 for bottomLinePoint, topLinePoint in zip(bottomLinePoints, topLinePoints):
                     instanceLine = LineString([bottomLinePoint, topLinePoint])
-                    if isValidLine(boundingBoxDict, maskDict, instanceNumber, instanceLine):
+                    if isValidLine(boundingBoxPolyDict, imageHeight, instanceNumber, instanceLine):
                         measLineList.append(instanceLine)
 
     return measLineList, maskAngle
@@ -327,7 +346,7 @@ def main():
             print('The imported rawImage is 1 dimensional for some reason, check it out.')
             quit()
 
-    boundingBoxDict = {}
+    boundingBoxPolyDict = {}
     maskDict = {}
     numInstances = len(outputs['instances'])
     # Loop once to generate dict for checking each instance against all others
@@ -336,22 +355,24 @@ def main():
 
         # 0,0 at top left, and box is [left top right bottom] position ie [xmin ymin xmax ymax] (ie XYXY not XYWH)
         npBoundingBox = np.asarray(boundingBox.cpu())
-        boundingBoxDict[instanceNumber] = npBoundingBox
+        boundingBoxPoly = Polygon(bboxToPoly(npBoundingBox[0], npBoundingBox[1], npBoundingBox[2], npBoundingBox[3]))
+
+        boundingBoxPolyDict[instanceNumber] = boundingBoxPoly
         maskDict[instanceNumber] = npMask
 
     if parallelProcessing:
         with parallel_backend('multiprocessing'):
             with tqdm_joblib(tqdm(desc="Analyzing Instances", total=numInstances)) as progress_bar:
                 analysisOutput = joblib.Parallel(n_jobs=multiprocessing.cpu_count())(
-                    joblib.delayed(analyzeSingleInstance)(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection) for
+                    joblib.delayed(analyzeSingleInstance)(maskDict, boundingBoxPolyDict, instanceNumber, isVerticalSubSection) for
                     instanceNumber in range(numInstances))
     else:
         analysisOutput = []
         for instanceNumber in range(numInstances):
-            analysisOutput.append(analyzeSingleInstance(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection))
+            analysisOutput.append(analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, isVerticalSubSection))
     allMeasLineList = [entry[0] for entry in analysisOutput if entry[0]]
     allMeasAnglesList = [entry[1] for entry in analysisOutput if entry[0]]
-
+    quit()
     measMask = np.zeros(npImage.shape)[:, :, 0]
     numMeasInstances = len(allMeasCoordsSetList)
     for coordsSet, instanceNumber in zip(allMeasCoordsSetList, range(numMeasInstances)):
