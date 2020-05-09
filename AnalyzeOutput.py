@@ -1,6 +1,9 @@
 import os
 import pickle
 import joblib
+from joblib import parallel_backend
+
+
 import contextlib
 from tqdm import tqdm
 import multiprocessing
@@ -419,10 +422,11 @@ def main():
         maskDict[instanceNumber] = npMask
 
     if parallelProcessing:
-        with tqdm_joblib(tqdm(desc="Analyzing Instances", total=numInstances)) as progress_bar:
-            analysisOutput = joblib.Parallel(n_jobs=multiprocessing.cpu_count())(
-                joblib.delayed(analyzeSingleInstance)(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection) for
-                instanceNumber in range(numInstances))
+        with parallel_backend('multiprocessing'):
+            with tqdm_joblib(tqdm(desc="Analyzing Instances", total=numInstances)) as progress_bar:
+                analysisOutput = joblib.Parallel(n_jobs=multiprocessing.cpu_count())(
+                    joblib.delayed(analyzeSingleInstance)(maskDict, boundingBoxDict, instanceNumber, isVerticalSubSection) for
+                    instanceNumber in range(numInstances))
     else:
         analysisOutput = []
         for instanceNumber in range(numInstances):
