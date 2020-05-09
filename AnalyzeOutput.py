@@ -25,6 +25,7 @@ from polylidarutil import (generate_test_points, plot_points, plot_triangles, ge
                            plot_triangle_meshes, get_triangles_from_he, get_plane_triangles, plot_polygons, get_point)
 
 from polylidar import extractPolygons
+from descartes import PolygonPatch
 from MinimumBoundingBox import MinimumBoundingBox
 # from detectron2 import model_zoo
 # from detectron2.engine import DefaultPredictor
@@ -38,7 +39,6 @@ showBoundingBoxPlots = False
 plotPolylidar = False
 isVerticalSubSection = True
 parallelProcessing = False
-
 
 @contextlib.contextmanager
 def tqdm_joblib(tqdm_object):
@@ -376,15 +376,31 @@ def main():
         analysisOutput = []
         for instanceNumber in range(numInstances):
             analysisOutput.append(analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, isVerticalSubSection))
+
     allMeasLineList = [entry[0] for entry in analysisOutput if entry[0]]
     allLineLengthList = [entry[1] for entry in analysisOutput if entry[0]]
-    allMeasAnglesList = [entry[2] for entry in analysisOutput if entry[0]]
-    quit()
+    lineStdList = [entry[2] for entry in analysisOutput if entry[0]]
+    lineAvgList = [entry[3] for entry in analysisOutput if entry[0]]
+    allMeasAnglesList = [entry[4] for entry in analysisOutput if entry[0]]
     measMask = np.zeros(npImage.shape)[:, :, 0]
-    numMeasInstances = len(allMeasCoordsSetList)
-    for coordsSet, instanceNumber in zip(allMeasCoordsSetList, range(numMeasInstances)):
+    numMeasInstances = len(allMeasLineList)
+
+
+    quit()
+    for lineList, instanceNumber in zip(allMeasLineList, range(numMeasInstances)):
         for row, col in coordsSet:
             measMask[row][col] = (1 + instanceNumber) / numMeasInstances
+
+    fig, ax = plt.subplots(figsize=(8, 8), nrows=1, ncols=1)
+    outlinePatch = PolygonPatch(outputSubMaskPoly, ec='green', fill=True, linewidth=2)
+    ax.add_patch(outlinePatch)
+    for startPoint, endPoint in zip(lineStartPoints, lineEndPoints):
+        instanceLine = LineString([startPoint, endPoint])
+        x, y = instanceLine.xy
+        ax.plot(x, y, color='blue', linewidth=1)
+    plt.axis('equal')
+    plt.show()
+
 
     # https://stackoverflow.com/questions/17170229/setting-transparency-based-on-pixel-values-in-matplotlib
     measMask = np.ma.masked_where(measMask == 0, measMask)
