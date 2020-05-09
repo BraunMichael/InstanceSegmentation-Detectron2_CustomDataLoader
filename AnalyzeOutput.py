@@ -230,24 +230,23 @@ def isEdgeInstance(imageRight, imageBottom, boundingBoxPoly, isVerticalSubSectio
     return False
 
 
-def longestLineLengthInPolygon(maskPolygon, startCoordsRaw, endCoordsRaw):
-    startCoord = Point(startCoordsRaw)
-    endCoord = Point(endCoordsRaw)
-    lineTest = LineString([startCoord, endCoord])
+def longestLineAndLengthInPolygon(maskPolygon, lineTest):
     testSegments = lineTest.intersection(maskPolygon)  # without .boundary, get the lines immediately
-
+    outputLine = None
     LineLength = None
     if isinstance(testSegments, LineString):
         if not testSegments.is_empty:
             # The line is entirely inside the mask polygon
             LineLength = testSegments.length
+            outputLine = testSegments
     elif isinstance(testSegments, MultiLineString):
         # The line crosses the boundary of the mask polygon
         LineLength = 0
         for segment in testSegments:
             if segment.length > LineLength:
                 LineLength = segment.length
-    return LineLength
+                outputLine = segment
+    return outputLine, LineLength
 
 
 def getLinePoints(startXY, endXY):
@@ -301,6 +300,7 @@ def analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, isVerti
     imageHeight = mask.shape[0]
     boundingBoxPoly = boundingBoxPolyDict[instanceNumber]
     measLineList = []
+    lineLengthList = []
 
     outputSubMaskPoly, subBoundingBoxPoly, maskAngle = centerXPercentofWire(mask, 0.3, isVerticalSubSection)
 
@@ -314,7 +314,10 @@ def analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, isVerti
                 for leftPoint, rightPoint in zip(leftLinePoints, rightLinePoints):
                     instanceLine = LineString([leftPoint, rightPoint])
                     if isValidLine(boundingBoxPolyDict, imageHeight, instanceNumber, instanceLine):
-                        measLineList.append(instanceLine)
+                        longestLine, lineLength = longestLineAndLengthInPolygon(outputSubMaskPoly, instanceLine)
+                        if longestLine is not None:
+                            measLineList.append(longestLine)
+                            lineLengthList.append(lineLength)
 
             else:
                 bottomLinePoints = getLinePoints(bottomLeft, bottomRight)
@@ -322,9 +325,16 @@ def analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, isVerti
                 for bottomLinePoint, topLinePoint in zip(bottomLinePoints, topLinePoints):
                     instanceLine = LineString([bottomLinePoint, topLinePoint])
                     if isValidLine(boundingBoxPolyDict, imageHeight, instanceNumber, instanceLine):
-                        measLineList.append(instanceLine)
+                        longestLine, lineLength = longestLineAndLengthInPolygon(outputSubMaskPoly, instanceLine)
+                        if longestLine is not None:
+                            measLineList.append(longestLine)
+                            lineLengthList.append(lineLength)
 
-    return measLineList, maskAngle
+        lineLengthList = np.asarray(lineLengthList)
+        lineStd = np.std(lineLengthList, ddof=1)
+        lineAvg = np.mean(lineLengthList)
+
+    return measLineList, lineLengthList, maskAngle
 
 
 # @profile
@@ -371,7 +381,8 @@ def main():
         for instanceNumber in range(numInstances):
             analysisOutput.append(analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, isVerticalSubSection))
     allMeasLineList = [entry[0] for entry in analysisOutput if entry[0]]
-    allMeasAnglesList = [entry[1] for entry in analysisOutput if entry[0]]
+    allLineLengthList = [entry[1] for entry in analysisOutput if entry[0]]
+    allMeasAnglesList = [entry[2] for entry in analysisOutput if entry[0]]
     quit()
     measMask = np.zeros(npImage.shape)[:, :, 0]
     numMeasInstances = len(allMeasCoordsSetList)
