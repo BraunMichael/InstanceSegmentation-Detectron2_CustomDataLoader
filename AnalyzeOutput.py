@@ -293,14 +293,16 @@ def getXYFromPolyBox(boundingBoxPoly):
 
 # @profile
 def analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, isVerticalSubSection):
-    # if not parallelProcessing:
-    #     print("Working on instance number: ", instanceNumber)
+    if not parallelProcessing:
+        print("Working on instance number: ", instanceNumber)
     mask = maskDict[instanceNumber]
     imageWidth = mask.shape[1]
     imageHeight = mask.shape[0]
     boundingBoxPoly = boundingBoxPolyDict[instanceNumber]
     measLineList = []
     lineLengthList = []
+    lineStd = None
+    lineAvg = None
 
     outputSubMaskPoly, subBoundingBoxPoly, maskAngle = centerXPercentofWire(mask, 0.3, isVerticalSubSection)
 
@@ -322,12 +324,13 @@ def analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, isVerti
                     if longestLine is not None:
                         measLineList.append(longestLine)
                         lineLengthList.append(lineLength)
+            if len(lineLengthList) > 0:
+                lineLengthList = np.asarray(lineLengthList)
+                lineStd = np.std(lineLengthList, ddof=1)
+                lineAvg = np.mean(lineLengthList)
+            # else there are no valid lines
 
-        lineLengthList = np.asarray(lineLengthList)
-        lineStd = np.std(lineLengthList, ddof=1)
-        lineAvg = np.mean(lineLengthList)
-
-    return measLineList, lineLengthList, maskAngle
+    return measLineList, lineLengthList, lineStd, lineAvg, maskAngle
 
 
 # @profile
