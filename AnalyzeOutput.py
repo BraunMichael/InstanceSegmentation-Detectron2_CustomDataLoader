@@ -10,6 +10,7 @@ import multiprocessing
 import matplotlib.pyplot as plt
 import matplotlib.path as mpltPath
 import matplotlib as mpl
+from matplotlib import cm
 import matplotlib.patches as patches
 from shapely.geometry import Point, LineString, MultiLineString, Polygon
 from shapely import affinity
@@ -37,8 +38,8 @@ from MinimumBoundingBox import MinimumBoundingBox
 showPlots = False
 showBoundingBoxPlots = False
 plotPolylidar = False
-isVerticalSubSection = True
-parallelProcessing = False
+isVerticalSubSection = False
+parallelProcessing = True
 
 @contextlib.contextmanager
 def tqdm_joblib(tqdm_object):
@@ -385,31 +386,17 @@ def main():
     measMask = np.zeros(npImage.shape)[:, :, 0]
     numMeasInstances = len(allMeasLineList)
 
-
-    quit()
-    for lineList, instanceNumber in zip(allMeasLineList, range(numMeasInstances)):
-        for row, col in coordsSet:
-            measMask[row][col] = (1 + instanceNumber) / numMeasInstances
+    colorMap = cm.get_cmap('gist_rainbow', numMeasInstances)
 
     fig, ax = plt.subplots(figsize=(8, 8), nrows=1, ncols=1)
-    outlinePatch = PolygonPatch(outputSubMaskPoly, ec='green', fill=True, linewidth=2)
-    ax.add_patch(outlinePatch)
-    for startPoint, endPoint in zip(lineStartPoints, lineEndPoints):
-        instanceLine = LineString([startPoint, endPoint])
-        x, y = instanceLine.xy
-        ax.plot(x, y, color='blue', linewidth=1)
+    plt.imshow(npImage, interpolation='none')
+    for lineList, instanceNumber in zip(allMeasLineList, range(numMeasInstances)):
+        color = colorMap(instanceNumber)
+        for line in lineList:
+            x, y = line.xy
+            ax.plot(x, y, color=color, linewidth=1)
     plt.axis('equal')
     plt.show()
-
-
-    # https://stackoverflow.com/questions/17170229/setting-transparency-based-on-pixel-values-in-matplotlib
-    measMask = np.ma.masked_where(measMask == 0, measMask)
-    plt.subplots(figsize=(15, 12))
-    plt.imshow(npImage, interpolation='none')
-    plt.imshow(measMask, cmap=plt.get_cmap('plasma'), interpolation='none', alpha=0.5)
-    plt.show()
-
-    print('done')
 
 
 if __name__ == "__main__":
