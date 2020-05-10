@@ -26,7 +26,7 @@ from polylidar import extractPolygons
 # from detectron2.utils.logger import setup_logger
 
 showPlots = False
-showBoundingBoxPlots = False
+showBoundingBoxPlots = False  # Only works if parallel processing is False
 plotPolylidar = False
 isVerticalSubSection = True
 parallelProcessing = True
@@ -90,19 +90,21 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
             plt.axis('equal')
             plt.show()
 
+        # Scale the width/height and then skew the squared bounding box by skimage ellipse fitted mask angle about skimage mask centroid
+        # This should ensure a measurement line passes through the centroid, at the ellipse angle, and never starts within the mask itself
+        # This also means the lengths measured are the real lengths, don't need to do trig later
+        centroidCoords = region.centroid
         if isVerticalSubSection:
-            # Keep a squared bounding box (envelope) and scale the height
-            subBoundingBoxPoly = affinity.scale(maskPolygon.envelope, 1, percentSize)
-        else:
-            # Scale the width and then skew the squared bounding box by skimage ellipse fitted mask angle about skimage mask centroid
-            # This should ensure a measurement line passes through the centroid, at the ellipse angle, and never starts within the mask itself
+            scaledBoundingBoxPoly = affinity.scale(maskPolygon.envelope, 1, percentSize)
             # Coords are row, col ie (y, x)
-            centroidCoords = region.centroid
+            subBoundingBoxPoly = affinity.skew(scaledBoundingBoxPoly.envelope, ys=-maskAngle, origin=(centroidCoords[1], centroidCoords[0]))
+        else:
+            # Coords are row, col ie (y, x)
             scaledBoundingBoxPoly = affinity.scale(maskPolygon.envelope, percentSize, 1)
             subBoundingBoxPoly = affinity.skew(scaledBoundingBoxPoly.envelope, xs=maskAngle, origin=(centroidCoords[1], centroidCoords[0]))
         outputSubMaskPoly = maskPolygon.intersection(subBoundingBoxPoly)
 
-        if showBoundingBoxPlots:
+        if showBoundingBoxPlots and not parallelProcessing:
             # Blue rectangle is standard bounding box
             # Red rectangle is rotated bounding box from MinimumBoundingBox
             # Multicolored points are either standard (isVerticalSubsection=True) or rotated bounding box (isVerticalSubsection=False)
