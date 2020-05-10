@@ -1,33 +1,22 @@
+import sys
 import os
 import pickle
 import joblib
-from joblib import parallel_backend
-
-
+import numpy as np
 import contextlib
 from tqdm import tqdm
 import multiprocessing
-import matplotlib.pyplot as plt
-import matplotlib.path as mpltPath
-import matplotlib as mpl
 from matplotlib import cm
+import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from shapely.geometry import Point, LineString, MultiLineString, Polygon
 from shapely import affinity
-import numpy as np
-from os import path
-from PIL import Image, ImageOps
-from skimage.measure import label, regionprops, find_contours
+from PIL import Image
+from skimage.measure import label, regionprops
 from tkinter import Tk, filedialog
-import sys
 from collections import OrderedDict
-from polylidar import extractPlanesAndPolygons
-from polylidarutil import (generate_test_points, plot_points, plot_triangles, get_estimated_lmax,
-                           plot_triangle_meshes, get_triangles_from_he, get_plane_triangles, plot_polygons, get_point)
-
+from polylidarutil import (plot_points, plot_polygons, get_point)
 from polylidar import extractPolygons
-from descartes import PolygonPatch
-from MinimumBoundingBox import MinimumBoundingBox
 # from detectron2 import model_zoo
 # from detectron2.engine import DefaultPredictor
 # from detectron2.config import get_cfg
@@ -35,10 +24,11 @@ from MinimumBoundingBox import MinimumBoundingBox
 # from detectron2.data import MetadataCatalog, DatasetCatalog, build_detection_test_loader
 # from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 # from detectron2.utils.logger import setup_logger
+
 showPlots = False
 showBoundingBoxPlots = False
 plotPolylidar = False
-isVerticalSubSection = False
+isVerticalSubSection = True
 parallelProcessing = True
 
 @contextlib.contextmanager
@@ -305,7 +295,7 @@ def analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, isVerti
     lineStd = None
     lineAvg = None
 
-    outputSubMaskPoly, subBoundingBoxPoly, maskAngle = centerXPercentofWire(mask, 0.3, isVerticalSubSection)
+    outputSubMaskPoly, subBoundingBoxPoly, maskAngle = centerXPercentofWire(mask, 0.7, isVerticalSubSection)
 
     if outputSubMaskPoly is not None:
         bottomLeft, bottomRight, topLeft, topRight = getXYFromPolyBox(subBoundingBoxPoly)
@@ -340,7 +330,7 @@ def main():
     outputsFileName = '/home/mbraun/Downloads/outputmaskstest'
     outputs = fileHandling(outputsFileName)
     inputFileName = 'tiltedSEM/2020_02_06_MB0232_Reflectometry_002_cropped.jpg'
-    if not path.isfile(inputFileName):
+    if not os.path.isfile(inputFileName):
         quit()
     rawImage = Image.open(inputFileName)
     npImage = np.array(rawImage)
@@ -368,7 +358,7 @@ def main():
         maskDict[instanceNumber] = npMask
 
     if parallelProcessing:
-        with parallel_backend('multiprocessing'):
+        with joblib.parallel_backend('multiprocessing'):
             with tqdm_joblib(tqdm(desc="Analyzing Instances", total=numInstances)) as progress_bar:
                 analysisOutput = joblib.Parallel(n_jobs=multiprocessing.cpu_count())(
                     joblib.delayed(analyzeSingleInstance)(maskDict, boundingBoxPolyDict, instanceNumber, isVerticalSubSection) for
