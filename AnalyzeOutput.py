@@ -31,6 +31,7 @@ plotPolylidar = False  # Only works if parallel processing is False
 isVerticalSubSection = True
 parallelProcessing = True
 
+
 @contextlib.contextmanager
 def tqdm_joblib(tqdm_object):
     """Context manager to patch joblib to report into tqdm progress bar given as argument"""
@@ -313,8 +314,8 @@ def analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, isVerti
             for startPoint, endPoint in zip(lineStartPoints, lineEndPoints):
                 instanceLine = LineString([startPoint, endPoint])
                 longestLine, lineLength = longestLineAndLengthInPolygon(outputSubMaskPoly, instanceLine)
-                if isValidLine(boundingBoxPolyDict, imageHeight, instanceNumber, longestLine):
-                    if longestLine is not None:
+                if longestLine is not None:
+                    if isValidLine(boundingBoxPolyDict, imageHeight, instanceNumber, longestLine):
                         measLineList.append(longestLine)
                         lineLengthList.append(lineLength)
             if len(lineLengthList) > 2:
