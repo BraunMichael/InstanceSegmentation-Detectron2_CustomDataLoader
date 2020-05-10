@@ -27,7 +27,7 @@ from polylidar import extractPolygons
 
 showPlots = False
 showBoundingBoxPlots = False  # Only works if parallel processing is False
-plotPolylidar = False
+plotPolylidar = False  # Only works if parallel processing is False
 isVerticalSubSection = True
 parallelProcessing = True
 
@@ -81,7 +81,7 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
         assert len(polygonsList) == 1, "There was more than 1 polygon extracted from extractPolygons."
         shell_coords = [get_point(pi, flippedMaskCoords) for pi in polygonsList[0].shell]
         maskPolygon = Polygon(shell=shell_coords)
-        if plotPolylidar:
+        if plotPolylidar and not parallelProcessing:
             fig, ax = plt.subplots(figsize=(8, 8), nrows=1, ncols=1)
             # plot points
             plot_points(flippedMaskCoords, ax)
