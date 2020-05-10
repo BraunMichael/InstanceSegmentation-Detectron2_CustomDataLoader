@@ -317,8 +317,10 @@ def analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, isVerti
                     if longestLine is not None:
                         measLineList.append(longestLine)
                         lineLengthList.append(lineLength)
-            if len(lineLengthList) > 0:
-                lineLengthList = np.asarray(lineLengthList)
+            if len(lineLengthList) > 2:
+                # The first and last lines sometimes have issues, remove them
+                measLineList = measLineList[1:-1]
+                lineLengthList = np.asarray(lineLengthList[1:-1])
                 lineStd = np.std(lineLengthList, ddof=1)
                 lineAvg = np.mean(lineLengthList)
             # else there are no valid lines
