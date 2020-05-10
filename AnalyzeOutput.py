@@ -312,8 +312,8 @@ def analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, isVerti
 
             for startPoint, endPoint in zip(lineStartPoints, lineEndPoints):
                 instanceLine = LineString([startPoint, endPoint])
-                if isValidLine(boundingBoxPolyDict, imageHeight, instanceNumber, instanceLine):
-                    longestLine, lineLength = longestLineAndLengthInPolygon(outputSubMaskPoly, instanceLine)
+                longestLine, lineLength = longestLineAndLengthInPolygon(outputSubMaskPoly, instanceLine)
+                if isValidLine(boundingBoxPolyDict, imageHeight, instanceNumber, longestLine):
                     if longestLine is not None:
                         measLineList.append(longestLine)
                         lineLengthList.append(lineLength)
