@@ -77,6 +77,8 @@ def getFilesInFolderList(titleString, fileTypeString):
 
 def convertGrayscaleTo3ChannelFormat(filePath):
     inputImage = imageio.imread(filePath)
+    if len(inputImage.shape) == 3 and inputImage.shape[2] == 3:  # The input image may already be the right shape
+        return inputImage
     outputImage = np.stack((inputImage,) * 3, axis=-1)
     return outputImage
 
