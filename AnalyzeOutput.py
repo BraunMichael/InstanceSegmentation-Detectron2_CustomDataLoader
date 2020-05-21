@@ -337,8 +337,58 @@ def preparePath(lineObject, instanceColor):
     path_data = [(path.MOVETO, [x[0], y[0]]), (path.LINETO, [x[1], y[1]])]
     codes, verts = zip(*path_data)
     outPath = mpath.Path(verts, codes)
-    outPatch = mpatches.PathPatch(outPath, color=instanceColor, lw=2)
+    outPatch = mpatches.PathPatch(outPath, color=instanceColor, linewidth=2, alpha=0.3)
     return outPatch
+
+
+def createPolygonPatchesAndDict(allMeasLineList, isVerticalSubSection):
+    numMeasInstances = len(allMeasLineList)
+    colorMap = cm.get_cmap('gist_rainbow', numMeasInstances)
+    contiguousPolygonsDict = {}
+    patchList = []
+    for instanceNumber, lineList in enumerate(allMeasLineList):
+        if instanceNumber not in contiguousPolygonsDict:
+            contiguousPolygonsDict[instanceNumber] = []
+        instanceColor = colorMap(instanceNumber)
+        contiguousSide1 = []
+        contiguousSide2 = []
+        for lineNumber, line in enumerate(lineList):
+            x, y = line.xy
+            if contiguousSide1:
+                if isVerticalSubSection:
+                    if abs(contiguousSide1[-1][1] - y[0]) < 2 or lineNumber == len(lineList) - 1:
+                        contiguousSide1.append((x[0], y[0]))
+                        contiguousSide2.append((x[1], y[1]))
+                    if abs(contiguousSide1[-1][1] - y[0]) >= 2 or lineNumber == len(lineList) - 1:
+                        if len(contiguousSide1) == 1:
+                            polygonPerimeter = LineString(contiguousSide1 + contiguousSide2[::-1])
+                            outlinePatch = preparePath(polygonPerimeter, instanceColor)
+                        else:
+                            polygonPerimeter = Polygon(shell=contiguousSide1 + contiguousSide2[::-1])
+                            outlinePatch = PolygonPatch(polygonPerimeter, ec='none', fc=instanceColor, fill=True, linewidth=2, alpha=0.3)
+                        contiguousPolygonsDict[instanceNumber].append(polygonPerimeter)
+                        patchList.append(outlinePatch)
+                        contiguousSide1 = []
+                        contiguousSide2 = []
+                else:
+                    if abs(contiguousSide1[-1][0] - x[0]) < 2 or lineNumber == len(lineList) - 1:
+                        contiguousSide1.append((x[0], y[0]))
+                        contiguousSide2.append((x[1], y[1]))
+                    if abs(contiguousSide1[-1][0] - x[0]) >= 2 or lineNumber == len(lineList) - 1:
+                        if len(contiguousSide1) == 1:
+                            polygonPerimeter = LineString(contiguousSide1 + contiguousSide2[::-1])
+                            outlinePatch = preparePath(polygonPerimeter, instanceColor)
+                        else:
+                            polygonPerimeter = Polygon(shell=contiguousSide1 + contiguousSide2[::-1])
+                            outlinePatch = PolygonPatch(polygonPerimeter, ec='none', fc=instanceColor, fill=True, linewidth=2, alpha=0.3)
+                        contiguousPolygonsDict[instanceNumber].append(polygonPerimeter)
+                        patchList.append(outlinePatch)
+                        contiguousSide1 = []
+                        contiguousSide2 = []
+            else:
+                contiguousSide1.append((x[0], y[0]))
+                contiguousSide2.append((x[1], y[1]))
+    return contiguousPolygonsDict, patchList
 
 
 # @profile
@@ -394,54 +444,11 @@ def main():
     measMask = np.zeros(npImage.shape)[:, :, 0]
     numMeasInstances = len(allMeasLineList)
 
-    colorMap = cm.get_cmap('gist_rainbow', numMeasInstances)
-
+    contiguousPolygonsDict, patchList = createPolygonPatchesAndDict(allMeasLineList, isVerticalSubSection)
     fig, ax = plt.subplots(figsize=(8, 8), nrows=1, ncols=1)
     plt.imshow(npImage, interpolation='none')
-    contiguousPolygonsDict = {}
-    for instanceNumber, lineList in enumerate(allMeasLineList):
-        print("instance num:", instanceNumber, "len(linelist):", len(lineList))
-        if instanceNumber not in contiguousPolygonsDict:
-            contiguousPolygonsDict[instanceNumber] = []
-        instanceColor = colorMap(instanceNumber)
-        contiguousSide1 = []
-        contiguousSide2 = []
-        for lineNumber, line in enumerate(lineList):
-            x, y = line.xy
-            if contiguousSide1:
-                if isVerticalSubSection:
-                    if abs(contiguousSide1[-1][1] - y[0]) < 2 or lineNumber == len(lineList) - 1:
-                        contiguousSide1.append((x[0], y[0]))
-                        contiguousSide2.append((x[1], y[1]))
-                    if abs(contiguousSide1[-1][1] - y[0]) >= 2 or lineNumber == len(lineList) - 1:
-                        if len(contiguousSide1) == 1:
-                            polygonPerimeter = LineString(contiguousSide1 + contiguousSide2[::-1])
-                            outlinePatch = preparePath(polygonPerimeter, instanceColor)
-                        else:
-                            polygonPerimeter = Polygon(shell=contiguousSide1 + contiguousSide2[::-1])
-                            outlinePatch = PolygonPatch(polygonPerimeter, ec='none', fc=instanceColor, fill=True, linewidth=2)
-                        contiguousPolygonsDict[instanceNumber].append(polygonPerimeter)
-                        ax.add_patch(outlinePatch)
-                        contiguousSide1 = []
-                        contiguousSide2 = []
-                else:
-                    if abs(contiguousSide1[-1][0] - x[0]) < 2 or lineNumber == len(lineList) - 1:
-                        contiguousSide1.append((x[0], y[0]))
-                        contiguousSide2.append((x[1], y[1]))
-                    if abs(contiguousSide1[-1][0] - x[0]) >= 2 or lineNumber == len(lineList) - 1:
-                        if len(contiguousSide1) == 1:
-                            polygonPerimeter = LineString(contiguousSide1 + contiguousSide2[::-1])
-                            outlinePatch = preparePath(polygonPerimeter, instanceColor)
-                        else:
-                            polygonPerimeter = Polygon(shell=contiguousSide1 + contiguousSide2[::-1])
-                            outlinePatch = PolygonPatch(polygonPerimeter, ec='none', fc=instanceColor, fill=True, linewidth=2)
-                        contiguousPolygonsDict[instanceNumber].append(polygonPerimeter)
-                        ax.add_patch(outlinePatch)
-                        contiguousSide1 = []
-                        contiguousSide2 = []
-            else:
-                contiguousSide1.append((x[0], y[0]))
-                contiguousSide2.append((x[1], y[1]))
+    for patch in patchList:
+        ax.add_patch(patch)
     plt.axis('equal')
     plt.show()
 
