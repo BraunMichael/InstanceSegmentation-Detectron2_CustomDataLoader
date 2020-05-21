@@ -218,10 +218,12 @@ def main():
     binaryFilesFolder = filedialog.askdirectory(initialdir=os.getcwd(), title="Select Binary Mask Image Folder")
     if not binaryFilesFolder:
         root.destroy()
+        print("No binaryfilesfolder")
         quit()
     rawFilesFolder = filedialog.askdirectory(initialdir=os.getcwd(), title="Select Raw Image Folder")
     if not rawFilesFolder:
         root.destroy()
+        print("No rawfilesfolder")
         quit()
     root.destroy()
     parentFolder, _ = os.path.split(binaryFilesFolder)
