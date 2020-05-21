@@ -9,6 +9,7 @@ import multiprocessing
 from matplotlib import cm
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from descartes import PolygonPatch
 from shapely.geometry import Point, LineString, MultiLineString, Polygon
 from shapely import affinity
 from PIL import Image
@@ -28,7 +29,7 @@ from polylidar import extractPolygons
 showPlots = False
 showBoundingBoxPlots = False  # Only works if parallel processing is False
 plotPolylidar = False  # Only works if parallel processing is False
-isVerticalSubSection = True
+isVerticalSubSection = False
 parallelProcessing = True
 
 
@@ -331,6 +332,7 @@ def analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, isVerti
 
 # @profile
 def main():
+
     # outputsFileName = getFileOrDirList('file', 'Choose outputs pickle file')
     outputsFileName = '/home/mbraun/Downloads/outputmaskstest'
     outputs = fileHandling(outputsFileName)
@@ -385,11 +387,46 @@ def main():
 
     fig, ax = plt.subplots(figsize=(8, 8), nrows=1, ncols=1)
     plt.imshow(npImage, interpolation='none')
-    for lineList, instanceNumber in zip(allMeasLineList, range(numMeasInstances)):
+    contiguousPolygonsDict = {}
+    for instanceNumber, lineList in enumerate(allMeasLineList):
+        print("instance num:", instanceNumber, "len(linelist):", len(lineList))
+        if instanceNumber not in contiguousPolygonsDict:
+            contiguousPolygonsDict[instanceNumber] = []
         color = colorMap(instanceNumber)
-        for line in lineList:
+        contiguousSide1 = []
+        contiguousSide2 = []
+        for lineNumber, line in enumerate(lineList):
             x, y = line.xy
-            ax.plot(x, y, color=color, linewidth=1)
+            if contiguousSide1:
+                if isVerticalSubSection:
+                    if abs(contiguousSide1[-1][1] - y[0]) < 2 and lineNumber < len(lineList) - 1:
+                        contiguousSide1.append((x[0], y[0]))
+                        contiguousSide2.append((x[1], y[1]))
+                    else:
+                        polygonPerimeter = Polygon(shell=contiguousSide1 + contiguousSide2[::-1] + [contiguousSide1[-1]])
+                        contiguousPolygonsDict[instanceNumber].append(polygonPerimeter)
+                        outlinePatch = PolygonPatch(polygonPerimeter, ec='green', fill=False, linewidth=2)
+                        ax.add_patch(outlinePatch)
+                        contiguousSide1 = []
+                        contiguousSide2 = []
+                else:
+                    if abs(contiguousSide1[-1][0] - x[0]) < 2 and lineNumber < len(lineList) - 1:
+                        contiguousSide1.append((x[0], y[0]))
+                        contiguousSide2.append((x[1], y[1]))
+                    else:
+                        polygonPerimeter = Polygon(shell=contiguousSide1 + contiguousSide2[::-1] + [contiguousSide1[-1]])
+                        contiguousPolygonsDict[instanceNumber].append(polygonPerimeter)
+                        outlinePatch = PolygonPatch(polygonPerimeter, ec='green', fill=False, linewidth=2)
+                        ax.add_patch(outlinePatch)
+                        contiguousSide1 = []
+                        contiguousSide2 = []
+            else:
+                contiguousSide1.append((x[0], y[0]))
+                contiguousSide2.append((x[1], y[1]))
+
+
+
+    # ax.plot(x, y, color=color, linewidth=1)
     plt.axis('equal')
     plt.show()
 
