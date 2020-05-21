@@ -443,7 +443,6 @@ def main():
     # lineStdList = [entry[2] for entry in analysisOutput if entry[0]]
     # lineAvgList = [entry[3] for entry in analysisOutput if entry[0]]
     # allMeasAnglesList = [entry[4] for entry in analysisOutput if entry[0]]
-    # measMask = np.zeros(npImage.shape)[:, :, 0]
 
     contiguousPolygonsDict, patchList = createPolygonPatchesAndDict(allMeasLineList, isVerticalSubSection)
     fig, ax = plt.subplots(figsize=(8, 8), nrows=1, ncols=1)
