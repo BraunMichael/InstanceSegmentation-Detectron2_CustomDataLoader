@@ -8,7 +8,8 @@ from tqdm import tqdm
 import multiprocessing
 from matplotlib import cm
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches
+import matplotlib.patches as mpatches
+import matplotlib.path as mpath
 from descartes import PolygonPatch
 from shapely.geometry import Point, LineString, MultiLineString, Polygon
 from shapely import affinity
@@ -113,7 +114,7 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
             fig = plt.figure(figsize=(15, 12))
             ax = fig.add_subplot(111)
             ax.imshow(npMaskFunc)
-            r1 = patches.Rectangle((xmin, ymax), xmax-xmin, -(ymax-ymin), fill=False, edgecolor="blue", alpha=1, linewidth=1)
+            r1 = mpatches.Rectangle((xmin, ymax), xmax - xmin, -(ymax - ymin), fill=False, edgecolor="blue", alpha=1, linewidth=1)
 
             ax.axis('equal')
             ax.add_patch(r1)
@@ -330,6 +331,16 @@ def analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, isVerti
     return measLineList, lineLengthList, lineStd, lineAvg, maskAngle
 
 
+def preparePath(lineObject, instanceColor):
+    path = mpath.Path
+    x, y = lineObject.xy
+    path_data = [(path.MOVETO, [x[0], y[0]]), (path.LINETO, [x[1], y[1]])]
+    codes, verts = zip(*path_data)
+    outPath = mpath.Path(verts, codes)
+    outPatch = mpatches.PathPatch(outPath, color=instanceColor, lw=2)
+    return outPatch
+
+
 # @profile
 def main():
 
@@ -403,9 +414,13 @@ def main():
                         contiguousSide1.append((x[0], y[0]))
                         contiguousSide2.append((x[1], y[1]))
                     if abs(contiguousSide1[-1][1] - y[0]) >= 2 or lineNumber == len(lineList) - 1:
-                        polygonPerimeter = Polygon(shell=contiguousSide1 + contiguousSide2[::-1])
+                        if len(contiguousSide1) == 1:
+                            polygonPerimeter = LineString(contiguousSide1 + contiguousSide2[::-1])
+                            outlinePatch = preparePath(polygonPerimeter, instanceColor)
+                        else:
+                            polygonPerimeter = Polygon(shell=contiguousSide1 + contiguousSide2[::-1])
+                            outlinePatch = PolygonPatch(polygonPerimeter, ec='none', fc=instanceColor, fill=True, linewidth=2)
                         contiguousPolygonsDict[instanceNumber].append(polygonPerimeter)
-                        outlinePatch = PolygonPatch(polygonPerimeter, ec='none', fc=instanceColor, fill=True, linewidth=2)
                         ax.add_patch(outlinePatch)
                         contiguousSide1 = []
                         contiguousSide2 = []
@@ -414,21 +429,19 @@ def main():
                         contiguousSide1.append((x[0], y[0]))
                         contiguousSide2.append((x[1], y[1]))
                     if abs(contiguousSide1[-1][0] - x[0]) >= 2 or lineNumber == len(lineList) - 1:
-                        polygonPerimeter = Polygon(shell=contiguousSide1 + contiguousSide2[::-1])
+                        if len(contiguousSide1) == 1:
+                            polygonPerimeter = LineString(contiguousSide1 + contiguousSide2[::-1])
+                            outlinePatch = preparePath(polygonPerimeter, instanceColor)
+                        else:
+                            polygonPerimeter = Polygon(shell=contiguousSide1 + contiguousSide2[::-1])
+                            outlinePatch = PolygonPatch(polygonPerimeter, ec='none', fc=instanceColor, fill=True, linewidth=2)
                         contiguousPolygonsDict[instanceNumber].append(polygonPerimeter)
-                        outlinePatch = PolygonPatch(polygonPerimeter, ec='none', fc=instanceColor, fill=True, linewidth=2)
                         ax.add_patch(outlinePatch)
                         contiguousSide1 = []
                         contiguousSide2 = []
-                        plt.axis('equal')
-                        plt.show()
             else:
                 contiguousSide1.append((x[0], y[0]))
                 contiguousSide2.append((x[1], y[1]))
-
-
-
-    # ax.plot(x, y, color=color, linewidth=1)
     plt.axis('equal')
     plt.show()
 
