@@ -37,8 +37,10 @@ parallelProcessing = True
 @contextlib.contextmanager
 def tqdm_joblib(tqdm_object):
     """Context manager to patch joblib to report into tqdm progress bar given as argument"""
+
+    # noinspection PyProtectedMember
     class TqdmBatchCompletionCallback:
-        def __init__(self, time, index, parallel):
+        def __init__(self, _, index, parallel):
             self.index = index
             self.parallel = parallel
 
@@ -437,12 +439,11 @@ def main():
             analysisOutput.append(analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, isVerticalSubSection))
 
     allMeasLineList = [entry[0] for entry in analysisOutput if entry[0]]
-    allLineLengthList = [entry[1] for entry in analysisOutput if entry[0]]
-    lineStdList = [entry[2] for entry in analysisOutput if entry[0]]
-    lineAvgList = [entry[3] for entry in analysisOutput if entry[0]]
-    allMeasAnglesList = [entry[4] for entry in analysisOutput if entry[0]]
-    measMask = np.zeros(npImage.shape)[:, :, 0]
-    numMeasInstances = len(allMeasLineList)
+    # allLineLengthList = [entry[1] for entry in analysisOutput if entry[0]]
+    # lineStdList = [entry[2] for entry in analysisOutput if entry[0]]
+    # lineAvgList = [entry[3] for entry in analysisOutput if entry[0]]
+    # allMeasAnglesList = [entry[4] for entry in analysisOutput if entry[0]]
+    # measMask = np.zeros(npImage.shape)[:, :, 0]
 
     contiguousPolygonsDict, patchList = createPolygonPatchesAndDict(allMeasLineList, isVerticalSubSection)
     fig, ax = plt.subplots(figsize=(8, 8), nrows=1, ncols=1)
