@@ -21,13 +21,13 @@ from collections import OrderedDict
 from polylidarutil import (plot_points, plot_polygons, get_point)
 from polylidar import extractPolygons
 from uncertainties import unumpy as unp
-# from detectron2 import model_zoo
-# from detectron2.engine import DefaultPredictor
-# from detectron2.config import get_cfg
-# from detectron2.utils.visualizer import Visualizer, ColorMode
-# from detectron2.data import MetadataCatalog, DatasetCatalog, build_detection_test_loader
-# from detectron2.evaluation import COCOEvaluator, inference_on_dataset
-# from detectron2.utils.logger import setup_logger
+from detectron2 import model_zoo
+from detectron2.engine import DefaultPredictor
+from detectron2.config import get_cfg
+from detectron2.utils.visualizer import Visualizer, ColorMode
+from detectron2.data import MetadataCatalog, DatasetCatalog, build_detection_test_loader
+from detectron2.evaluation import COCOEvaluator, inference_on_dataset
+from detectron2.utils.logger import setup_logger
 
 showPlots = False
 showBoundingBoxPlots = False  # Only works if parallel processing is False
@@ -459,11 +459,61 @@ class PolygonListManager:
 
 # @profile
 def main():
+    setup_logger()
 
-    # outputsFileName = getFileOrDirList('file', 'Choose outputs pickle file')
-    outputsFileName = '/home/mbraun/Downloads/outputmaskstest'
-    outputs = fileHandling(outputsFileName)
-    inputFileName = 'tiltedSEM/2020_02_06_MB0232_Reflectometry_002_cropped.jpg'
+    basePath = os.getcwd()
+    showPlots = False
+
+    annotationTrainListFileName = os.path.join(basePath, "annotations_Train.txt")
+    if not annotationTrainListFileName:
+        quit()
+    annotationValidateListFileName = os.path.join(basePath, "annotations_Validation.txt")
+    if not annotationValidateListFileName:
+        quit()
+
+    # Need to make a train and a validation list of dicts separately in InstanceSegmentationDatasetDict
+    with open(annotationTrainListFileName, 'rb') as handle:
+        annotationTrainDicts = pickle.loads(handle.read())
+    with open(annotationValidateListFileName, 'rb') as handle:
+        annotationValidateDicts = pickle.loads(handle.read())
+    annotationDicts = [annotationTrainDicts, annotationValidateDicts]
+
+    dirNameSet = set()
+    maskTypeSet = set()
+    for annotationDictList in annotationDicts:
+        for annotationDict in annotationDictList:
+            parentDirName = os.path.split(os.path.split(annotationDict['file_name'])[0])[-1]
+            if parentDirName not in dirNameSet:
+                dirNameSet.add(parentDirName)
+            if isinstance(annotationDict['annotations'][0], list):
+                fileMaskType = 'polygon'
+            elif isinstance(annotationDict['annotations'][0], dict):
+                fileMaskType = 'bitmask'
+            else:
+                fileMaskType = ''
+            assert fileMaskType, 'The annotation dict annotations did not match the expected pattern for polygon or bitmask encoding. Check your annotation creation.'
+            if fileMaskType not in maskTypeSet:
+                maskTypeSet.add(fileMaskType)
+
+    # dirNameSet should return {'Train', 'Validation'}
+    assert len(maskTypeSet) == 1, "The number of detected mask types is not 1, check your annotation creation and file choice."
+    maskType = list(maskTypeSet)[0]  # There is only 1 entry, assert checks that above
+
+    assert 'Train' in dirNameSet and 'Validation' in dirNameSet, 'You are missing either a Train or Validation directory in your annotations'
+
+    dirnames = ['Train',
+                'Validation']  # After making sure these are directories as expected, lets force the order to match the annotationDicts order
+
+    nanowireStr = 'VerticalNanowires'
+    for d in range(len(dirnames)):
+        if nanowireStr + "_" + dirnames[d] not in DatasetCatalog.__dict__['_REGISTERED']:
+            DatasetCatalog.register(nanowireStr + "_" + dirnames[d], lambda d=d: annotationDicts[d])
+        MetadataCatalog.get(nanowireStr + "_" + dirnames[d]).set(thing_classes=["VerticalNanowires"])
+    nanowire_metadata = MetadataCatalog.get(nanowireStr + "_Train")
+
+    DatasetCatalog.get('VerticalNanowires_Train')
+    inputFileName = getFileOrDirList('file', 'Choose input image file')
+
     if not os.path.isfile(inputFileName):
         quit()
     rawImage = Image.open(inputFileName)
@@ -476,6 +526,22 @@ def main():
         else:
             print('The imported rawImage is 1 dimensional for some reason, check it out.')
             quit()
+
+    cfg = get_cfg()
+    cfg.OUTPUT_DIR = os.path.join(basePath, 'OutputModels', 'MaskRCNNModel_4maskpolygon_highres')
+    cfg.MODEL.DEVICE = 'cpu'
+    # add project-specific config (e.g., TensorMask) here if you're not running a model in detectron2's core library
+    cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
+    cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")
+    cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512  # (default: 512, balloon test used 128)
+    cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (VerticalNanowires)
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5  # set threshold for this model
+    cfg.TEST.DETECTIONS_PER_IMAGE = 200  # Increased from COCO default, should never have more than 200 wires per image (default: 100)
+    cfg.DATASETS.TEST = (nanowireStr + "_" + dirnames[1],)
+
+    predictor = DefaultPredictor(cfg)
+    # look at the outputs. See https://detectron2.readthedocs.io/tutorials/models.html#model-output-format for specification
+    outputs = predictor(npImage)
 
     boundingBoxPolyDict = {}
     maskDict = {}
