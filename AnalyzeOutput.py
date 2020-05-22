@@ -7,9 +7,10 @@ import contextlib
 from tqdm import tqdm
 import multiprocessing
 from matplotlib import cm
+import matplotlib.path as mpath
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-import matplotlib.path as mpath
+from matplotlib.widgets import RectangleSelector, Button
 from descartes import PolygonPatch
 from shapely.geometry import Point, LineString, MultiLineString, Polygon
 from shapely import affinity
@@ -346,11 +347,9 @@ def preparePath(lineObject, instanceColor):
 def createPolygonPatchesAndDict(allMeasLineList, isVerticalSubSection):
     numMeasInstances = len(allMeasLineList)
     colorMap = cm.get_cmap('gist_rainbow', numMeasInstances)
-    contiguousPolygonsDict = {}
+    contiguousPolygonsList = []
     patchList = []
     for instanceNumber, lineList in enumerate(allMeasLineList):
-        if instanceNumber not in contiguousPolygonsDict:
-            contiguousPolygonsDict[instanceNumber] = []
         instanceColor = colorMap(instanceNumber)
         contiguousSide1 = []
         contiguousSide2 = []
@@ -368,7 +367,7 @@ def createPolygonPatchesAndDict(allMeasLineList, isVerticalSubSection):
                         else:
                             polygonPerimeter = Polygon(shell=contiguousSide1 + contiguousSide2[::-1])
                             outlinePatch = PolygonPatch(polygonPerimeter, ec='none', fc=instanceColor, fill=True, linewidth=2, alpha=0.3)
-                        contiguousPolygonsDict[instanceNumber].append(polygonPerimeter)
+                        contiguousPolygonsList.append((instanceNumber, polygonPerimeter))
                         patchList.append(outlinePatch)
                         contiguousSide1 = []
                         contiguousSide2 = []
@@ -383,14 +382,14 @@ def createPolygonPatchesAndDict(allMeasLineList, isVerticalSubSection):
                         else:
                             polygonPerimeter = Polygon(shell=contiguousSide1 + contiguousSide2[::-1])
                             outlinePatch = PolygonPatch(polygonPerimeter, ec='none', fc=instanceColor, fill=True, linewidth=2, alpha=0.3)
-                        contiguousPolygonsDict[instanceNumber].append(polygonPerimeter)
+                        contiguousPolygonsList.append((instanceNumber, polygonPerimeter))
                         patchList.append(outlinePatch)
                         contiguousSide1 = []
                         contiguousSide2 = []
             else:
                 contiguousSide1.append((x[0], y[0]))
                 contiguousSide2.append((x[1], y[1]))
-    return contiguousPolygonsDict, patchList
+    return contiguousPolygonsList, patchList
 
 
 # @profile
@@ -444,12 +443,63 @@ def main():
     # lineAvgList = [entry[3] for entry in analysisOutput if entry[0]]
     # allMeasAnglesList = [entry[4] for entry in analysisOutput if entry[0]]
 
-    contiguousPolygonsDict, patchList = createPolygonPatchesAndDict(allMeasLineList, isVerticalSubSection)
+    contiguousPolygonsList, patchList = createPolygonPatchesAndDict(allMeasLineList, isVerticalSubSection)
     fig, ax = plt.subplots(figsize=(8, 8), nrows=1, ncols=1)
     plt.imshow(npImage, interpolation='none')
     for patch in patchList:
         ax.add_patch(patch)
+    plt.subplots_adjust(bottom=0.15)
     plt.axis('equal')
+
+    class RangeSelect:
+        def __init__(self, numInstances):
+            self.coords = {}
+            self.selectedPolygon = None
+            self.numInstances = numInstances
+
+        def __call__(self, eclick, erelease):
+            if eclick.ydata > erelease.ydata:
+                eclick.ydata, erelease.ydata = erelease.ydata, eclick.ydata
+            if eclick.xdata > erelease.xdata:
+                eclick.xdata, erelease.xdata = erelease.xdata, eclick.xdata
+            self.coords['x'] = [eclick.xdata, erelease.xdata]
+            self.coords['y'] = [eclick.ydata, erelease.ydata]
+            self.selectedPolygon = Polygon([(eclick.xdata, eclick.ydata), (erelease.xdata, eclick.ydata), (erelease.xdata, erelease.ydata), (eclick.xdata, erelease.ydata)])
+
+            print(eclick)
+            print(erelease)
+            if len(ax.patches) > self.numInstances + 1:
+                ax.patches[-1].remove()
+            selection = mpatches.Rectangle((eclick.xdata, eclick.ydata), abs(eclick.xdata - erelease.xdata), abs(eclick.ydata - erelease.ydata), linewidth=1, edgecolor='none', facecolor='blue', alpha=0.5, fill=True)
+            ax.add_patch(selection)
+
+            fig.canvas.draw()
+
+    plt.show(block=False)
+    rangeselect = RangeSelect(len(patchList))
+    coordsList = []
+
+    def removeRegion(_):
+        indicesToDelete = []
+        instancesToDelete = []
+        for regionIndex, (instanceNum, region) in enumerate(contiguousPolygonsList):
+            if region.intersects(rangeselect.selectedPolygon):
+                # instancesToDelete.append(regionIndex)
+                indicesToDelete.append(regionIndex)
+        # Be careful not to mess up indices of list while trying to delete based on index!
+        for index in sorted(indicesToDelete, reverse=True):
+            del (contiguousPolygonsList[index])
+            del (ax.patches[index])
+        rangeselect.numInstances = len(contiguousPolygonsList)
+        # TODO: find the selected patch, possibly rely on list location and go based on...something
+        # ax.patches[-2].set_facecolor('white')
+        rect = RectangleSelector(ax, rangeselect, drawtype='box', rectprops=dict(facecolor='red', edgecolor='black', alpha=0.3, fill=True))
+        plt.draw()
+
+    axAddRegion = plt.axes([0.7, 0.02, 0.2, 0.075])
+    bRemove = Button(axAddRegion, 'Remove Instance')
+    rect = RectangleSelector(ax, rangeselect, drawtype='box', rectprops=dict(facecolor='red', edgecolor='black', alpha=0.5, fill=True))
+    bRemove.on_clicked(removeRegion)
     plt.show()
 
 
