@@ -20,6 +20,7 @@ from tkinter import Tk, filedialog
 from collections import OrderedDict
 from polylidarutil import (plot_points, plot_polygons, get_point)
 from polylidar import extractPolygons
+from uncertainties import unumpy as unp
 # from detectron2 import model_zoo
 # from detectron2.engine import DefaultPredictor
 # from detectron2.config import get_cfg
@@ -403,6 +404,9 @@ class PolygonListManager:
         self.fig = fig
         self.ax = ax
         self.contiguousPolygonsList = contiguousPolygonsList
+        self.instancesToMeasSet = set()
+        for instanceNumber, _ in self.contiguousPolygonsList:
+            self.instancesToMeasSet.add(instanceNumber)
 
     def RemoveButtonClicked(self, _):
         indicesToDelete = []
@@ -420,6 +424,8 @@ class PolygonListManager:
             indicesInInstance.append(regionIndex)
             if region.intersects(self.selectedPolygon):
                 deleteCurrentInstance = True
+                if instanceNum in self.instancesToMeasSet:
+                    self.instancesToMeasSet.remove(instanceNum)
         # Be careful not to mess up indices of list while trying to delete based on index!
         for index in sorted(indicesToDelete, reverse=True):
             del (self.contiguousPolygonsList[index])
@@ -490,11 +496,6 @@ def main():
             analysisOutput.append(analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, isVerticalSubSection))
 
     allMeasLineList = [entry[0] for entry in analysisOutput if entry[0]]
-    # allLineLengthList = [entry[1] for entry in analysisOutput if entry[0]]
-    # lineStdList = [entry[2] for entry in analysisOutput if entry[0]]
-    # lineAvgList = [entry[3] for entry in analysisOutput if entry[0]]
-    # allMeasAnglesList = [entry[4] for entry in analysisOutput if entry[0]]
-
     contiguousPolygonsList, patchList = createPolygonPatchesAndDict(allMeasLineList, isVerticalSubSection)
     fig, ax = plt.subplots(figsize=(8, 8), nrows=1, ncols=1)
     plt.imshow(npImage, interpolation='none')
@@ -509,6 +510,24 @@ def main():
     rect = RectangleSelector(ax, polygonListManager.RangeSelection, drawtype='box', rectprops=dict(facecolor='red', edgecolor='none', alpha=0.3, fill=True))
     bRemove.on_clicked(polygonListManager.RemoveButtonClicked)
     plt.show()
+
+    allLineLengthList = [entry[1] for entry in analysisOutput if entry[0]]
+    lineStdList = [entry[2] for entry in analysisOutput if entry[0]]
+    lineAvgList = [entry[3] for entry in analysisOutput if entry[0]]
+    allMeasAnglesList = [entry[4] for entry in analysisOutput if entry[0]]
+    finalMeasLineList = []
+    finalAllLineLengthList = []
+    finalLineStdList = []
+    finalLineAvgList = []
+    finalAllMeasAnglesList = []
+    for instanceNumber in list(polygonListManager.instancesToMeasSet):
+        finalMeasLineList.append(allMeasLineList[instanceNumber])
+        finalAllLineLengthList.append(allLineLengthList[instanceNumber])
+        finalLineStdList.append(lineStdList[instanceNumber])
+        finalLineAvgList.append(lineAvgList[instanceNumber])
+        finalAllMeasAnglesList.append(allMeasAnglesList[instanceNumber])
+    uncertaintyLineArray = unp.uarray(finalLineAvgList, finalLineStdList)
+    print("Overall Average Size (with std dev): {:.0f}".format(uncertaintyLineArray.mean()))
 
 
 if __name__ == "__main__":
