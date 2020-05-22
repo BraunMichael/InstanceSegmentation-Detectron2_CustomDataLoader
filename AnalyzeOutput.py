@@ -340,7 +340,7 @@ def preparePath(lineObject, instanceColor):
     path_data = [(path.MOVETO, [x[0], y[0]]), (path.LINETO, [x[1], y[1]])]
     codes, verts = zip(*path_data)
     outPath = mpath.Path(verts, codes)
-    outPatch = mpatches.PathPatch(outPath, color=instanceColor, linewidth=2, alpha=0.3)
+    outPatch = mpatches.PathPatch(outPath, color=instanceColor, linewidth=2, alpha=0.5)
     return outPatch
 
 
@@ -366,7 +366,7 @@ def createPolygonPatchesAndDict(allMeasLineList, isVerticalSubSection):
                             outlinePatch = preparePath(polygonPerimeter, instanceColor)
                         else:
                             polygonPerimeter = Polygon(shell=contiguousSide1 + contiguousSide2[::-1])
-                            outlinePatch = PolygonPatch(polygonPerimeter, ec='none', fc=instanceColor, fill=True, linewidth=2, alpha=0.3)
+                            outlinePatch = PolygonPatch(polygonPerimeter, ec='none', fc=instanceColor, fill=True, linewidth=2, alpha=0.5)
                         contiguousPolygonsList.append((instanceNumber, polygonPerimeter))
                         patchList.append(outlinePatch)
                         contiguousSide1 = []
@@ -381,7 +381,7 @@ def createPolygonPatchesAndDict(allMeasLineList, isVerticalSubSection):
                             outlinePatch = preparePath(polygonPerimeter, instanceColor)
                         else:
                             polygonPerimeter = Polygon(shell=contiguousSide1 + contiguousSide2[::-1])
-                            outlinePatch = PolygonPatch(polygonPerimeter, ec='none', fc=instanceColor, fill=True, linewidth=2, alpha=0.3)
+                            outlinePatch = PolygonPatch(polygonPerimeter, ec='none', fc=instanceColor, fill=True, linewidth=2, alpha=0.5)
                         contiguousPolygonsList.append((instanceNumber, polygonPerimeter))
                         patchList.append(outlinePatch)
                         contiguousSide1 = []
@@ -465,40 +465,44 @@ def main():
             self.coords['x'] = [eclick.xdata, erelease.xdata]
             self.coords['y'] = [eclick.ydata, erelease.ydata]
             self.selectedPolygon = Polygon([(eclick.xdata, eclick.ydata), (erelease.xdata, eclick.ydata), (erelease.xdata, erelease.ydata), (eclick.xdata, erelease.ydata)])
-
-            print(eclick)
-            print(erelease)
             if len(ax.patches) > self.numInstances + 1:
                 ax.patches[-1].remove()
-            selection = mpatches.Rectangle((eclick.xdata, eclick.ydata), abs(eclick.xdata - erelease.xdata), abs(eclick.ydata - erelease.ydata), linewidth=1, edgecolor='none', facecolor='blue', alpha=0.5, fill=True)
+            selection = mpatches.Rectangle((eclick.xdata, eclick.ydata), abs(eclick.xdata - erelease.xdata), abs(eclick.ydata - erelease.ydata), linewidth=1, edgecolor='none', facecolor='red', alpha=0.3, fill=True)
             ax.add_patch(selection)
 
             fig.canvas.draw()
 
     plt.show(block=False)
     rangeselect = RangeSelect(len(patchList))
-    coordsList = []
 
     def removeRegion(_):
         indicesToDelete = []
-        instancesToDelete = []
+        # Could be more efficient by storing current instance and start index, so can add all instances
+        currentInstanceNum = None
+        indicesInInstance = []
+        deleteCurrentInstance = False
         for regionIndex, (instanceNum, region) in enumerate(contiguousPolygonsList):
+            if currentInstanceNum != instanceNum:
+                if deleteCurrentInstance:
+                    indicesToDelete.extend(indicesInInstance)
+                currentInstanceNum = instanceNum
+                indicesInInstance = []
+                deleteCurrentInstance = False
+            indicesInInstance.append(regionIndex)
             if region.intersects(rangeselect.selectedPolygon):
-                # instancesToDelete.append(regionIndex)
-                indicesToDelete.append(regionIndex)
+                deleteCurrentInstance = True
         # Be careful not to mess up indices of list while trying to delete based on index!
         for index in sorted(indicesToDelete, reverse=True):
             del (contiguousPolygonsList[index])
             del (ax.patches[index])
         rangeselect.numInstances = len(contiguousPolygonsList)
-        # TODO: find the selected patch, possibly rely on list location and go based on...something
-        # ax.patches[-2].set_facecolor('white')
-        rect = RectangleSelector(ax, rangeselect, drawtype='box', rectprops=dict(facecolor='red', edgecolor='black', alpha=0.3, fill=True))
+        del (ax.patches[-1])
+        rect = RectangleSelector(ax, rangeselect, drawtype='box', rectprops=dict(facecolor='red', edgecolor='none', alpha=0.3, fill=True))
         plt.draw()
 
     axAddRegion = plt.axes([0.7, 0.02, 0.2, 0.075])
     bRemove = Button(axAddRegion, 'Remove Instance')
-    rect = RectangleSelector(ax, rangeselect, drawtype='box', rectprops=dict(facecolor='red', edgecolor='black', alpha=0.5, fill=True))
+    rect = RectangleSelector(ax, rangeselect, drawtype='box', rectprops=dict(facecolor='red', edgecolor='none', alpha=0.3, fill=True))
     bRemove.on_clicked(removeRegion)
     plt.show()
 

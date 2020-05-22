@@ -4,6 +4,7 @@
       <w>coords</w>
       <w>detectron</w>
       <w>joblib</w>
+      <w>rangeselect</w>
       <w>segmentations</w>
       <w>torchdevice</w>
       <w>torchload</w>
