@@ -327,7 +327,10 @@ def analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, isVerti
                 # The first and last lines sometimes have issues, remove them
                 measLineList = measLineList[1:-1]
                 lineLengthList = np.asarray(lineLengthList[1:-1])
-                lineStd = np.std(lineLengthList, ddof=1)
+                if len(lineLengthList) == 2:
+                    lineStd = np.std(lineLengthList, ddof=1)
+                else:
+                    lineStd = np.std(lineLengthList, ddof=0)
                 lineAvg = np.mean(lineLengthList)
             # else there are no valid lines
 
@@ -392,6 +395,55 @@ def createPolygonPatchesAndDict(allMeasLineList, isVerticalSubSection):
     return contiguousPolygonsList, patchList
 
 
+class PolygonListManager:
+    def __init__(self, contiguousPolygonsList, numInstances, fig, ax):
+        self.coords = {}
+        self.selectedPolygon = None
+        self.numInstances = numInstances
+        self.fig = fig
+        self.ax = ax
+        self.contiguousPolygonsList = contiguousPolygonsList
+
+    def RemoveButtonClicked(self, _):
+        indicesToDelete = []
+        # Could be more efficient by storing current instance and start index, so can add all instances
+        currentInstanceNum = None
+        indicesInInstance = []
+        deleteCurrentInstance = False
+        for regionIndex, (instanceNum, region) in enumerate(self.contiguousPolygonsList):
+            if currentInstanceNum != instanceNum:
+                if deleteCurrentInstance:
+                    indicesToDelete.extend(indicesInInstance)
+                currentInstanceNum = instanceNum
+                indicesInInstance = []
+                deleteCurrentInstance = False
+            indicesInInstance.append(regionIndex)
+            if region.intersects(self.selectedPolygon):
+                deleteCurrentInstance = True
+        # Be careful not to mess up indices of list while trying to delete based on index!
+        for index in sorted(indicesToDelete, reverse=True):
+            del (self.contiguousPolygonsList[index])
+            del (self.ax.patches[index])
+        self.numInstances = len(self.contiguousPolygonsList)
+        del (self.ax.patches[-1])
+        rect = RectangleSelector(self.ax, self.RangeSelection, drawtype='box', rectprops=dict(facecolor='red', edgecolor='none', alpha=0.3, fill=True))
+        plt.draw()
+
+    def RangeSelection(self, eclick, erelease):
+        if eclick.ydata > erelease.ydata:
+            eclick.ydata, erelease.ydata = erelease.ydata, eclick.ydata
+        if eclick.xdata > erelease.xdata:
+            eclick.xdata, erelease.xdata = erelease.xdata, eclick.xdata
+        self.coords['x'] = [eclick.xdata, erelease.xdata]
+        self.coords['y'] = [eclick.ydata, erelease.ydata]
+        self.selectedPolygon = Polygon([(eclick.xdata, eclick.ydata), (erelease.xdata, eclick.ydata), (erelease.xdata, erelease.ydata), (eclick.xdata, erelease.ydata)])
+        if len(self.ax.patches) > self.numInstances + 1:
+            self.ax.patches[-1].remove()
+        selection = mpatches.Rectangle((eclick.xdata, eclick.ydata), abs(eclick.xdata - erelease.xdata), abs(eclick.ydata - erelease.ydata), linewidth=1, edgecolor='none', facecolor='red', alpha=0.3, fill=True)
+        self.ax.add_patch(selection)
+        self.fig.canvas.draw()
+
+
 # @profile
 def main():
 
@@ -451,59 +503,11 @@ def main():
     plt.subplots_adjust(bottom=0.15)
     plt.axis('equal')
 
-    class RangeSelect:
-        def __init__(self, numInstances):
-            self.coords = {}
-            self.selectedPolygon = None
-            self.numInstances = numInstances
-
-        def __call__(self, eclick, erelease):
-            if eclick.ydata > erelease.ydata:
-                eclick.ydata, erelease.ydata = erelease.ydata, eclick.ydata
-            if eclick.xdata > erelease.xdata:
-                eclick.xdata, erelease.xdata = erelease.xdata, eclick.xdata
-            self.coords['x'] = [eclick.xdata, erelease.xdata]
-            self.coords['y'] = [eclick.ydata, erelease.ydata]
-            self.selectedPolygon = Polygon([(eclick.xdata, eclick.ydata), (erelease.xdata, eclick.ydata), (erelease.xdata, erelease.ydata), (eclick.xdata, erelease.ydata)])
-            if len(ax.patches) > self.numInstances + 1:
-                ax.patches[-1].remove()
-            selection = mpatches.Rectangle((eclick.xdata, eclick.ydata), abs(eclick.xdata - erelease.xdata), abs(eclick.ydata - erelease.ydata), linewidth=1, edgecolor='none', facecolor='red', alpha=0.3, fill=True)
-            ax.add_patch(selection)
-
-            fig.canvas.draw()
-
-    plt.show(block=False)
-    rangeselect = RangeSelect(len(patchList))
-
-    def removeRegion(_):
-        indicesToDelete = []
-        # Could be more efficient by storing current instance and start index, so can add all instances
-        currentInstanceNum = None
-        indicesInInstance = []
-        deleteCurrentInstance = False
-        for regionIndex, (instanceNum, region) in enumerate(contiguousPolygonsList):
-            if currentInstanceNum != instanceNum:
-                if deleteCurrentInstance:
-                    indicesToDelete.extend(indicesInInstance)
-                currentInstanceNum = instanceNum
-                indicesInInstance = []
-                deleteCurrentInstance = False
-            indicesInInstance.append(regionIndex)
-            if region.intersects(rangeselect.selectedPolygon):
-                deleteCurrentInstance = True
-        # Be careful not to mess up indices of list while trying to delete based on index!
-        for index in sorted(indicesToDelete, reverse=True):
-            del (contiguousPolygonsList[index])
-            del (ax.patches[index])
-        rangeselect.numInstances = len(contiguousPolygonsList)
-        del (ax.patches[-1])
-        rect = RectangleSelector(ax, rangeselect, drawtype='box', rectprops=dict(facecolor='red', edgecolor='none', alpha=0.3, fill=True))
-        plt.draw()
-
+    polygonListManager = PolygonListManager(contiguousPolygonsList, len(patchList), fig, ax)
     axAddRegion = plt.axes([0.7, 0.02, 0.2, 0.075])
     bRemove = Button(axAddRegion, 'Remove Instance')
-    rect = RectangleSelector(ax, rangeselect, drawtype='box', rectprops=dict(facecolor='red', edgecolor='none', alpha=0.3, fill=True))
-    bRemove.on_clicked(removeRegion)
+    rect = RectangleSelector(ax, polygonListManager.RangeSelection, drawtype='box', rectprops=dict(facecolor='red', edgecolor='none', alpha=0.3, fill=True))
+    bRemove.on_clicked(polygonListManager.RemoveButtonClicked)
     plt.show()
 
 
