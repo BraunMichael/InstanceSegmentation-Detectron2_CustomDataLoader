@@ -32,7 +32,7 @@ from uncertainties import unumpy as unp
 showPlots = False
 showBoundingBoxPlots = False  # Only works if parallel processing is False
 plotPolylidar = False  # Only works if parallel processing is False
-isVerticalSubSection = False
+isVerticalSubSection = True
 parallelProcessing = True
 
 
@@ -167,6 +167,10 @@ def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file'
 
 # @profile
 def isValidLine(boundingBoxPolyDict, imageHeight, instanceNum, instanceLine):
+    # TODO: This is slow, should be able to do one of the following:
+    #  - Make a dict at start for each instance with values of every instance that it's bounding box overlaps
+    #  - use https://shapely.readthedocs.io/en/stable/manual.html#prepared-geometry-operations
+    #  - or use https://shapely.readthedocs.io/en/stable/manual.html#str-packed-r-tree
     # Check if line is contained in a different bounding box, need to check which instance is in front (below)
     # Don't check for the current instanceNum (key in boundingBoxDict)
     validForInstanceList = []
@@ -229,8 +233,9 @@ def isEdgeInstance(imageRight, imageBottom, boundingBoxPoly, isVerticalSubSectio
             return True
     return False
 
-
+# @profile
 def longestLineAndLengthInPolygon(maskPolygon, lineTest):
+    # TODO: This is slow
     testSegments = lineTest.intersection(maskPolygon)  # without .boundary, get the lines immediately
     outputLine = None
     LineLength = None
@@ -269,7 +274,9 @@ def getLinePoints(startXY, endXY):
     return xyPoints
 
 
+# @profile
 def getXYFromPolyBox(boundingBoxPoly):
+    # TODO: This is slow
     topXY = []
     bottomXY = []
     boundingBoxXY = boundingBoxPoly.boundary.coords[:-1]
