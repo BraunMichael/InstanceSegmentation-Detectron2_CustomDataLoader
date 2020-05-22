@@ -34,7 +34,7 @@ nvcc --version  # Check cuda version, hopefully 10.1 (or newer)
 Install the required python packages:
 ```
 pip install --upgrade pip
-pip install opencv-python matplotlib scikit-image numpy cython Pillow imgaug imagecorruptions imageio ttictoc multiprocess lmfit joblib pyyaml==5.1
+pip install opencv-python matplotlib scikit-image numpy cython Pillow imgaug imagecorruptions imageio ttictoc multiprocess lmfit joblib pyyaml==5.1 uncertainties
 ```
 Currently using kivy for the gui interactions, kivy has only early support for Python 3.8 so far. for Python <3.8:
 ```
