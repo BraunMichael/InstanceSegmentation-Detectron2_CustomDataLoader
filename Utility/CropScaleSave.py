@@ -95,9 +95,6 @@ def whiteLinePixelLocationList(rawImage, horizontalLine_truefalse):
 
 
 def scaleBarProcessing(filename, scaleBarMicronsPerPixelDict, replaceScaleEntry):
-    global fig
-    global ax
-    fig, ax = plt.subplots()
     rawImage = Image.open(filename)
     (rawImageWidth, rawImageHeight) = rawImage.size
     rawImageHeightOffset = rawImageHeight*0.75
@@ -114,6 +111,9 @@ def scaleBarProcessing(filename, scaleBarMicronsPerPixelDict, replaceScaleEntry)
 
     nakedFileName = getNakedNameFromFilePath(filename)
     if replaceScaleEntry or nakedFileName not in scaleBarMicronsPerPixelDict:
+        global fig
+        global ax
+        fig, ax = plt.subplots()
         # Find edge of box of scalebar (closest line to right side that isn't the right side)
 
         (imageWidth, imageHeight) = reducedRawImage.size
