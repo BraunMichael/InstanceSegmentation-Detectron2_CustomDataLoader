@@ -420,7 +420,6 @@ class PolygonListManager:
 
     def RemoveButtonClicked(self, _):
         indicesToDelete = []
-        # Could be more efficient by storing current instance and start index, so can add all instances
         currentInstanceNum = None
         indicesInInstance = []
         deleteCurrentInstance = False
@@ -566,6 +565,7 @@ def main():
 
     allMeasLineList = [entry[0] for entry in analysisOutput if entry[0]]
     contiguousPolygonsList, patchList = createPolygonPatchesAndDict(allMeasLineList, isVerticalSubSection)
+    # TODO: 2 plots are showing up...
     fig, ax = plt.subplots(figsize=(8, 8), nrows=1, ncols=1)
     plt.imshow(npImage, interpolation='none')
     for patch in patchList:
