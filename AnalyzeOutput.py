@@ -598,7 +598,7 @@ def main():
         finalLineAvgList.append(lineAvgList[instanceNumber])
         finalAllMeasAnglesList.append(allMeasAnglesList[instanceNumber])
     uncertaintyLineArray = unp.uarray(finalLineAvgList, finalLineStdList)
-    print("Overall Average Size (with std dev): {:.0f}".format(scaleBarNMPerPixel * uncertaintyLineArray.mean()))
+    print("Overall Average Size (with std dev): {:.0f} nm".format(scaleBarNMPerPixel * uncertaintyLineArray.mean()))
 
 
 if __name__ == "__main__":
