@@ -2,6 +2,7 @@
   <dictionary name="mbraun">
     <words>
       <w>coords</w>
+      <w>databar</w>
       <w>detectron</w>
       <w>joblib</w>
       <w>rangeselect</w>

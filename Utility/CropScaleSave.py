@@ -208,6 +208,7 @@ def getNakedNameFromFilePath(name):
     nakedName, fileExtension = os.path.splitext(tail)
     return nakedName
 
+
 def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file', fileTypes: str = '*', initialDirOrFile: str = os.getcwd()):
     if os.path.isfile(initialDirOrFile) or os.path.isdir(initialDirOrFile):
         initialDir = os.path.split(initialDirOrFile)[0]
@@ -294,4 +295,3 @@ def importRawImageAndScale():
     croppedImage.save(croppedFileName)
 
     return croppedImage, scaleBarMicronsPerPixel
-
