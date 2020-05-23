@@ -28,6 +28,8 @@ from detectron2.utils.visualizer import Visualizer, ColorMode
 from detectron2.data import MetadataCatalog, DatasetCatalog, build_detection_test_loader
 from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 from detectron2.utils.logger import setup_logger
+from Utility.CropScaleSave import importRawImageAndScale
+
 
 showPlots = False
 showBoundingBoxPlots = False  # Only works if parallel processing is False
@@ -232,6 +234,7 @@ def isEdgeInstance(imageRight, imageBottom, boundingBoxPoly, isVerticalSubSectio
             # too close to bottom side
             return True
     return False
+
 
 # @profile
 def longestLineAndLengthInPolygon(maskPolygon, lineTest):
@@ -457,25 +460,32 @@ class PolygonListManager:
         self.fig.canvas.draw()
 
 
-# @profile
-def main():
+def getAnnotationDict(basePath, fileName):
+    annotationListFileName = os.path.join(basePath, fileName)
+    if not annotationListFileName:
+        quit()
+    with open(annotationListFileName, 'rb') as handle:
+        annotationDict = pickle.loads(handle.read())
+    return annotationDict
+
+
+def getInstances():
     setup_logger()
-
     basePath = os.getcwd()
-    showPlots = False
-
-    annotationTrainListFileName = os.path.join(basePath, "annotations_Train.txt")
-    if not annotationTrainListFileName:
-        quit()
-    annotationValidateListFileName = os.path.join(basePath, "annotations_Validation.txt")
-    if not annotationValidateListFileName:
-        quit()
-
-    # Need to make a train and a validation list of dicts separately in InstanceSegmentationDatasetDict
-    with open(annotationTrainListFileName, 'rb') as handle:
-        annotationTrainDicts = pickle.loads(handle.read())
-    with open(annotationValidateListFileName, 'rb') as handle:
-        annotationValidateDicts = pickle.loads(handle.read())
+    # annotationTrainListFileName = os.path.join(basePath, "annotations_Train.txt")
+    # if not annotationTrainListFileName:
+    #     quit()
+    # annotationValidateListFileName = os.path.join(basePath, "annotations_Validation.txt")
+    # if not annotationValidateListFileName:
+    #     quit()
+    #
+    # # Need to make a train and a validation list of dicts separately in InstanceSegmentationDatasetDict
+    # with open(annotationTrainListFileName, 'rb') as handle:
+    #     annotationTrainDicts = pickle.loads(handle.read())
+    # with open(annotationValidateListFileName, 'rb') as handle:
+    #     annotationValidateDicts = pickle.loads(handle.read())
+    annotationTrainDicts = getAnnotationDict(basePath, "annotations_Train.txt")
+    annotationValidateDicts = getAnnotationDict(basePath, "annotations_Validation.txt")
     annotationDicts = [annotationTrainDicts, annotationValidateDicts]
 
     dirNameSet = set()
@@ -497,26 +507,21 @@ def main():
 
     # dirNameSet should return {'Train', 'Validation'}
     assert len(maskTypeSet) == 1, "The number of detected mask types is not 1, check your annotation creation and file choice."
-    maskType = list(maskTypeSet)[0]  # There is only 1 entry, assert checks that above
-
     assert 'Train' in dirNameSet and 'Validation' in dirNameSet, 'You are missing either a Train or Validation directory in your annotations'
-
-    dirnames = ['Train',
-                'Validation']  # After making sure these are directories as expected, lets force the order to match the annotationDicts order
-
+    dirnames = ['Train', 'Validation']  # After making sure these are directories as expected, lets force the order to match the annotationDicts order
     nanowireStr = 'VerticalNanowires'
     for d in range(len(dirnames)):
         if nanowireStr + "_" + dirnames[d] not in DatasetCatalog.__dict__['_REGISTERED']:
             DatasetCatalog.register(nanowireStr + "_" + dirnames[d], lambda d=d: annotationDicts[d])
         MetadataCatalog.get(nanowireStr + "_" + dirnames[d]).set(thing_classes=["VerticalNanowires"])
-    nanowire_metadata = MetadataCatalog.get(nanowireStr + "_Train")
 
     DatasetCatalog.get('VerticalNanowires_Train')
-    inputFileName = getFileOrDirList('file', 'Choose input image file')
 
-    if not os.path.isfile(inputFileName):
-        quit()
-    rawImage = Image.open(inputFileName)
+    rawImage, scaleBarMicronsPerPixel = importRawImageAndScale()
+    tiltAngle = 30
+    if not isVerticalSubSection:
+        # Correct for tilt angle, this is equivalent to multiplying the measured length, but is more convenient here
+        scaleBarMicronsPerPixel = scaleBarMicronsPerPixel / np.sin(np.deg2rad(tiltAngle))
     npImage = np.array(rawImage)
 
     if npImage.ndim < 3:
@@ -542,7 +547,12 @@ def main():
     predictor = DefaultPredictor(cfg)
     # look at the outputs. See https://detectron2.readthedocs.io/tutorials/models.html#model-output-format for specification
     outputs = predictor(npImage)
+    return outputs, npImage, scaleBarMicronsPerPixel
 
+
+# @profile
+def main():
+    outputs, npImage, scaleBarMicronsPerPixel = getInstances()
     boundingBoxPolyDict = {}
     maskDict = {}
     numInstances = len(outputs['instances'])
@@ -600,7 +610,7 @@ def main():
         finalLineAvgList.append(lineAvgList[instanceNumber])
         finalAllMeasAnglesList.append(allMeasAnglesList[instanceNumber])
     uncertaintyLineArray = unp.uarray(finalLineAvgList, finalLineStdList)
-    print("Overall Average Size (with std dev): {:.0f}".format(uncertaintyLineArray.mean()))
+    print("Overall Average Size (with std dev): {:.0f}".format(scaleBarMicronsPerPixel * uncertaintyLineArray.mean()))
 
 
 if __name__ == "__main__":
