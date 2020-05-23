@@ -533,12 +533,12 @@ def getInstances():
     predictor = DefaultPredictor(cfg)
     # look at the outputs. See https://detectron2.readthedocs.io/tutorials/models.html#model-output-format for specification
     outputs = predictor(npImage)
-    return outputs, npImage, scaleBarMicronsPerPixel
+    return outputs, npImage, scaleBarMicronsPerPixel * 1000
 
 
 # @profile
 def main():
-    outputs, npImage, scaleBarMicronsPerPixel = getInstances()
+    outputs, npImage, scaleBarNMPerPixel = getInstances()
     boundingBoxPolyDict = {}
     maskDict = {}
     numInstances = len(outputs['instances'])
@@ -596,7 +596,7 @@ def main():
         finalLineAvgList.append(lineAvgList[instanceNumber])
         finalAllMeasAnglesList.append(allMeasAnglesList[instanceNumber])
     uncertaintyLineArray = unp.uarray(finalLineAvgList, finalLineStdList)
-    print("Overall Average Size (with std dev): {:.0f}".format(scaleBarMicronsPerPixel * uncertaintyLineArray.mean()))
+    print("Overall Average Size (with std dev): {:.0f}".format(scaleBarNMPerPixel * uncertaintyLineArray.mean()))
 
 
 if __name__ == "__main__":
