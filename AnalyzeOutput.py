@@ -472,18 +472,6 @@ def getAnnotationDict(basePath, fileName):
 def getInstances():
     setup_logger()
     basePath = os.getcwd()
-    # annotationTrainListFileName = os.path.join(basePath, "annotations_Train.txt")
-    # if not annotationTrainListFileName:
-    #     quit()
-    # annotationValidateListFileName = os.path.join(basePath, "annotations_Validation.txt")
-    # if not annotationValidateListFileName:
-    #     quit()
-    #
-    # # Need to make a train and a validation list of dicts separately in InstanceSegmentationDatasetDict
-    # with open(annotationTrainListFileName, 'rb') as handle:
-    #     annotationTrainDicts = pickle.loads(handle.read())
-    # with open(annotationValidateListFileName, 'rb') as handle:
-    #     annotationValidateDicts = pickle.loads(handle.read())
     annotationTrainDicts = getAnnotationDict(basePath, "annotations_Train.txt")
     annotationValidateDicts = getAnnotationDict(basePath, "annotations_Validation.txt")
     annotationDicts = [annotationTrainDicts, annotationValidateDicts]
@@ -541,8 +529,6 @@ def getInstances():
     cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512  # (default: 512, balloon test used 128)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (VerticalNanowires)
     cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5  # set threshold for this model
-    cfg.TEST.DETECTIONS_PER_IMAGE = 200  # Increased from COCO default, should never have more than 200 wires per image (default: 100)
-    cfg.DATASETS.TEST = (nanowireStr + "_" + dirnames[1],)
 
     predictor = DefaultPredictor(cfg)
     # look at the outputs. See https://detectron2.readthedocs.io/tutorials/models.html#model-output-format for specification
