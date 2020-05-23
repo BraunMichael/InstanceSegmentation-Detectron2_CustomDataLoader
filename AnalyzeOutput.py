@@ -435,6 +435,8 @@ class PolygonListManager:
                 deleteCurrentInstance = True
                 if instanceNum in self.instancesToMeasSet:
                     self.instancesToMeasSet.remove(instanceNum)
+        if deleteCurrentInstance:  # Fix for visual bug of not deleting the last instance
+            indicesToDelete.extend(indicesInInstance)
         # Be careful not to mess up indices of list while trying to delete based on index!
         for index in sorted(indicesToDelete, reverse=True):
             del (self.contiguousPolygonsList[index])
