@@ -3,6 +3,9 @@ import json
 import jsonpickle
 import tkinter
 from tkinter import Tk, filedialog
+import numpy as np
+import matplotlib.pyplot as plt
+from PIL import Image
 import locale
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
@@ -104,7 +107,8 @@ def get_file(entryField, entryFieldText, titleMessage, fileFormatsStr):
 
 
 def preview_image(imageFilePath):
-    print('not implemented yet')
+    rawImage = Image.open(imageFilePath.get().replace('~', os.path.expanduser('~')))
+    rawImage.show()
 
 
 def get_setupOptions(savedJSONFileName):
@@ -181,7 +185,6 @@ def uiInput(win, setupOptions, savedJSONFileName):
     tkinter.Button(win, text='Show/Hide Advanced Options', command=lambda: show_AdvancedOptions(win, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar)).grid(row=7, column=1)
 
     hide_AdvancedOptions(win)
-    # TODO: edit lambda here, and the on_closing probably needs to convert strings to floats for tilt and centerfractiontomeasure
     win.protocol("WM_DELETE_WINDOW", lambda: on_closing(win, setupOptions, savedJSONFileName, ImageEntryText, scaleDictEntryText, isVerticalSubSectionVar, centerFractionToMeasureVar, tiltAngleVar, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar))
     win.mainloop()
 
