@@ -29,13 +29,7 @@ from detectron2.data import MetadataCatalog, DatasetCatalog, build_detection_tes
 from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 from detectron2.utils.logger import setup_logger
 from Utility.CropScaleSave import importRawImageAndScale
-
-
-showPlots = False
-showBoundingBoxPlots = False  # Only works if parallel processing is False
-plotPolylidar = False  # Only works if parallel processing is False
-isVerticalSubSection = True
-parallelProcessing = True
+from Utility.AnalyzeOutputUI import SetupOptions
 
 
 @contextlib.contextmanager
@@ -63,9 +57,9 @@ def tqdm_joblib(tqdm_object):
 
 
 # @profile
-def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
+def centerXPercentofWire(npMaskFunc, percentSize, setupOptions: SetupOptions):
     assert 0 <= percentSize <= 1, "Percent size of section has to be between 0 and 1"
-    assert isinstance(isVerticalSubSection,
+    assert isinstance(setupOptions.isVerticalSubSection,
                       bool), "isVerticalSubSection must be a boolean, True if you want a vertical subsection, False if you want a horizontal subsection"
     label_image = label(npMaskFunc, connectivity=1)
     allRegionProperties = regionprops(label_image)
@@ -90,7 +84,7 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
         assert len(polygonsList) == 1, "There was more than 1 polygon extracted from extractPolygons."
         shell_coords = [get_point(pi, flippedMaskCoords) for pi in polygonsList[0].shell]
         maskPolygon = Polygon(shell=shell_coords)
-        if plotPolylidar and not parallelProcessing:
+        if setupOptions.plotPolylidar and not setupOptions.parallelProcessing:
             fig, ax = plt.subplots(figsize=(8, 8), nrows=1, ncols=1)
             # plot points
             plot_points(flippedMaskCoords, ax)
@@ -103,7 +97,7 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
         # This should ensure a measurement line passes through the centroid, at the ellipse angle, and never starts within the mask itself
         # This also means the lengths measured are the real lengths, don't need to do trig later
         centroidCoords = region.centroid
-        if isVerticalSubSection:
+        if setupOptions.isVerticalSubSection:
             scaledBoundingBoxPoly = affinity.scale(maskPolygon.envelope, 1, percentSize)
             # Coords are row, col ie (y, x)
             subBoundingBoxPoly = affinity.skew(scaledBoundingBoxPoly.envelope, ys=-maskAngle, origin=(centroidCoords[1], centroidCoords[0]))
@@ -113,10 +107,10 @@ def centerXPercentofWire(npMaskFunc, percentSize, isVerticalSubSection: bool):
             subBoundingBoxPoly = affinity.skew(scaledBoundingBoxPoly.envelope, xs=maskAngle, origin=(centroidCoords[1], centroidCoords[0]))
         outputSubMaskPoly = maskPolygon.intersection(subBoundingBoxPoly)
 
-        if showBoundingBoxPlots and not parallelProcessing:
+        if setupOptions.showBoundingBoxPlots and not setupOptions.parallelProcessing:
             # Blue rectangle is standard bounding box
             # Red rectangle is rotated bounding box from MinimumBoundingBox
-            # Multicolored points are either standard (isVerticalSubsection=True) or rotated bounding box (isVerticalSubsection=False)
+            # Multicolored points are either standard (setupOptions.isVerticalSubsection=True) or rotated bounding box (setupOptions.isVerticalSubsection=False)
             fig = plt.figure(figsize=(15, 12))
             ax = fig.add_subplot(111)
             ax.imshow(npMaskFunc)
@@ -302,8 +296,8 @@ def getXYFromPolyBox(boundingBoxPoly):
 
 
 # @profile
-def analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, isVerticalSubSection):
-    if not parallelProcessing:
+def analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, setupOptions: SetupOptions):
+    if not setupOptions.parallelProcessing:
         print("Working on instance number: ", instanceNumber)
     mask = maskDict[instanceNumber]
     imageWidth = mask.shape[1]
@@ -314,13 +308,13 @@ def analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, isVerti
     lineStd = None
     lineAvg = None
 
-    outputSubMaskPoly, subBoundingBoxPoly, maskAngle = centerXPercentofWire(mask, 0.7, isVerticalSubSection)
+    outputSubMaskPoly, subBoundingBoxPoly, maskAngle = centerXPercentofWire(mask, 0.7, setupOptions)
 
     if outputSubMaskPoly is not None:
         bottomLeft, bottomRight, topLeft, topRight = getXYFromPolyBox(subBoundingBoxPoly)
 
-        if not isEdgeInstance(imageWidth, imageHeight, boundingBoxPoly, isVerticalSubSection):
-            if isVerticalSubSection:
+        if not isEdgeInstance(imageWidth, imageHeight, boundingBoxPoly, setupOptions.isVerticalSubSection):
+            if setupOptions.isVerticalSubSection:
                 lineStartPoints = getLinePoints(bottomLeft, topLeft)  # Left line
                 lineEndPoints = getLinePoints(bottomRight, topRight)  # Right line
             else:
@@ -506,11 +500,10 @@ def getInstances():
 
     DatasetCatalog.get('VerticalNanowires_Train')
 
-    rawImage, scaleBarMicronsPerPixel = importRawImageAndScale()
-    tiltAngle = 30
-    if not isVerticalSubSection:
+    rawImage, scaleBarMicronsPerPixel, setupOptions = importRawImageAndScale()
+    if not setupOptions.isVerticalSubSection:
         # Correct for tilt angle, this is equivalent to multiplying the measured length, but is more convenient here
-        scaleBarMicronsPerPixel = scaleBarMicronsPerPixel / np.sin(np.deg2rad(tiltAngle))
+        scaleBarMicronsPerPixel = scaleBarMicronsPerPixel / np.sin(np.deg2rad(setupOptions.tiltAngle))
     npImage = np.array(rawImage)
 
     if npImage.ndim < 3:
@@ -534,12 +527,12 @@ def getInstances():
     predictor = DefaultPredictor(cfg)
     # look at the outputs. See https://detectron2.readthedocs.io/tutorials/models.html#model-output-format for specification
     outputs = predictor(npImage)
-    return outputs, npImage, scaleBarMicronsPerPixel * 1000
+    return outputs, npImage, scaleBarMicronsPerPixel * 1000, setupOptions
 
 
 # @profile
 def main():
-    outputs, npImage, scaleBarNMPerPixel = getInstances()
+    outputs, npImage, scaleBarNMPerPixel, setupOptions = getInstances()
     boundingBoxPolyDict = {}
     maskDict = {}
     numInstances = len(outputs['instances'])
@@ -554,19 +547,19 @@ def main():
         boundingBoxPolyDict[instanceNumber] = boundingBoxPoly
         maskDict[instanceNumber] = npMask
 
-    if parallelProcessing:
+    if setupOptions.parallelProcessing:
         with joblib.parallel_backend('multiprocessing'):
             with tqdm_joblib(tqdm(desc="Analyzing Instances", total=numInstances)) as progress_bar:
                 analysisOutput = joblib.Parallel(n_jobs=multiprocessing.cpu_count())(
-                    joblib.delayed(analyzeSingleInstance)(maskDict, boundingBoxPolyDict, instanceNumber, isVerticalSubSection) for
+                    joblib.delayed(analyzeSingleInstance)(maskDict, boundingBoxPolyDict, instanceNumber, setupOptions) for
                     instanceNumber in range(numInstances))
     else:
         analysisOutput = []
         for instanceNumber in range(numInstances):
-            analysisOutput.append(analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, isVerticalSubSection))
+            analysisOutput.append(analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, setupOptions))
 
     allMeasLineList = [entry[0] for entry in analysisOutput if entry[0]]
-    contiguousPolygonsList, patchList = createPolygonPatchesAndDict(allMeasLineList, isVerticalSubSection)
+    contiguousPolygonsList, patchList = createPolygonPatchesAndDict(allMeasLineList, setupOptions.isVerticalSubSection)
     fig, ax = plt.subplots(figsize=(8, 8), nrows=1, ncols=1)
     plt.imshow(npImage, interpolation='none')
     for patch in patchList:
@@ -597,7 +590,7 @@ def main():
         finalLineAvgList.append(lineAvgList[instanceNumber])
         finalAllMeasAnglesList.append(allMeasAnglesList[instanceNumber])
     uncertaintyLineArray = unp.uarray(finalLineAvgList, finalLineStdList)
-    print("Overall Average Size (with std dev): {:.0f} nm".format(scaleBarNMPerPixel * uncertaintyLineArray.mean()))
+    print("Overall Average Size (with std dev): {:.0f} nm".format(scaleBarNMPerPixel * uncertaintyLineArray.mean()), )
 
 
 if __name__ == "__main__":
