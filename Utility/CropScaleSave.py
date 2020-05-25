@@ -7,6 +7,7 @@ import shutil
 from PIL import Image
 from tkinter import Tk
 from tkinter import filedialog
+from Utility.AnalyzeOutputUI import setupOptionsUI
 
 
 def longestContinuousLengthPerLine(whitePixelsDict):
@@ -94,7 +95,7 @@ def whiteLinePixelLocationList(rawImage, horizontalLine_truefalse):
     return whiteLinesList
 
 
-def scaleBarProcessing(filename, scaleBarMicronsPerPixelDict, replaceScaleEntry):
+def scaleBarProcessing(filename, scaleBarMicronsPerPixelDict, replaceScaleEntry, scalebarWidthMicrons):
     rawImage = Image.open(filename)
     (rawImageWidth, rawImageHeight) = rawImage.size
     rawImageHeightOffset = rawImageHeight*0.75
@@ -130,7 +131,6 @@ def scaleBarProcessing(filename, scaleBarMicronsPerPixelDict, replaceScaleEntry)
         ax.set_xlim(scalebarColumn, rawImageWidth)
         widgets.RectangleSelector(ax, onselect, drawtype='box',  rectprops=dict(facecolor='red', edgecolor='black', alpha=0.5, fill=True))
         plt.show()
-        scaleBarValue = easygui.integerbox(msg="After satisfied with cropping, enter the scale bar size in microns", title="Get scale bar size", upperbound=100000)
 
         (xmin, xmax) = ax.get_xlim()
         (ymax, ymin) = ax.get_ylim()
@@ -168,7 +168,7 @@ def scaleBarProcessing(filename, scaleBarMicronsPerPixelDict, replaceScaleEntry)
                     scaleBarWidthPixels = scaleBarEndPixel_OffsetCorrected - scaleBarStartPixel_OffsetCorrected
                 break
         assert scaleBarWidthPixels > 0, "Could not find a scale bar, maybe something is different about the input file databar format or white box surrounding it?"
-        scaleBarMicronsPerPixel = scaleBarValue/scaleBarWidthPixels
+        scaleBarMicronsPerPixel = scalebarWidthMicrons/scaleBarWidthPixels
         croppedImage.close()
         print("Scale bar is ", scaleBarWidthPixels, " pixels across. Total width of cropped area is: ", cropWidth)
         scaleBarMicronsPerPixelDict[getNakedNameFromFilePath(filename)] = scaleBarMicronsPerPixel
@@ -181,10 +181,10 @@ def scaleBarProcessing(filename, scaleBarMicronsPerPixelDict, replaceScaleEntry)
     return scaleBarMicronsPerPixelDict, dataBarPixelRow_OffsetCorrected
 
 
-def getScaleandDataBarDicts(fileNames, scaleBarMicronsPerPixelDict, replaceScaleEntry):
+def getScaleandDataBarDicts(fileNames, scaleBarMicronsPerPixelDict, replaceScaleEntry, scalebarWidthMicrons):
     dataBarPixelRowDict = {}
     for name in fileNames:
-        (scaleBarMicronsPerPixelDict, dataBarPixelRow) = scaleBarProcessing(name, scaleBarMicronsPerPixelDict, replaceScaleEntry)
+        (scaleBarMicronsPerPixelDict, dataBarPixelRow) = scaleBarProcessing(name, scaleBarMicronsPerPixelDict, replaceScaleEntry, scalebarWidthMicrons)
         dataBarPixelRowDict[name] = dataBarPixelRow
     return scaleBarMicronsPerPixelDict, dataBarPixelRowDict
 
@@ -229,11 +229,9 @@ def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file'
 
 
 def importRawImageAndScale():
-    root = Tk()
-    root.withdraw()
-    inputFileName = getFileOrDirList('file', 'Choose input image file')
-
-    scaleBarDictFile = filedialog.askopenfilename(initialdir=r'E:\Google Drive\Research SEM', title='Choose scalebar Dict file', filetypes=[('Scalebar Dict Text File', '.txt')])
+    setupOptions = setupOptionsUI()
+    scaleBarDictFile = setupOptions.scaleDictPath
+    inputFileName = setupOptions.imageFilePath
     scaleBarMicronsPerPixelDict = getScaleDictFromFile(scaleBarDictFile)
 
     fileNames = []
@@ -267,7 +265,7 @@ def importRawImageAndScale():
                 replaceScaleEntry = True
         nameNum += 1
 
-    (scaleBarMicronsPerPixelDict, dataBarPixelRowDict) = getScaleandDataBarDicts(fileNames, scaleBarMicronsPerPixelDict, replaceScaleEntry)
+    (scaleBarMicronsPerPixelDict, dataBarPixelRowDict) = getScaleandDataBarDicts(fileNames, scaleBarMicronsPerPixelDict, replaceScaleEntry, setupOptions.scaleBarWidthMicrons)
 
     # Copy the original scaleBarDictFile to a backup before overwriting for safety, then delete the copy
     scaleBarDictFileCopyName, scaleBarDictFileExtension = os.path.splitext(scaleBarDictFile)
@@ -294,4 +292,4 @@ def importRawImageAndScale():
     croppedFileName = inputFileName.replace(fileTypeEnding, '_cropped'+fileTypeEnding)
     croppedImage.save(croppedFileName)
 
-    return croppedImage, scaleBarMicronsPerPixel
+    return croppedImage, scaleBarMicronsPerPixel, setupOptions
