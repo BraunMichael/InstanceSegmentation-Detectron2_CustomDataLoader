@@ -265,7 +265,6 @@ def getLinePoints(startXY, endXY):
 
 # @profile
 def getXYFromPolyBox(boundingBoxPoly):
-    # TODO: This is slow, getting the boundary coords, should be able to figure out the ordering without boundingBoxXYCentroid
     topXY = []
     bottomXY = []
     boundingBoxXY = boundingBoxPoly.boundary.coords[:-1]
