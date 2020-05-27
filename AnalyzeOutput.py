@@ -59,11 +59,10 @@ def tqdm_joblib(tqdm_object):
 
 
 # @profile
-def centerXPercentofWire(npMaskFunc, percentSize, setupOptions: SetupOptions):
+def centerXPercentofWire(npMaskFunc, setupOptions: SetupOptions):
     # TODO: This is the limiting factor at this point in speed, but it is entirely in the skimage (label_image and allRegionProperties lines) and polylidar (polygonsList line) calls
-    assert 0 <= percentSize <= 1, "Percent size of section has to be between 0 and 1"
-    assert isinstance(setupOptions.isVerticalSubSection,
-                      bool), "isVerticalSubSection must be a boolean, True if you want a vertical subsection, False if you want a horizontal subsection"
+    assert 0 <= setupOptions.centerFractionToMeasure <= 1, "Percent size of section has to be between 0 and 1"
+    assert isinstance(setupOptions.isVerticalSubSection, bool), "isVerticalSubSection must be a boolean, True if you want a vertical subsection, False if you want a horizontal subsection"
     label_image = label(npMaskFunc, connectivity=1)
     allRegionProperties = regionprops(label_image)
     largeRegionsNums = set()
@@ -101,12 +100,12 @@ def centerXPercentofWire(npMaskFunc, percentSize, setupOptions: SetupOptions):
         # This also means the lengths measured are the real lengths, don't need to do trig later
         centroidCoords = region.centroid
         if setupOptions.isVerticalSubSection:
-            scaledBoundingBoxPoly = affinity.scale(maskPolygon.envelope, 1, percentSize)
+            scaledBoundingBoxPoly = affinity.scale(maskPolygon.envelope, 1, setupOptions.centerFractionToMeasure)
             # Coords are row, col ie (y, x)
             subBoundingBoxPoly = affinity.skew(scaledBoundingBoxPoly.envelope, ys=-maskAngle, origin=(centroidCoords[1], centroidCoords[0]))
         else:
             # Coords are row, col ie (y, x)
-            scaledBoundingBoxPoly = affinity.scale(maskPolygon.envelope, percentSize, 1)
+            scaledBoundingBoxPoly = affinity.scale(maskPolygon.envelope, setupOptions.centerFractionToMeasure, 1)
             subBoundingBoxPoly = affinity.skew(scaledBoundingBoxPoly.envelope, xs=maskAngle, origin=(centroidCoords[1], centroidCoords[0]))
         outputSubMaskPoly = maskPolygon.intersection(subBoundingBoxPoly)
 
@@ -301,7 +300,7 @@ def analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, setupOp
     lineStd = None
     lineAvg = None
 
-    outputSubMaskPoly, subBoundingBoxPoly, maskAngle = centerXPercentofWire(mask, 0.7, setupOptions)
+    outputSubMaskPoly, subBoundingBoxPoly, maskAngle = centerXPercentofWire(mask, setupOptions)
     if outputSubMaskPoly is not None:
         strTree = STRtree([poly for i, poly in boundingBoxPolyDict.items() if i != instanceNumber])
         subStrTree = STRtree(strTree.query(boundingBoxPolyDict[instanceNumber]))
