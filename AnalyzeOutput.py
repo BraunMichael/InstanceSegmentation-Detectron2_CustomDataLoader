@@ -579,9 +579,15 @@ def main():
         finalLineStdList.append(lineStdList[instanceNumber])
         finalLineAvgList.append(lineAvgList[instanceNumber])
         finalAllMeasAnglesList.append(allMeasAnglesList[instanceNumber])
-    uncertaintyLineArray = unp.uarray(finalLineAvgList, finalLineStdList)
+    # TODO: The uncertainty calculation isn't quite right, may be doing standard error, need to investigate propagation and inclusion of standard deviation across all the measurements
+    # uncertaintyLineArray = unp.uarray(finalLineAvgList, finalLineStdList)
+    # averageMeasValue = uncertaintyLineArray.mean()
+    averageMeasValue = np.mean(finalLineAvgList)
+
+    print(finalLineAvgList)
+    print(finalLineStdList)
     print("Analyzed Image:", getNakedNameFromFilePath(setupOptions.imageFilePath))
-    print("Overall Average Size (with std dev): {:.0f} nm".format(scaleBarNMPerPixel * uncertaintyLineArray.mean()))
+    print("Overall Average Size (with std dev): {:.0f} with random Standard Deviation of {:.0f} nm".format(scaleBarNMPerPixel * averageMeasValue, np.std(finalLineAvgList)))
     print("Number of Measurements: ", len(finalLineAvgList))
 
 
