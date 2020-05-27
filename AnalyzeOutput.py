@@ -83,7 +83,8 @@ def centerXPercentofWire(npMaskFunc, setupOptions: SetupOptions):
         maskAngle = np.rad2deg(region.orientation)
 
         polygonsList = extractPolygons(flippedMaskCoords)
-        assert len(polygonsList) == 1, "There was more than 1 polygon extracted from extractPolygons."
+        # assert len(polygonsList) == 1, "There was more than 1 polygon extracted from extractPolygons."
+        # Just take the first polygon no matter what
         shell_coords = [get_point(pi, flippedMaskCoords) for pi in polygonsList[0].shell]
         maskPolygon = Polygon(shell=shell_coords)
         if setupOptions.plotPolylidar and not setupOptions.parallelProcessing:
