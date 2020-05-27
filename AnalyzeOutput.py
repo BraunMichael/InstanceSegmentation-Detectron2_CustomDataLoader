@@ -292,6 +292,7 @@ def getXYFromPolyBox(boundingBoxPoly):
 def analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, setupOptions: SetupOptions):
     if not setupOptions.parallelProcessing:
         print("Working on instance number: ", instanceNumber)
+
     mask = maskDict[instanceNumber]
     imageWidth = mask.shape[1]
     imageHeight = mask.shape[0]
@@ -302,7 +303,6 @@ def analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, setupOp
     lineAvg = None
 
     outputSubMaskPoly, subBoundingBoxPoly, maskAngle = centerXPercentofWire(mask, 0.7, setupOptions)
-
     if outputSubMaskPoly is not None:
         strTree = STRtree([poly for i, poly in boundingBoxPolyDict.items() if i != instanceNumber])
         subStrTree = STRtree(strTree.query(boundingBoxPolyDict[instanceNumber]))
@@ -532,6 +532,7 @@ def main():
     maskDict = {}
     numInstances = len(outputs['instances'])
     # Loop once to generate dict for checking each instance against all others
+
     for (mask, boundingBox, instanceNumber) in zip(outputs['instances'].pred_masks, outputs['instances'].pred_boxes, range(numInstances)):
         npBoundingBox = np.asarray(boundingBox.cpu())
         # 0,0 at top left, and box is [left top right bottom] position ie [xmin ymin xmax ymax] (ie XYXY not XYWH)
@@ -541,9 +542,7 @@ def main():
     if setupOptions.parallelProcessing:
         with joblib.parallel_backend('multiprocessing'):
             with tqdm_joblib(tqdm(desc="Analyzing Instances", total=numInstances)) as progress_bar:
-                analysisOutput = joblib.Parallel(n_jobs=multiprocessing.cpu_count())(
-                    joblib.delayed(analyzeSingleInstance)(maskDict, boundingBoxPolyDict, instanceNumber, setupOptions) for
-                    instanceNumber in range(numInstances))
+                analysisOutput = joblib.Parallel(n_jobs=multiprocessing.cpu_count())(joblib.delayed(analyzeSingleInstance)(maskDict, boundingBoxPolyDict, instanceNumber, setupOptions) for instanceNumber in range(numInstances))
     else:
         analysisOutput = []
         for instanceNumber in range(numInstances):
