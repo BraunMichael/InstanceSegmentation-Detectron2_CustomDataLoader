@@ -107,8 +107,16 @@ def get_file(entryField, entryFieldText, titleMessage, fileFormatsStr):
 
 
 def preview_image(imageFilePath):
-    rawImage = Image.open(imageFilePath.get().replace('~', os.path.expanduser('~')))
-    rawImage.show()
+    inputImagePath = imageFilePath.get().replace('~', os.path.expanduser('~'))
+    if inputImagePath.endswith(('.tiff', '.tif')):
+        print("attempting to convert tiff to png")
+        rawImage = Image.open(inputImagePath)
+        npImage = ((np.array(rawImage) + 1) / 256) - 1
+        visImage = Image.fromarray(np.uint8(npImage), mode='L')
+        visImage.show()
+    else:
+        rawImage = Image.open(inputImagePath)
+        rawImage.show()
 
 
 def get_setupOptions(savedJSONFileName):
@@ -158,7 +166,7 @@ def uiInput(win, setupOptions, savedJSONFileName):
     ImageFileEntry = tkinter.Entry(win, textvariable=ImageEntryText)
     ImageFileEntry.grid(row=1, column=0)
     ImageFileEntry.config(width=len(setupOptions.imageFilePath.replace(os.path.expanduser('~'), '~')))
-    ImageFileButton = tkinter.Button(win, text='Choose File', command=lambda: get_file(ImageFileEntry, ImageEntryText, 'Choose Image File', '.jpg .jpeg .png .tiff'))
+    ImageFileButton = tkinter.Button(win, text='Choose File', command=lambda: get_file(ImageFileEntry, ImageEntryText, 'Choose Image File', '.jpg .jpeg .png .tiff .tif'))
     ImageFileButton.grid(row=1, column=1)
     ImageFilePreviewButton = tkinter.Button(win, text='Preview', command=lambda: preview_image(ImageEntryText))
     ImageFilePreviewButton.grid(row=1, column=2)
