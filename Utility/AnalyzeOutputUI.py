@@ -14,6 +14,7 @@ class SetupOptions:
     def __init__(self):
         self.imageFilePath = ''
         self.scaleDictPath = ''
+        self.modelPath = ''
         self.isVerticalSubSection = True
         self.centerFractionToMeasure = 0.5
         self.tiltAngle = 30
@@ -22,6 +23,7 @@ class SetupOptions:
         self.showBoundingBoxPlots = False
         self.plotPolylidar = False
         self.parallelProcessing = True
+        self.modelPath = ''
 
 
 def strToFloat(numberString):
@@ -53,26 +55,27 @@ def hide_AdvancedOptions(win):
 
 def show_AdvancedOptions(win, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar):
     if 'showPlots_Label' not in win.children:
-        tkinter.Label(win, text="Show Intermediate Plots?", name='showPlots_Label').grid(row=9, column=0)
+        initialRow = 11
+        tkinter.Label(win, text="Show Intermediate Plots?", name='showPlots_Label').grid(row=initialRow, column=0)
         r1showPlots = tkinter.Radiobutton(win, text="Yes", variable=showPlotsVar, value=1, name='showPlots_YesButton')
         r2showPlots = tkinter.Radiobutton(win, text="No", variable=showPlotsVar, value=0, name='showPlots_NoButton')
-        r1showPlots.grid(row=9, column=1)
-        r2showPlots.grid(row=9, column=2)
-        tkinter.Label(win, text="Show BoundingBox Plots?", name='showBoundingBoxPlots_Label').grid(row=10, column=0)
+        r1showPlots.grid(row=initialRow, column=1)
+        r2showPlots.grid(row=initialRow, column=2)
+        tkinter.Label(win, text="Show BoundingBox Plots?", name='showBoundingBoxPlots_Label').grid(row=initialRow+1, column=0)
         r1showBoundingBoxPlots = tkinter.Radiobutton(win, text="Yes", variable=showBoundingBoxPlotsVar, value=1, name='showBoundingBoxPlots_YesButton')
         r2showBoundingBoxPlots = tkinter.Radiobutton(win, text="No", variable=showBoundingBoxPlotsVar, value=0, name='showBoundingBoxPlots_NoButton')
-        r1showBoundingBoxPlots.grid(row=10, column=1)
-        r2showBoundingBoxPlots.grid(row=10, column=2)
-        tkinter.Label(win, text="Show Polylidar Point Plot?", name='plotPolylidar_Label').grid(row=11, column=0)
+        r1showBoundingBoxPlots.grid(row=initialRow+1, column=1)
+        r2showBoundingBoxPlots.grid(row=initialRow+1, column=2)
+        tkinter.Label(win, text="Show Polylidar Point Plot?", name='plotPolylidar_Label').grid(row=initialRow+2, column=0)
         r1plotPolylidar = tkinter.Radiobutton(win, text="Yes", variable=plotPolylidarVar, value=1, name='plotPolylidar_YesButton')
         r2plotPolylidar = tkinter.Radiobutton(win, text="No", variable=plotPolylidarVar, value=0, name='plotPolylidar_NoButton')
-        r1plotPolylidar.grid(row=11, column=1)
-        r2plotPolylidar.grid(row=11, column=2)
-        tkinter.Label(win, text="Use parallelization?", name='parallelProcessing_Label').grid(row=12, column=0)
+        r1plotPolylidar.grid(row=initialRow+2, column=1)
+        r2plotPolylidar.grid(row=initialRow+2, column=2)
+        tkinter.Label(win, text="Use parallelization?", name='parallelProcessing_Label').grid(row=initialRow+3, column=0)
         r1parallelProcessing = tkinter.Radiobutton(win, text="Yes", variable=parallelProcessingVar, value=1, name='parallelProcessing_YesButton')
         r2parallelProcessing = tkinter.Radiobutton(win, text="No", variable=parallelProcessingVar, value=0, name='parallelProcessing_NoButton')
-        r1parallelProcessing.grid(row=12, column=1)
-        r2parallelProcessing.grid(row=12, column=2)
+        r1parallelProcessing.grid(row=initialRow+3, column=1)
+        r2parallelProcessing.grid(row=initialRow+3, column=2)
     else:
         hide_AdvancedOptions(win)
 
@@ -118,9 +121,10 @@ def get_setupOptions(savedJSONFileName):
     return setupOptions
 
 
-def on_closing(win, setupOptions, savedJSONFileName, ImageEntryText, scaleDictEntryText, isVerticalSubSectionVar, centerFractionToMeasureVar, tiltAngleVar, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar, scaleBarWidthMicronsVar):
+def on_closing(win, setupOptions, savedJSONFileName, ImageEntryText, scaleDictEntryText, modelEntryText, isVerticalSubSectionVar, centerFractionToMeasureVar, tiltAngleVar, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar, scaleBarWidthMicronsVar):
     setupOptions.imageFilePath = ImageEntryText.get().replace('~', os.path.expanduser('~'))
     setupOptions.scaleDictPath = scaleDictEntryText.get().replace('~', os.path.expanduser('~'))
+    setupOptions.modelPath = modelEntryText.get().replace('~', os.path.expanduser('~'))
     setupOptions.isVerticalSubSection = isVerticalSubSectionVar.get()
     setupOptions.centerFractionToMeasure = strToFloat(centerFractionToMeasureVar.get())
     setupOptions.tiltAngle = strToFloat(tiltAngleVar.get())
@@ -139,7 +143,7 @@ def uiInput(win, setupOptions, savedJSONFileName):
     win.title("Spectrum Data Processing Setup UI")
     ImageEntryText = tkinter.StringVar(value=setupOptions.imageFilePath.replace(os.path.expanduser('~'), '~'))
     scaleDictEntryText = tkinter.StringVar(value=setupOptions.scaleDictPath.replace(os.path.expanduser('~'), '~'))
-
+    modelEntryText = tkinter.StringVar(value=setupOptions.modelPath.replace(os.path.expanduser('~'), '~'))
     isVerticalSubSectionVar = tkinter.BooleanVar(value=setupOptions.isVerticalSubSection)
     scaleBarWidthMicronsVar = tkinter.StringVar(value=setupOptions.scaleBarWidthMicrons)
     centerFractionToMeasureVar = tkinter.StringVar(value=setupOptions.centerFractionToMeasure)
@@ -166,29 +170,35 @@ def uiInput(win, setupOptions, savedJSONFileName):
     scaleDictButton = tkinter.Button(win, text='Choose File', command=lambda: get_file(scaleDictEntry, scaleDictEntryText, 'Choose Scale Dict File', '.txt'))
     scaleDictButton.grid(row=3, column=1)
 
-    item_Label = tkinter.Label(win, text="Measure Widths or Lengths")
-    item_Label.grid(row=4, column=0)
+    tkinter.Label(win, text="Machine Learning Model:").grid(row=4, column=0)
+    modelEntry = tkinter.Entry(win, textvariable=modelEntryText)
+    modelEntry.grid(row=5, column=0)
+    modelEntry.config(width=len(setupOptions.modelPath.replace(os.path.expanduser('~'), '~')))
+    modelButton = tkinter.Button(win, text='Choose File', command=lambda: get_file(modelEntry, modelEntryText, 'Choose Machine Learning Model', '.pth'))
+    modelButton.grid(row=5, column=1)
+
+    tkinter.Label(win, text="Measure Widths or Lengths").grid(row=6, column=0)
     r1isXRD = tkinter.Radiobutton(win, text="Widths", variable=isVerticalSubSectionVar, value=1)
     r2isXRD = tkinter.Radiobutton(win, text="Lengths", variable=isVerticalSubSectionVar, value=0)
-    r1isXRD.grid(row=4, column=1)
-    r2isXRD.grid(row=4, column=2)
+    r1isXRD.grid(row=6, column=1)
+    r2isXRD.grid(row=6, column=2)
 
-    tkinter.Label(win, text="Scale Bar Size (Microns)").grid(row=5, column=0)
+    tkinter.Label(win, text="Scale Bar Size (Microns)").grid(row=7, column=0)
     tiltAngleEntry = tkinter.Entry(win, textvariable=scaleBarWidthMicronsVar, validate='all', validatecommand=lambda: validStringNumberRange(scaleBarWidthMicronsVar.get(), 0, 1000))
-    tiltAngleEntry.grid(row=5, column=1)
+    tiltAngleEntry.grid(row=7, column=1)
 
-    tkinter.Label(win, text="Tilt Angle").grid(row=6, column=0)
+    tkinter.Label(win, text="Tilt Angle").grid(row=8, column=0)
     tiltAngleEntry = tkinter.Entry(win, textvariable=tiltAngleVar, validate='all', validatecommand=lambda: validStringNumberRange(tiltAngleVar.get(), -10, 90))
-    tiltAngleEntry.grid(row=6, column=1)
+    tiltAngleEntry.grid(row=8, column=1)
 
-    tkinter.Label(win, text="Center Fraction to Measure").grid(row=7, column=0)
+    tkinter.Label(win, text="Center Fraction to Measure").grid(row=9, column=0)
     centerFractionToMeasureEntry = tkinter.Entry(win, textvariable=centerFractionToMeasureVar, validate='all', validatecommand=lambda: validStringNumberRange(centerFractionToMeasureVar.get(), 0, 1))
-    centerFractionToMeasureEntry.grid(row=7, column=1)
+    centerFractionToMeasureEntry.grid(row=9, column=1)
 
-    tkinter.Button(win, text='Show/Hide Advanced Options', command=lambda: show_AdvancedOptions(win, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar)).grid(row=8, column=1)
+    tkinter.Button(win, text='Show/Hide Advanced Options', command=lambda: show_AdvancedOptions(win, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar)).grid(row=10, column=1)
 
     hide_AdvancedOptions(win)
-    win.protocol("WM_DELETE_WINDOW", lambda: on_closing(win, setupOptions, savedJSONFileName, ImageEntryText, scaleDictEntryText, isVerticalSubSectionVar, centerFractionToMeasureVar, tiltAngleVar, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar, scaleBarWidthMicronsVar))
+    win.protocol("WM_DELETE_WINDOW", lambda: on_closing(win, setupOptions, savedJSONFileName, ImageEntryText, scaleDictEntryText, modelEntryText, isVerticalSubSectionVar, centerFractionToMeasureVar, tiltAngleVar, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar, scaleBarWidthMicronsVar))
     win.mainloop()
 
 
