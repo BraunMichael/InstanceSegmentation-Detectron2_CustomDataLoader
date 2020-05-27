@@ -60,6 +60,7 @@ def tqdm_joblib(tqdm_object):
 
 # @profile
 def centerXPercentofWire(npMaskFunc, percentSize, setupOptions: SetupOptions):
+    # TODO: This is the limiting factor at this point in speed, but it is entirely in the skimage (label_image and allRegionProperties lines) and polylidar (polygonsList line) calls
     assert 0 <= percentSize <= 1, "Percent size of section has to be between 0 and 1"
     assert isinstance(setupOptions.isVerticalSubSection,
                       bool), "isVerticalSubSection must be a boolean, True if you want a vertical subsection, False if you want a horizontal subsection"
@@ -226,7 +227,7 @@ def isEdgeInstance(imageRight, imageBottom, instanceBoxCoords, isVerticalSubSect
 
 # @profile
 def longestLineAndLengthInPolygon(maskPolygon, lineTest):
-    # TODO: This is slow
+    # TODO: This is slow, just the lineTest.intersection line
     testSegments = lineTest.intersection(maskPolygon)  # without .boundary, get the lines immediately
     outputLine = None
     LineLength = None
@@ -259,15 +260,12 @@ def getLinePoints(startXY, endXY):
         interpolatedPoint = lineOfInterest.interpolate(pos).coords[0]
         roundedPoint = map(round, interpolatedPoint)
         xyPoints[tuple(roundedPoint)] = None
-    # # Can iterated through via:
-    # for key in xyPts.keys():
-    #     print(key)
     return xyPoints
 
 
 # @profile
 def getXYFromPolyBox(boundingBoxPoly):
-    # TODO: This is slow
+    # TODO: This is slow, getting the boundary coords, should be able to figure out the ordering without boundingBoxXYCentroid
     topXY = []
     bottomXY = []
     boundingBoxXY = boundingBoxPoly.boundary.coords[:-1]
@@ -528,7 +526,6 @@ def getInstances():
     return outputs, npImage, scaleBarMicronsPerPixel * 1000, setupOptions
 
 
-# @profile
 def main():
     outputs, npImage, scaleBarNMPerPixel, setupOptions = getInstances()
     boundingBoxPolyDict = {}
