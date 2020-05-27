@@ -30,7 +30,7 @@ from detectron2.utils.visualizer import Visualizer, ColorMode
 from detectron2.data import MetadataCatalog, DatasetCatalog, build_detection_test_loader
 from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 from detectron2.utils.logger import setup_logger
-from Utility.CropScaleSave import importRawImageAndScale
+from Utility.CropScaleSave import importRawImageAndScale, getNakedNameFromFilePath
 from Utility.AnalyzeOutputUI import SetupOptions
 
 
@@ -530,7 +530,6 @@ def main():
     maskDict = {}
     numInstances = len(outputs['instances'])
     # Loop once to generate dict for checking each instance against all others
-
     for (mask, boundingBox, instanceNumber) in zip(outputs['instances'].pred_masks, outputs['instances'].pred_boxes, range(numInstances)):
         npBoundingBox = np.asarray(boundingBox.cpu())
         # 0,0 at top left, and box is [left top right bottom] position ie [xmin ymin xmax ymax] (ie XYXY not XYWH)
@@ -578,6 +577,7 @@ def main():
         finalLineAvgList.append(lineAvgList[instanceNumber])
         finalAllMeasAnglesList.append(allMeasAnglesList[instanceNumber])
     uncertaintyLineArray = unp.uarray(finalLineAvgList, finalLineStdList)
+    print("Analyzed Image:", getNakedNameFromFilePath(setupOptions.imageFilePath))
     print("Overall Average Size (with std dev): {:.0f} nm".format(scaleBarNMPerPixel * uncertaintyLineArray.mean()))
     print("Number of Measurements: ", len(finalLineAvgList))
 
