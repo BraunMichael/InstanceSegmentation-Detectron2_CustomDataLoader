@@ -243,13 +243,13 @@ def importRawImageAndScale():
         imagePath = inputFileName
 
         fileTypeEnding = imagePath[imagePath.rfind('.'):]
-        pngName = inputFileName.replace(fileTypeEnding, '.png')
-        pngPath = os.path.join(dirpath, pngName)
+        pngPath = inputFileName.replace(fileTypeEnding, '.png')
+        # pngPath = os.path.join(dirpath, pngName)
         rawImage = Image.open(imagePath)
         npImage = ((np.array(rawImage) + 1) / 256) - 1
         visImage = Image.fromarray(np.uint8(npImage), mode='L')
         visImage.save(pngPath, 'PNG')
-        fileNames.append(os.path.join(dirpath, pngName))
+        fileNames.append(pngPath)
         # os.remove(imagePath)
 
     noDuplicateNames = True
