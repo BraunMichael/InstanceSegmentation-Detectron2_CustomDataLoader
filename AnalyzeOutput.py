@@ -331,7 +331,10 @@ def analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, setupOp
                 else:
                     lineStd = np.std(lineLengthList, ddof=0)
                 lineAvg = np.mean(lineLengthList)
-            # else there are no valid lines
+            else:
+                # else there are no valid lines
+                measLineList = []
+                lineLengthList = []
 
     return measLineList, lineLengthList, lineStd, lineAvg, maskAngle
 
