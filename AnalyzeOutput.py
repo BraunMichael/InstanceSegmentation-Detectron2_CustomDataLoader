@@ -271,9 +271,10 @@ def getXYFromPolyBox(boundingBoxPoly):
     topXY = []
     bottomXY = []
     boundingBoxXY = boundingBoxPoly.boundary.coords[:-1]
+    boundingBoxXYCentroid = boundingBoxPoly.boundary.centroid.coords[0][1]
     assert len(boundingBoxXY) == 4, "The polygon used did not have 4 sides"
     for coords in boundingBoxXY:
-        if coords[1] > boundingBoxPoly.boundary.centroid.coords[0][1]:
+        if coords[1] > boundingBoxXYCentroid:
             bottomXY.append(coords)
         else:
             topXY.append(coords)
