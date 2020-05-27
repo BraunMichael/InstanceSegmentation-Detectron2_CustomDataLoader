@@ -19,7 +19,7 @@ class SetupOptions:
         self.centerFractionToMeasure = 0.5
         self.tiltAngle = 30
         self.scaleBarWidthMicrons = 2
-        self.showPlots = False
+        self.showPlots = False  # TODO: this is not used
         self.showBoundingBoxPlots = False
         self.plotPolylidar = False
         self.parallelProcessing = True
