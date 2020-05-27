@@ -583,8 +583,8 @@ def main():
     # averageMeasValue = uncertaintyLineArray.mean()
     averageMeasValue = np.mean(finalLineAvgList)
 
-    print(finalLineAvgList)
-    print(finalLineStdList)
+    # print(finalLineAvgList)
+    # print(finalLineStdList)
     print("Analyzed Image:", getNakedNameFromFilePath(setupOptions.imageFilePath))
     print("Overall Average Size (with std dev): {:.0f} with random standard deviation of {:.0f} nm".format(scaleBarNMPerPixel * averageMeasValue, np.std(finalLineAvgList)))
     print("Number of Measurements: ", len(finalLineAvgList))
