@@ -128,7 +128,7 @@ def on_closing(win, setupOptions, savedJSONFileName, ImageEntryText, scaleDictEn
     setupOptions.showBoundingBoxPlots = showBoundingBoxPlotsVar.get()
     setupOptions.plotPolylidar = plotPolylidarVar.get()
     setupOptions.parallelProcessing = parallelProcessingVar.get()
-    setupOptions.scaleBarWidthMicrons = scaleBarWidthMicronsVar.get()
+    setupOptions.scaleBarWidthMicrons = strToFloat(scaleBarWidthMicronsVar.get())
 
     with open(savedJSONFileName, 'w') as outfile:
         json.dump(jsonpickle.encode(setupOptions), outfile)
