@@ -538,14 +538,10 @@ def main():
     numInstances = len(outputs['instances'])
     # Loop once to generate dict for checking each instance against all others
     for (mask, boundingBox, instanceNumber) in zip(outputs['instances'].pred_masks, outputs['instances'].pred_boxes, range(numInstances)):
-        npMask = np.asarray(mask.cpu())
-
-        # 0,0 at top left, and box is [left top right bottom] position ie [xmin ymin xmax ymax] (ie XYXY not XYWH)
         npBoundingBox = np.asarray(boundingBox.cpu())
-        boundingBoxPoly = Polygon(bboxToPoly(npBoundingBox[0], npBoundingBox[1], npBoundingBox[2], npBoundingBox[3]))
-
-        boundingBoxPolyDict[instanceNumber] = boundingBoxPoly
-        maskDict[instanceNumber] = npMask
+        # 0,0 at top left, and box is [left top right bottom] position ie [xmin ymin xmax ymax] (ie XYXY not XYWH)
+        boundingBoxPolyDict[instanceNumber] = Polygon(bboxToPoly(npBoundingBox[0], npBoundingBox[1], npBoundingBox[2], npBoundingBox[3]))
+        maskDict[instanceNumber] = np.asarray(mask.cpu())
 
     if setupOptions.parallelProcessing:
         with joblib.parallel_backend('multiprocessing'):
