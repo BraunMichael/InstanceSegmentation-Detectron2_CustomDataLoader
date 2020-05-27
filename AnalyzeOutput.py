@@ -13,6 +13,8 @@ import matplotlib.patches as mpatches
 from matplotlib.widgets import RectangleSelector, Button
 from descartes import PolygonPatch
 from shapely.geometry import Point, LineString, MultiLineString, Polygon
+from shapely.strtree import STRtree
+from shapely.prepared import prep
 from shapely import affinity
 from PIL import Image
 from skimage.measure import label, regionprops
@@ -161,54 +163,46 @@ def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file'
     return fileOrFolderList
 
 
-# @profile
-def isValidLine(boundingBoxPolyDict, imageHeight, instanceNum, instanceLine):
-    # TODO: This is slow, should be able to do one of the following:
-    #  - Make a dict at start for each instance with values of every instance that it's bounding box overlaps
-    #  - use https://shapely.readthedocs.io/en/stable/manual.html#prepared-geometry-operations
-    #  - or use https://shapely.readthedocs.io/en/stable/manual.html#str-packed-r-tree
+def isValidLine(strTree, instanceBoxCoords, imageHeight, instanceLine):
     # Check if line is contained in a different bounding box, need to check which instance is in front (below)
     # Don't check for the current instanceNum (key in boundingBoxDict)
     validForInstanceList = []
-    bottomLeft, bottomRight, topLeft, topRight = getXYFromPolyBox(boundingBoxPolyDict[instanceNum])
-    for checkNumber, checkBoundingBoxPoly in boundingBoxPolyDict.items():
-        if checkNumber != instanceNum:
-            # Check if line is contained in a different bounding box, need to check which instance is in front (below)
-            lineInvalid = instanceLine.intersects(checkBoundingBoxPoly)
-
-            # May need to do more...something with checking average and deviation from average width of the 2 wires?
-            if lineInvalid:
-                bottomLeftCheck, bottomRightCheck, topLeftCheck, topRightCheck = getXYFromPolyBox(checkBoundingBoxPoly)
-
-                imageBottom = imageHeight
-                instanceBottom = bottomLeft[1]
-                checkInstanceBottom = bottomLeftCheck[1]
-                if abs(imageBottom - instanceBottom) < 20:
-                    # the box of interest is too close to the bottom
-                    instanceTop = topLeft[1]
-                    checkInstanceTop = topLeftCheck[1]
-                    if instanceTop < checkInstanceTop:
-                        # Good assumption that instance of interest is in front, since all wires ~same length and the top is lower than the check instance
-                        validForInstanceList.append(True)
-                    else:
-                        # Maybe need to add more checks if too many lines are being eliminated
-                        # intersectingMask = maskDict[checkNumber]
-                        validForInstanceList.append(False)
-                elif instanceBottom > checkInstanceBottom:
-                    # the instance of interest is lower in the image, thus in front due to substrate tilt
+    bottomLeft, bottomRight, topLeft, topRight = instanceBoxCoords
+    lineIntersectingBoxes = strTree.query(instanceLine)
+    if lineIntersectingBoxes:
+        for bbox in lineIntersectingBoxes:
+            # This is faster than doing a index lookup into a list of bounding box polygons then coords
+            bottomLeftCheck, bottomRightCheck, topLeftCheck, topRightCheck = getXYFromPolyBox(bbox)
+            imageBottom = imageHeight
+            instanceBottom = bottomLeft[1]
+            checkInstanceBottom = bottomLeftCheck[1]
+            if abs(imageBottom - instanceBottom) < 20:
+                # the box of interest is too close to the bottom
+                instanceTop = topLeft[1]
+                checkInstanceTop = topLeftCheck[1]
+                if instanceTop < checkInstanceTop:
+                    # Good assumption that instance of interest is in front, since all wires ~same length and the top is lower than the check instance
                     validForInstanceList.append(True)
                 else:
+                    # Maybe need to add more checks if too many lines are being eliminated
+                    # intersectingMask = maskDict[checkNumber]
                     validForInstanceList.append(False)
-            else:
+            elif instanceBottom > checkInstanceBottom:
+                # the instance of interest is lower in the image, thus in front due to substrate tilt
                 validForInstanceList.append(True)
+            else:
+                validForInstanceList.append(False)
+    else:
+        validForInstanceList.append(True)
+
     if all(validForInstanceList):
         return True
     # else:
     return False
 
 
-def isEdgeInstance(imageRight, imageBottom, boundingBoxPoly, isVerticalSubSection):
-    bottomLeft, bottomRight, topLeft, topRight = getXYFromPolyBox(boundingBoxPoly)
+def isEdgeInstance(imageRight, imageBottom, instanceBoxCoords, isVerticalSubSection):
+    bottomLeft, bottomRight, topLeft, topRight = instanceBoxCoords
     instanceBottom = bottomLeft[1]
     instanceTop = topLeft[1]
     instanceRight = bottomRight[0]
@@ -302,7 +296,7 @@ def analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, setupOp
     mask = maskDict[instanceNumber]
     imageWidth = mask.shape[1]
     imageHeight = mask.shape[0]
-    boundingBoxPoly = boundingBoxPolyDict[instanceNumber]
+
     measLineList = []
     lineLengthList = []
     lineStd = None
@@ -311,9 +305,12 @@ def analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, setupOp
     outputSubMaskPoly, subBoundingBoxPoly, maskAngle = centerXPercentofWire(mask, 0.7, setupOptions)
 
     if outputSubMaskPoly is not None:
-        bottomLeft, bottomRight, topLeft, topRight = getXYFromPolyBox(subBoundingBoxPoly)
+        strTree = STRtree([poly for i, poly in boundingBoxPolyDict.items() if i != instanceNumber])
+        subStrTree = STRtree(strTree.query(boundingBoxPolyDict[instanceNumber]))
 
-        if not isEdgeInstance(imageWidth, imageHeight, boundingBoxPoly, setupOptions.isVerticalSubSection):
+        bottomLeft, bottomRight, topLeft, topRight = getXYFromPolyBox(subBoundingBoxPoly)
+        instanceBoxCoords = getXYFromPolyBox(boundingBoxPolyDict[instanceNumber])
+        if not isEdgeInstance(imageWidth, imageHeight, instanceBoxCoords, setupOptions.isVerticalSubSection):
             if setupOptions.isVerticalSubSection:
                 lineStartPoints = getLinePoints(bottomLeft, topLeft)  # Left line
                 lineEndPoints = getLinePoints(bottomRight, topRight)  # Right line
@@ -325,7 +322,7 @@ def analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, setupOp
                 instanceLine = LineString([startPoint, endPoint])
                 longestLine, lineLength = longestLineAndLengthInPolygon(outputSubMaskPoly, instanceLine)
                 if longestLine is not None:
-                    if isValidLine(boundingBoxPolyDict, imageHeight, instanceNumber, longestLine):
+                    if isValidLine(subStrTree, instanceBoxCoords, imageHeight, longestLine):
                         measLineList.append(longestLine)
                         lineLengthList.append(lineLength)
             if len(lineLengthList) > 2:
