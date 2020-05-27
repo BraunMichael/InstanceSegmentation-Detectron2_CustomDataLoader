@@ -91,7 +91,7 @@ def centerXPercentofWire(npMaskFunc, setupOptions: SetupOptions):
             # plot points
             plot_points(flippedMaskCoords, ax)
             # plot polygons...doesn't use 2nd argument
-            plot_polygons(maskPolygon, 0, flippedMaskCoords, ax)
+            plot_polygons(polygonsList, 0, flippedMaskCoords, ax)
             plt.axis('equal')
             plt.show()
 
