@@ -6,24 +6,9 @@ from tkinter import Tk, filedialog
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
+from Utility.Utilities import *
 import locale
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
-
-
-class SetupOptions:
-    def __init__(self):
-        self.imageFilePath = ''
-        self.scaleDictPath = ''
-        self.modelPath = ''
-        self.isVerticalSubSection = True
-        self.centerFractionToMeasure = 0.5
-        self.tiltAngle = 30
-        self.scaleBarWidthMicrons = 2
-        self.showPlots = False  # TODO: this is not used
-        self.showBoundingBoxPlots = False
-        self.plotPolylidar = False
-        self.parallelProcessing = True
-        self.modelPath = ''
 
 
 def strToFloat(numberString):
@@ -80,28 +65,8 @@ def show_AdvancedOptions(win, showPlotsVar, showBoundingBoxPlotsVar, plotPolylid
         hide_AdvancedOptions(win)
 
 
-def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file', fileTypes: str = None,
-                     initialDirOrFile: str = os.getcwd()):
-    if os.path.isfile(initialDirOrFile) or os.path.isdir(initialDirOrFile):
-        initialDir = os.path.split(initialDirOrFile)[0]
-    else:
-        initialDir = initialDirOrFile
-    root = Tk()
-    root.withdraw()
-    assert fileOrFolder.lower() == 'file' or fileOrFolder.lower() == 'folder', "Only file or folder is an allowed string choice for fileOrFolder"
-    if fileOrFolder.lower() == 'file':
-        fileOrFolderList = filedialog.askopenfilename(initialdir=initialDir, title=titleStr,
-                                                      filetypes=[(fileTypes + "file", fileTypes)])
-    else:  # Must be folder from assert statement
-        fileOrFolderList = filedialog.askdirectory(initialdir=initialDir, title=titleStr)
-    if not fileOrFolderList:
-        fileOrFolderList = initialDirOrFile
-    root.destroy()
-    return fileOrFolderList
-
-
 def get_file(entryField, entryFieldText, titleMessage, fileFormatsStr):
-    listName = getFileOrDirList('file', titleMessage, fileFormatsStr, entryFieldText.get().replace('~', os.path.expanduser('~')))
+    listName = getFileOrDir('file', titleMessage, fileFormatsStr, entryFieldText.get().replace('~', os.path.expanduser('~')))
     entryFieldText.set(listName.replace(os.path.expanduser('~'), '~'))
     entryField.config(width=len(listName.replace(os.path.expanduser('~'), '~')))
 

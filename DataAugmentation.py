@@ -16,6 +16,8 @@ from tqdm import tqdm
 from imgaug.augmentables.batches import UnnormalizedBatch
 from collections import deque
 from ttictoc import tic, toc
+from Utility.Utilities import *
+
 
 # Parallelization implemented on ShotNoise, everything else was slower with the number of images used so far.
 # Formatting of ShotNoise can be copied easily into the others if wanting to switch back to parallelization
@@ -29,32 +31,8 @@ validationPercent = 100 - trainingPercent
 showGridImage = False
 
 
-@contextlib.contextmanager
-def tqdm_joblib(tqdm_object):
-    """Context manager to patch joblib to report into tqdm progress bar given as argument"""
-
-    class TqdmBatchCompletionCallback:
-        def __init__(self, time, index, parallel):
-            self.index = index
-            self.parallel = parallel
-
-        def __call__(self, index):
-            tqdm_object.update()
-            if self.parallel._original_iterator is not None:
-                self.parallel.dispatch_next()
-
-    old_batch_callback = joblib.parallel.BatchCompletionCallBack
-    joblib.parallel.BatchCompletionCallBack = TqdmBatchCompletionCallback
-    try:
-        yield tqdm_object
-    finally:
-        joblib.parallel.BatchCompletionCallBack = old_batch_callback
-        tqdm_object.close()
-
-
 # noinspection PyShadowingNames
-def saveImageAndMask(image, maskImage, augmentedRawImagesDir, augmentedMaskedImagesDir, baseFileName, baseFileType,
-                     maskFileType, fileNumber):
+def saveImageAndMask(image, maskImage, augmentedRawImagesDir, augmentedMaskedImagesDir, baseFileName, baseFileType, maskFileType, fileNumber):
     imageio.imwrite(os.path.join(augmentedRawImagesDir, baseFileName + '_' + str(fileNumber) + '.' + baseFileType),
                     image)
     imageio.imwrite(
@@ -63,9 +41,7 @@ def saveImageAndMask(image, maskImage, augmentedRawImagesDir, augmentedMaskedIma
 
 
 def getFilesInFolderList(titleString, fileTypeString):
-    filesFolder = filedialog.askdirectory(initialdir="/home/mbraun/NewIS", title=titleString)
-    if not filesFolder:
-        quit()
+    filesFolder = getFileOrDir('folder', titleString)
     (dirpath, dirnames, rawFileNames) = next(os.walk(filesFolder))
     fileNames = []
 
@@ -307,12 +283,8 @@ def imageAugment(baseImageListFunc, baseMaskListFunc, fullImageListFunc, segmapL
         quit()
 
 
-root = Tk()
-root.withdraw()
 binaryMaskFileNames = sorted(getFilesInFolderList("Select Binary Mask Image Folder", ".png"))
 rawImageFileNames = sorted(getFilesInFolderList("Select Raw Image Folder", ".jpg"))
-root.destroy()
-
 num_cores = multiprocessing.cpu_count()
 
 if len(binaryMaskFileNames) != len(rawImageFileNames):
@@ -341,8 +313,7 @@ for entry in range(0, len(rawImageFileNames)):
     baseImageList = [originalImage]
     baseMaskList = [segmap]
 
-    baseImageList, baseMaskList = imageAugment(baseImageList, baseMaskList, baseImageList, baseMaskList,
-                                               "HorizontalFlip")
+    baseImageList, baseMaskList = imageAugment(baseImageList, baseMaskList, baseImageList, baseMaskList, "HorizontalFlip")
 
     if additiveAugmentMode:
         fullImageList = baseImageList.copy()

@@ -3,7 +3,6 @@ import pickle
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
-from tkinter import Tk, filedialog
 import multiprocessing
 import random
 import locale
@@ -16,6 +15,8 @@ from kivymd.uix.textfield import MDTextField
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.dropdownitem import MDDropDownItem
 from kivy.core.window import Window
+
+from Utility.Utilities import *
 
 from torch import load as torchload
 from torch import device as torchdevice
@@ -50,19 +51,6 @@ class CenteredMDTextField(MDTextField):
             self.tab_width,
             self._label_cached
         )
-
-
-class SetupOptions:
-    def __init__(self):
-        self.showPlots = False
-        self.continueTraining = True
-        self.modelType = "maskrcnn"
-        self.numClasses = 1
-        self.folderSuffix = "output"
-        self.totalIterations = 10000
-        self.iterationCheckpointPeriod = 1000
-        self.validationDictPath = ''
-        self.trainDictPath = ''
 
 
 def getLastIteration(saveDir) -> int:
@@ -116,7 +104,7 @@ class SetupUI(MDApp):
         )
 
     def file_manager_open(self, destinationField, openType, message):
-        listName = getFileOrDirList(openType, message, '.txt', self.root.ids[destinationField].text.replace('~', os.path.expanduser('~')))
+        listName = getFileOrDir(openType, message, '.txt', self.root.ids[destinationField].text.replace('~', os.path.expanduser('~')))
         self.root.ids[destinationField].text = listName.replace(os.path.expanduser('~'), '~')
 
     def set_model(self, instance):
@@ -257,12 +245,6 @@ def setConfigurator(setupoptions: SetupOptions, baseStr: str = '', maskType: str
     return cfg
 
 
-def fileHandling(annotationFileName):
-    with open(annotationFileName, 'rb') as handle:
-        fileContents = pickle.loads(handle.read())
-    return fileContents
-
-
 def setDatasetAndMetadata(baseStr: str, setupoptions: SetupOptions):
     showPlots = setupoptions.showPlots
 
@@ -317,24 +299,6 @@ def setDatasetAndMetadata(baseStr: str, setupoptions: SetupOptions):
             ax.imshow(visTest.get_image()[:, :, ::-1])
             plt.show(block=True)
     return maskType
-
-
-def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file', fileTypes: str = None, initialDirOrFile: str = os.getcwd()):
-    if os.path.isfile(initialDirOrFile) or os.path.isdir(initialDirOrFile):
-        initialDir = os.path.split(initialDirOrFile)[0]
-    else:
-        initialDir = initialDirOrFile
-    root = Tk()
-    root.withdraw()
-    assert fileOrFolder.lower() == 'file' or fileOrFolder.lower() == 'folder', "Only file or folder is an allowed string choice for fileOrFolder"
-    if fileOrFolder.lower() == 'file':
-        fileOrFolderList = filedialog.askopenfilename(initialdir=initialDir, title=titleStr, filetypes=[(fileTypes + "file", fileTypes)])
-    else:  # Must be folder from assert statement
-        fileOrFolderList = filedialog.askdirectory(initialdir=initialDir, title=titleStr)
-    if not fileOrFolderList:
-        fileOrFolderList = initialDirOrFile
-    root.destroy()
-    return fileOrFolderList
 
 
 def textToBool(text):

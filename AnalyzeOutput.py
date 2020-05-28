@@ -3,7 +3,6 @@ import os
 import pickle
 import joblib
 import numpy as np
-import contextlib
 from tqdm import tqdm
 import multiprocessing
 from matplotlib import cm
@@ -18,7 +17,6 @@ from shapely.prepared import prep
 from shapely import affinity
 from PIL import Image
 from skimage.measure import label, regionprops
-from tkinter import Tk, filedialog
 from collections import OrderedDict
 from polylidarutil import (plot_points, plot_polygons, get_point)
 from polylidar import extractPolygons
@@ -32,30 +30,7 @@ from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 from detectron2.utils.logger import setup_logger
 from Utility.CropScaleSave import importRawImageAndScale, getNakedNameFromFilePath
 from Utility.AnalyzeOutputUI import SetupOptions
-
-
-@contextlib.contextmanager
-def tqdm_joblib(tqdm_object):
-    """Context manager to patch joblib to report into tqdm progress bar given as argument"""
-
-    # noinspection PyProtectedMember
-    class TqdmBatchCompletionCallback:
-        def __init__(self, _, index, parallel):
-            self.index = index
-            self.parallel = parallel
-
-        def __call__(self, index):
-            tqdm_object.update()
-            if self.parallel._original_iterator is not None:
-                self.parallel.dispatch_next()
-
-    old_batch_callback = joblib.parallel.BatchCompletionCallBack
-    joblib.parallel.BatchCompletionCallBack = TqdmBatchCompletionCallback
-    try:
-        yield tqdm_object
-    finally:
-        joblib.parallel.BatchCompletionCallBack = old_batch_callback
-        tqdm_object.close()
+from Utility.Utilities import *
 
 
 # @profile
@@ -135,33 +110,8 @@ def centerXPercentofWire(npMaskFunc, setupOptions: SetupOptions):
     return None, None, None
 
 
-def fileHandling(annotationFileName):
-    with open(annotationFileName, 'rb') as handle:
-        fileContents = pickle.loads(handle.read())
-    return fileContents
-
-
 def bboxToPoly(xmin, ymin, xmax, ymax):
     return [[xmin, ymin], [xmax, ymin], [xmax, ymax], [xmin, ymax]]
-
-
-def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file', fileTypes: str = '*', initialDirOrFile: str = os.getcwd()):
-    if os.path.isfile(initialDirOrFile) or os.path.isdir(initialDirOrFile):
-        initialDir = os.path.split(initialDirOrFile)[0]
-    else:
-        initialDir = initialDirOrFile
-    root = Tk()
-    root.withdraw()
-    assert fileOrFolder.lower() == 'file' or fileOrFolder.lower() == 'folder', "Only file or folder is an allowed string choice for fileOrFolder"
-    if fileOrFolder.lower() == 'file':
-        fileOrFolderList = filedialog.askopenfilename(initialdir=initialDir, title=titleStr,
-                                                      filetypes=[(fileTypes + "file", fileTypes)])
-    else:  # Must be folder from assert statement
-        fileOrFolderList = filedialog.askdirectory(initialdir=initialDir, title=titleStr)
-    if not fileOrFolderList:
-        fileOrFolderList = initialDirOrFile
-    root.destroy()
-    return fileOrFolderList
 
 
 def isValidLine(strTree, instanceBoxCoords, imageHeight, instanceLine):
