@@ -22,6 +22,38 @@ def validStringNumberRange(numberString, minimumValue, maximumValue):
     return False
 
 
+class TextValidator(object):
+    def __init__(self, tkWindow, minimumScaleBarWidthMicronsValue, maximumScaleBarWidthMicronsValue, minimumTiltAngleValue, maximumTiltAngleValue, minimumCenterFractionToMeasureValue, maximumCenterFractionToMeasureValue):
+        self.tkWindow = tkWindow
+        self.minimumScaleBarWidthMicronsValue = minimumScaleBarWidthMicronsValue
+        self.maximumScaleBarWidthMicronsValue = maximumScaleBarWidthMicronsValue
+        self.minimumTiltAngleValue = minimumTiltAngleValue
+        self.maximumTiltAngleValue = maximumTiltAngleValue
+        self.minimumCenterFractionToMeasureValue = minimumCenterFractionToMeasureValue
+        self.maximumCenterFractionToMeasureValue = maximumCenterFractionToMeasureValue
+
+    def stringNumberRangeValidator(self, proposedText, minimumValue, maximumValue):
+        if proposedText == '':
+            return True
+        if not proposedText.replace('.', '', 1).isdigit():
+            self.tkWindow.bell()
+            return False
+        numberFloat = strToFloat(proposedText)
+        if minimumValue <= numberFloat <= maximumValue:
+            return True
+        self.tkWindow.bell()
+        return False
+
+    def scaleBarWidthMicronsValidator(self, proposedText):
+        return self.stringNumberRangeValidator(proposedText, self.minimumScaleBarWidthMicronsValue, self.maximumScaleBarWidthMicronsValue)
+
+    def tiltAngleValidator(self, proposedText):
+        return self.stringNumberRangeValidator(proposedText, self.minimumTiltAngleValue, self.maximumTiltAngleValue)
+
+    def centerFractionToMeasureValidator(self, proposedText):
+        return self.stringNumberRangeValidator(proposedText, self.minimumCenterFractionToMeasureValue, self.maximumCenterFractionToMeasureValue)
+
+
 def hide_AdvancedOptions(win):
     if 'showPlots_Label' in win.children:
         win.children['showPlots_Label'].destroy()
@@ -156,16 +188,20 @@ def uiInput(win, setupOptions, savedJSONFileName):
     r1isXRD.grid(row=6, column=1)
     r2isXRD.grid(row=6, column=2)
 
+    txtValidator = TextValidator(win, minimumScaleBarWidthMicronsValue=0, maximumScaleBarWidthMicronsValue=1000, minimumTiltAngleValue=-10, maximumTiltAngleValue=90, minimumCenterFractionToMeasureValue=0, maximumCenterFractionToMeasureValue=1)
+    scaleBarWidthMicronsValidatorFunction = (win.register(txtValidator.scaleBarWidthMicronsValidator), '%P')
     tkinter.Label(win, text="Scale Bar Size (Microns)").grid(row=7, column=0)
-    tiltAngleEntry = tkinter.Entry(win, textvariable=scaleBarWidthMicronsVar, validate='all', validatecommand=lambda: validStringNumberRange(scaleBarWidthMicronsVar.get(), 0, 1000))
+    tiltAngleEntry = tkinter.Entry(win, textvariable=scaleBarWidthMicronsVar, validate='all', validatecommand=scaleBarWidthMicronsValidatorFunction)
     tiltAngleEntry.grid(row=7, column=1)
 
+    tiltAngleValidatorFunction = (win.register(txtValidator.tiltAngleValidator), '%P')
     tkinter.Label(win, text="Tilt Angle").grid(row=8, column=0)
-    tiltAngleEntry = tkinter.Entry(win, textvariable=tiltAngleVar, validate='all', validatecommand=lambda: validStringNumberRange(tiltAngleVar.get(), -10, 90))
+    tiltAngleEntry = tkinter.Entry(win, textvariable=tiltAngleVar, validate='all', validatecommand=tiltAngleValidatorFunction)
     tiltAngleEntry.grid(row=8, column=1)
 
+    centerFractionToMeasureValidatorFunction = (win.register(txtValidator.centerFractionToMeasureValidator), '%P')
     tkinter.Label(win, text="Center Fraction to Measure").grid(row=9, column=0)
-    centerFractionToMeasureEntry = tkinter.Entry(win, textvariable=centerFractionToMeasureVar, validate='all', validatecommand=lambda: validStringNumberRange(centerFractionToMeasureVar.get(), 0, 1))
+    centerFractionToMeasureEntry = tkinter.Entry(win, textvariable=centerFractionToMeasureVar, validate='all', validatecommand=centerFractionToMeasureValidatorFunction)
     centerFractionToMeasureEntry.grid(row=9, column=1)
 
     tkinter.Button(win, text='Show/Hide Advanced Options', command=lambda: show_AdvancedOptions(win, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar)).grid(row=10, column=1)
