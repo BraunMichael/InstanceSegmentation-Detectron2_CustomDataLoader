@@ -136,15 +136,15 @@ def annotateSingleImage(rawImageName, binaryMaskName, maskType, parentFolder):
     assert rawImage.size == binaryImage.size, "Image:" + rawImageName + "and Mask:" + binaryMaskName + "do not have the same image size!"
     (width, height) = binaryImage.size
     rawNPImage = np.array(rawImage)
-    binaryNPImage = np.array(binaryImage)
-    if binaryNPImage.ndim > 2:
-        if binaryNPImage.ndim == 3:
+    binaryNPImageOriginal = np.array(binaryImage)
+    if binaryNPImageOriginal.ndim > 2:
+        if binaryNPImageOriginal.ndim == 3:
             # Assuming black and white masks, be lazy and only take the first color channel
-            binaryNPImage = binaryNPImage[:, :, 0]
+            binaryNPImageOriginal = binaryNPImageOriginal[:, :, 0]
         else:
             print('The imported rawImage is 4 dimensional for some reason, check it out.')
             quit()
-    binaryNPImage = binary_fill_holes(binaryNPImage)  # Fill holes in image, MaskRCNN polygon maskType breaks with holes
+    binaryNPImage = binary_fill_holes(binaryNPImageOriginal)  # Fill holes in image, MaskRCNN polygon maskType breaks with holes
     record["file_name"] = os.path.relpath(rawImageName, parentFolder)
     record["image_id"] = os.path.relpath(rawImageName, parentFolder)
     record["height"] = height
