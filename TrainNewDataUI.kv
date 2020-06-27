@@ -158,6 +158,16 @@
                 padding: ((self.width - self.text_width) / 2, self.height / 4)
 
 
+        MDTextField:
+            id: classNamesField
+            color: 0, 0, 0, 1    # black text color
+            focus: False
+            hint_text: "Class names (comma separated)"
+            helper_text: ""
+            helper_text_mode: "on_focus"
+            on_text: app.checkClassNames(root.ids['classNamesField'].text)
+            on_focus: app.checkClassNames(root.ids['classNamesField'].text)
+
         MDBoxLayout:
             orientation: "horizontal"
             adaptive_height: True
