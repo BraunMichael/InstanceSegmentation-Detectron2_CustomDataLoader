@@ -38,6 +38,13 @@ def outputModelFolderConverter(prefix: str, suffix: str):
     return prefix + "Model_" + suffix
 
 
+def lineSplitter(lineString):
+    delimiters = ' ', ', ', ',', '\t', '\n'
+    regexPattern = '|'.join(map(re.escape, delimiters))
+    splitLineList = re.split(regexPattern, lineString)
+    return splitLineList
+
+
 class CenteredMDTextField(MDTextField):
     text_width = NumericProperty()
 
@@ -143,6 +150,23 @@ class SetupUI(MDApp):
             self.root.ids['iterationsCompleteLabel'].text_color = warningColor
             self.root.ids['iterationsCompleteLabel'].text = "Warning, there are no detected iterations on chosen model path. Will start from pre-trained model only."
             setupoptions.continueTraining = False
+
+    def checkClassNames(self, classNamesString):
+        self.root.ids['iterationsComplete'].color_mode = "custom"
+        self.root.ids['iterationsCompleteLabel'].theme_text_color = "Custom"
+
+        splitLine = [entry for entry in lineSplitter(classNamesString) if entry]
+        if len(splitLine) != int(self.root.ids['numClassesField'].text) or not classNamesString:
+            warningColor = (241 / 255, 196 / 255, 15 / 255, 1)
+            self.root.ids['classNamesField'].line_color_focus = warningColor
+            self.root.ids['classNamesField'].helper_text = "The number of listed classes and stated number of classes above do not match"
+        else:
+            goodColor = (39 / 255, 174 / 255, 96 / 255, 1)
+            self.root.ids['classNamesField'].line_color_focus = goodColor
+            self.root.ids['classNamesField'].helper_text = ""
+        print(splitLine)
+        print(self.root.ids['classNamesField'].text)
+
 
     def on_start(self):
         self.root.ids['fileManager_Train'].ids['lbl_txt'].halign = 'center'
