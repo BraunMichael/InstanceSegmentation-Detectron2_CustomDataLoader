@@ -176,6 +176,7 @@ def annotateSingleImage(rawImageName, binaryMaskName, maskType, parentFolder):
             regionGreyLevel = binaryNPImageOriginal[int(round(region.centroid[0])), int(round(region.centroid[1]))]
             category_id = levelDict[regionGreyLevel]
             maskCoords = region.coords
+
             subMask = np.zeros(binaryNPImage.shape)
             for pixelXY in maskCoords:
                 subMask[pixelXY[0]][pixelXY[1]] = 1
