@@ -17,6 +17,7 @@ class SetupOptions:
         self.iterationCheckpointPeriod = 1000
         self.validationDictPath = ''
         self.trainDictPath = ''
+        self.classNameList = ''
 
         self.imageFilePath = ''
         self.scaleDictPath = ''
