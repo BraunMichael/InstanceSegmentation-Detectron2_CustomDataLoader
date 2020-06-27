@@ -164,13 +164,17 @@ def annotateSingleImage(rawImageName, binaryMaskName, maskType, parentFolder):
         fig, ax = plt.subplots(figsize=(10, 8))
 
     allRegionProperties = regionprops(label_image)
-
+    hist, bins = np.histogram(binaryNPImageOriginal.ravel(), np.max(binaryNPImageOriginal) + 1, [0, np.max(binaryNPImageOriginal) + 1])
+    levelDict = {}
+    for ind, value in enumerate(np.where(hist > 0)[0]):
+        levelDict[value] = ind
     objectsList = []
     regionNumber = 1
     for region in allRegionProperties:
         # take regions with large enough areas
         if region.area > 100:
-            category_id = 0  # If more than 1 type of thing, need a new (and consistent) category_id for each different type of object
+            regionGreyLevel = binaryNPImageOriginal[int(round(region.centroid[0])), int(round(region.centroid[1]))]
+            category_id = levelDict[regionGreyLevel]
             maskCoords = region.coords
             subMask = np.zeros(binaryNPImage.shape)
             for pixelXY in maskCoords:
