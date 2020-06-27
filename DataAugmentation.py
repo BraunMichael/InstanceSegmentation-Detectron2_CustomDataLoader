@@ -26,7 +26,7 @@ showPlots = False  # Will show tiled grid if true, only works with a small numbe
 saveFiles = True
 
 additiveAugmentMode = True  # False is "multiplicative" mode, where there will be an image that has every augment applied, and every possible combination of augment is represented
-trainingPercent = 80
+trainingPercent = 90
 validationPercent = 100 - trainingPercent
 showGridImage = False
 
@@ -352,7 +352,7 @@ for entry in range(0, len(rawImageFileNames)):
                 plotList.append(drawSegmentationMapsOnImages(fullImage, segmapImage, colorList))
 
     if saveFiles:
-        augmentedRawImagesDir = 'NewAugmentedRawImages'
+        augmentedRawImagesDir = 'TopDownAugmentedRawImages'
         if not os.path.isdir(augmentedRawImagesDir):
             os.mkdir(augmentedRawImagesDir)
         augmentedRawImagesTrainDir = os.path.join(augmentedRawImagesDir, 'Train')
@@ -362,7 +362,7 @@ for entry in range(0, len(rawImageFileNames)):
         if not os.path.isdir(augmentedRawImagesValidationDir):
             os.mkdir(augmentedRawImagesValidationDir)
 
-        augmentedMaskedImagesDir = 'NewAugmentedMaskImages'
+        augmentedMaskedImagesDir = 'TopDownAugmentedMaskImages'
         if not os.path.isdir(augmentedMaskedImagesDir):
             os.mkdir(augmentedMaskedImagesDir)
         augmentedMaskedImagesTrainDir = os.path.join(augmentedMaskedImagesDir, 'Train')
