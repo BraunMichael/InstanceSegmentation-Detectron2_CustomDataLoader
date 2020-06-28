@@ -218,6 +218,8 @@ class SetupUI(MDApp):
                 setupoptions.trainDictPath = entry.text.replace('~', os.path.expanduser('~'))
             elif key == 'validateAnnotationDictPath':
                 setupoptions.validationDictPath = entry.text.replace('~', os.path.expanduser('~'))
+            elif key == 'classNamesField':
+                setupoptions.classNameList = lineSplitter(entry.text)
 
         self.root_window.close()
 
@@ -309,7 +311,7 @@ def setDatasetAndMetadata(baseStr: str, setupoptions: SetupOptions):
     for d in range(len(dirnames)):
         if baseStr + "_" + dirnames[d] not in DatasetCatalog.__dict__['_REGISTERED']:
             DatasetCatalog.register(baseStr + "_" + dirnames[d], lambda d=d: annotationDicts[d])
-        MetadataCatalog.get(baseStr + "_" + dirnames[d]).set(thing_classes=["VerticalNanowires"])
+        MetadataCatalog.get(baseStr + "_" + dirnames[d]).set(thing_classes=setupoptions.classNameList)
 
     if showPlots:
         nanowire_metadata = MetadataCatalog.get(baseStr + "_Train")
