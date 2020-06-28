@@ -1,4 +1,5 @@
 import os
+import re
 import pickle
 import matplotlib.pyplot as plt
 import numpy as np
@@ -315,12 +316,17 @@ def setDatasetAndMetadata(baseStr: str, setupoptions: SetupOptions):
 
     if showPlots:
         nanowire_metadata = MetadataCatalog.get(baseStr + "_Train")
-        for d in random.sample(annotationTrainDicts, 20):
+        for d in random.sample(annotationTrainDicts, 5):
             fig, ax = plt.subplots(figsize=(10, 8))
             print(d["file_name"])
             rawImage = Image.open(d["file_name"])
             npImage = np.array(rawImage)
-            visualizerNP = Visualizer(npImage[:, :, ::-1], metadata=nanowire_metadata, scale=0.5)
+            # TODO fix this
+            try:
+                visualizerNP = Visualizer(npImage[:, :, ::-1], metadata=nanowire_metadata, scale=0.5)
+            except IndexError:
+                npImage = np.expand_dims(npImage, axis=2)
+                visualizerNP = Visualizer(npImage[:, :, ::-1], metadata=nanowire_metadata, scale=0.5)
             visTest = visualizerNP.draw_dataset_dict(d)
             ax.imshow(visTest.get_image()[:, :, ::-1])
             plt.show(block=True)
