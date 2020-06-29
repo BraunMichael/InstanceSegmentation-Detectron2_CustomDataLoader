@@ -294,7 +294,7 @@ if len(binaryMaskFileNames) != len(rawImageFileNames):
 
 # Still don't think we should need 256 colors, but this appears to work well
 # Actually, this might be because the mask areas are indicated by a value of 255 not 1, so it is assigning it to a class number 255
-colorList = [(255, 255, 255) for i in range(256)]
+colorList = [(i, i, i) for i in range(256)]
 colorList.insert(0, (0, 0, 0))
 
 annotations = []
