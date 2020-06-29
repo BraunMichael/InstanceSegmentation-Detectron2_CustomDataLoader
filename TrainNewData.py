@@ -321,7 +321,6 @@ def setDatasetAndMetadata(baseStr: str, setupoptions: SetupOptions):
             print(d["file_name"])
             rawImage = Image.open(d["file_name"])
             npImage = np.array(rawImage)
-            # TODO fix this
             try:
                 visualizerNP = Visualizer(npImage[:, :, ::-1], metadata=nanowire_metadata, scale=0.5)
             except IndexError:
