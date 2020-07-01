@@ -29,7 +29,7 @@ from detectron2.data import MetadataCatalog, DatasetCatalog, build_detection_tes
 from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 from detectron2.utils.logger import setup_logger
 from Utility.CropScaleSave import importRawImageAndScale, getNakedNameFromFilePath
-from Utility.AnalyzeOutputUI import SetupOptions
+# from Utility.AnalyzeOutputUI import SetupOptions
 from Utility.Utilities import *
 
 
