@@ -158,9 +158,8 @@ def uiInput(win, setupOptions, savedJSONFileName):
     tkinter.Label(win, text="Machine Learning Model:").grid(row=4, column=0)
     tkinter.OptionMenu(win, modelEntryVar, *modelEntryOptions, command=iterationValidator.modelTypeValidate).grid(row=4, column=1)
 
-    # TODO: figure out validation, possibly changing text color
-    iterationValidator = IterationValidator(win, setupOptions=setupOptions, modelEntryVar=modelEntryVar, folderSuffixText=folderSuffixText, completedIterationsVar=completedIterationsVar)
-    folderSuffixValidatorFunction = (win.register(iterationValidator.folderSuffixValidate), '%P')
+    # TODO: figure out changing text color to indicate validation/warning for if no iterations performed yet
+
     tkinter.Label(win, text="Model output folder name suffix:").grid(row=5, column=0)
     tkinter.Entry(win, textvariable=folderSuffixText, validate='all', validatecommand=folderSuffixValidatorFunction).grid(row=5, column=1)
 
