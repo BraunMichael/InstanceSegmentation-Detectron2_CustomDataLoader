@@ -141,7 +141,7 @@ def on_closing(win, setupOptions, savedJSONFileName, ImageEntryText, scaleDictEn
 
 
 def uiInput(win, setupOptions, savedJSONFileName):
-    win.title("Spectrum Data Processing Setup UI")
+    win.title("ML Analysis UI")
     ImageEntryText = tkinter.StringVar(value=setupOptions.imageFilePath.replace(os.path.expanduser('~'), '~'))
     scaleDictEntryText = tkinter.StringVar(value=setupOptions.scaleDictPath.replace(os.path.expanduser('~'), '~'))
     modelEntryText = tkinter.StringVar(value=setupOptions.modelPath.replace(os.path.expanduser('~'), '~'))
