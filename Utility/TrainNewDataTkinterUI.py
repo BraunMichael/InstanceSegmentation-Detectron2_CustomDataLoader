@@ -35,7 +35,6 @@ class NumberValidator(object):
         return True
 
     def ClassNumberValidate(self, proposedText):
-        print(self.classNamesVar.get())
         if self.NumberValidate(proposedText):
             if proposedText:
                 if checkClassNames(self.classNamesVar.get(), strToInt(proposedText)):
@@ -46,6 +45,11 @@ class NumberValidator(object):
         return False
 
     def ClassListValidate(self, proposedText):
+        if self.numberClassesVar.get():
+            if checkClassNames(proposedText, strToInt(self.numberClassesVar.get())):
+                self.validClassNamesVar.set(True)
+            else:
+                self.validClassNamesVar.set(False)
         return True
 
 
@@ -135,6 +139,7 @@ def uiInput(win, setupOptions, savedJSONFileName):
     numberValidator = NumberValidator(win, numberClassesVar=numberClassesVar, classNamesVar=classNamesVar, validClassNamesVar=validClassNamesVar)
     numberValidatorFunction = (win.register(numberValidator.NumberValidate), '%P')
     classNumberValidatorFunction = (win.register(numberValidator.ClassNumberValidate), '%P')
+    classListValidatorFunction = (win.register(numberValidator.ClassListValidate), '%P')
 
     tkinter.Label(win, text="Total Number of Iterations:").grid(row=7, column=0)
     tkinter.Entry(win, textvariable=totalIterationsVar, validate='all', validatecommand=numberValidatorFunction).grid(row=7, column=1)
@@ -146,7 +151,7 @@ def uiInput(win, setupOptions, savedJSONFileName):
     tkinter.Entry(win, textvariable=numberClassesVar, validate='all', validatecommand=classNumberValidatorFunction).grid(row=9, column=1)
 
     tkinter.Label(win, text="Class names (comma separated)").grid(row=10, column=0)
-    tkinter.Entry(win, textvariable=classNamesVar).grid(row=10, column=1)
+    tkinter.Entry(win, textvariable=classNamesVar, validate='all', validatecommand=classListValidatorFunction).grid(row=10, column=1)
 
     tkinter.Label(win, text="Show plots with annotated images before training?").grid(row=11, column=0)
     tkinter.OptionMenu(win, showPlotsVar, *showPlotsOptions).grid(row=11, column=1)
