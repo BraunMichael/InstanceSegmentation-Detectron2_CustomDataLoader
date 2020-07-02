@@ -156,11 +156,8 @@ def uiInput(win, setupOptions, savedJSONFileName):
     iterationValidator = IterationValidator(win, setupOptions=setupOptions, modelEntryVar=modelEntryVar, folderSuffixText=folderSuffixText, completedIterationsVar=completedIterationsVar)
     folderSuffixValidatorFunction = (win.register(iterationValidator.folderSuffixValidate), '%P')
     tkinter.Label(win, text="Model output folder name suffix:").grid(row=5, column=0)
-    # tkinter.Entry(win, textvariable=folderSuffixText).grid(row=5, column=1)
     tkinter.Entry(win, textvariable=folderSuffixText, validate='all', validatecommand=folderSuffixValidatorFunction).grid(row=5, column=1)
 
-    numberValidator = NumberValidator(win, numberClassesVar=numberClassesVar, classNamesVar=classNamesVar, validClassNamesVar=validClassNamesVar)
-    numberValidatorFunction = (win.register(numberValidator.NumberValidate), '%P')
     tkinter.Label(win, text="Completed iterations on chosen model:").grid(row=6, column=0)
     tkinter.Entry(win, textvariable=completedIterationsVar, width=len(completedIterationsVar.get()), state='readonly').grid(row=6, column=1)
 
