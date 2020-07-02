@@ -157,6 +157,7 @@ def uiInput(win, setupOptions, savedJSONFileName):
     tkinter.Label(win, text="Machine Learning Model:").grid(row=4, column=0)
     tkinter.OptionMenu(win, modelEntryVar, *modelEntryOptions).grid(row=4, column=1)
 
+    # TODO: figure out validation, possibly changing text color
     # txtValidator = TextValidator(win, numberClasses=numberClassesVar, modelType=modelEntryVar, folderSuffix=folderSuffixText)
     tkinter.Label(win, text="Model output folder name suffix:").grid(row=5, column=0)
     tkinter.Entry(win, textvariable=folderSuffixText).grid(row=5, column=1)
