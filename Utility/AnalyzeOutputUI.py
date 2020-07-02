@@ -11,17 +11,6 @@ import locale
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
 
-def strToFloat(numberString):
-    charFreeStr = ''.join(ch for ch in numberString if ch.isdigit() or ch == '.' or ch == ',')
-    return float(locale.atof(charFreeStr))
-
-
-def validStringNumberRange(numberString, minimumValue, maximumValue):
-    if minimumValue <= strToFloat(numberString) <= maximumValue:
-        return True
-    return False
-
-
 class TextValidator(object):
     def __init__(self, tkWindow, minimumScaleBarWidthMicronsValue, maximumScaleBarWidthMicronsValue, minimumTiltAngleValue, maximumTiltAngleValue, minimumCenterFractionToMeasureValue, maximumCenterFractionToMeasureValue):
         self.tkWindow = tkWindow

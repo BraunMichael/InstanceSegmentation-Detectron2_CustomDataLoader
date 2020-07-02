@@ -1,9 +1,15 @@
 import os
+import re
 import joblib
 import contextlib
+from glob import glob
 from tqdm import tqdm
 from tkinter import Tk, filedialog
+from torch import load as torchload
+from torch import device as torchdevice
 import pickle
+import locale
+locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
 
 class SetupOptions:
@@ -79,4 +85,63 @@ def getFileOrDir(fileOrFolder: str = 'file', titleStr: str = 'Choose a file', fi
     return fileOrFolderList
 
 
+def getLastIteration(saveDir) -> int:
+    """
+    Returns:
+        int : Number of iterations performed from model in target directory.
+    """
+    fullSaveDir = os.path.join(os.getcwd(), 'OutputModels', saveDir)
+    checkpointFilePath = os.path.join(os.getcwd(), 'OutputModels', fullSaveDir, "last_checkpoint")
 
+    # get file from checkpointFilePath as latestModel
+    if os.path.exists(checkpointFilePath):
+        with open(checkpointFilePath) as f:
+            latestModel = os.path.join(fullSaveDir, f.read().strip())
+    elif os.path.exists(os.path.join(fullSaveDir, 'model_final.pth')):
+        latestModel = os.path.join(fullSaveDir, 'model_final.pth')
+    else:
+        fileList = glob("*.pth")
+        if fileList:
+            latestModel = sorted(fileList, reverse=True)[0]
+        else:
+            return 0
+
+    latestIteration = torchload(latestModel, map_location=torchdevice("cpu")).get("iteration", -1)
+    return latestIteration
+
+
+def strToFloat(numberString):
+    charFreeStr = ''.join(ch for ch in numberString if ch.isdigit() or ch == '.' or ch == ',')
+    return float(locale.atof(charFreeStr))
+
+
+def strToInt(numberString):
+    return int(strToFloat(numberString))
+
+
+def listToCommaString(listValue):
+    outString = ""
+    for entryNum in range(len(listValue)):
+        outString += listValue[entryNum]
+        if entryNum < len(listValue) - 1:
+            outString += ', '
+    return outString
+
+
+def outputModelFolderConverter(prefix: str, suffix: str):
+    return prefix + "Model_" + suffix
+
+
+def textToBool(text):
+    assert text.lower() == 'true' or text.lower() == 'false', "The passed text is not true/false"
+    if text.lower() == 'true':
+        return True
+    elif text.lower() == 'false':
+        return False
+
+
+def lineSplitter(lineString):
+    delimiters = ' ', ', ', ',', '\t', '\n'
+    regexPattern = '|'.join(map(re.escape, delimiters))
+    splitLineList = re.split(regexPattern, lineString)
+    return splitLineList

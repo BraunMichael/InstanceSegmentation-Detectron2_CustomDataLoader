@@ -19,17 +19,6 @@ from torch import device as torchdevice
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
 
-def outputModelFolderConverter(prefix: str, suffix: str):
-    return prefix + "Model_" + suffix
-
-
-def lineSplitter(lineString):
-    delimiters = ' ', ', ', ',', '\t', '\n'
-    regexPattern = '|'.join(map(re.escape, delimiters))
-    splitLineList = re.split(regexPattern, lineString)
-    return splitLineList
-
-
 class CenteredMDTextField(MDTextField):
     text_width = NumericProperty()
 
@@ -43,39 +32,6 @@ class CenteredMDTextField(MDTextField):
             self.tab_width,
             self._label_cached
         )
-
-
-def textToBool(text):
-    assert text.lower() == 'true' or text.lower() == 'false', "The passed text is not true/false"
-    if text.lower() == 'true':
-        return True
-    elif text.lower() == 'false':
-        return False
-
-
-def getLastIteration(saveDir) -> int:
-    """
-    Returns:
-        int : Number of iterations performed from model in target directory.
-    """
-    fullSaveDir = os.path.join(os.getcwd(), 'OutputModels', saveDir)
-    checkpointFilePath = os.path.join(os.getcwd(), 'OutputModels', fullSaveDir, "last_checkpoint")
-
-    # get file from checkpointFilePath as latestModel
-    if os.path.exists(checkpointFilePath):
-        with open(checkpointFilePath) as f:
-            latestModel = os.path.join(fullSaveDir, f.read().strip())
-    elif os.path.exists(os.path.join(fullSaveDir, 'model_final.pth')):
-        latestModel = os.path.join(fullSaveDir, 'model_final.pth')
-    else:
-        fileList = glob("*.pth")
-        if fileList:
-            latestModel = sorted(fileList, reverse=True)[0]
-        else:
-            return 0
-
-    latestIteration = torchload(latestModel, map_location=torchdevice("cpu")).get("iteration", -1)
-    return latestIteration
 
 
 class SetupUI(MDApp):

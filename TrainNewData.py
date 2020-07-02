@@ -20,9 +20,6 @@ from kivy.core.window import Window
 from Utility.Utilities import *
 from Utility.TrainNewDataUI import KivySetupOptionsUI
 from Utility.TrainNewDataTkinterUI import setupOptionsUI
-from torch import load as torchload
-from torch import device as torchdevice
-from glob import glob
 
 from detectron2 import model_zoo
 from detectron2.data import DatasetCatalog, MetadataCatalog
@@ -34,10 +31,6 @@ from detectron2.utils.logger import setup_logger
 setup_logger()
 
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
-
-
-def outputModelFolderConverter(prefix: str, suffix: str):
-    return prefix + "Model_" + suffix
 
 
 def setConfigurator(setupoptions: SetupOptions, baseStr: str = '', maskType: str = ''):
@@ -147,14 +140,6 @@ def setDatasetAndMetadata(baseStr: str, setupoptions: SetupOptions):
     return maskType
 
 
-def textToBool(text):
-    assert text.lower() == 'true' or text.lower() == 'false', "The passed text is not true/false"
-    if text.lower() == 'true':
-        return True
-    elif text.lower() == 'false':
-        return False
-
-
 def main(setupoptions: SetupOptions):
     baseStr = 'VerticalNanowires'
 
@@ -166,6 +151,6 @@ def main(setupoptions: SetupOptions):
 
 
 if __name__ == "__main__":
-    setupoptions = KivySetupOptionsUI()
-    # setupoptionstkinter = setupOptionsUI()
+    # setupoptions = KivySetupOptionsUI()
+    setupoptions = setupOptionsUI()
     main(setupoptions)

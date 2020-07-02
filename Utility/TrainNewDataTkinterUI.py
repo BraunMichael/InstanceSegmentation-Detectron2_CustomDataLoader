@@ -7,32 +7,6 @@ import tkinter
 from tkinter import Tk, filedialog
 from PIL import Image
 from Utility.Utilities import *
-from torch import load as torchload
-from torch import device as torchdevice
-import locale
-locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
-
-
-def outputModelFolderConverter(prefix: str, suffix: str):
-    return prefix + "Model_" + suffix
-
-
-def lineSplitter(lineString):
-    delimiters = ' ', ', ', ',', '\t', '\n'
-    regexPattern = '|'.join(map(re.escape, delimiters))
-    splitLineList = re.split(regexPattern, lineString)
-    return splitLineList
-
-
-def strToInt(numberString):
-    charFreeStr = ''.join(ch for ch in numberString if ch.isdigit() or ch == '.' or ch == ',')
-    return int(locale.atof(charFreeStr))
-
-
-def validStringNumberRange(numberString, minimumValue, maximumValue):
-    if minimumValue <= strToFloat(numberString) <= maximumValue:
-        return True
-    return False
 
 
 class TextValidator(object):
@@ -41,7 +15,6 @@ class TextValidator(object):
         self.numberClassesVar = numberClassesVar
         self.modelTypeVar = modelTypeVar
         self.folderSuffixText = folderSuffixText
-
 
     def stringNumberRangeValidator(self, proposedText, minimumValue, maximumValue):
         if proposedText == '':
@@ -94,12 +67,6 @@ def boolToString(boolValue):
     return "False"
 
 
-def stringToBool(stringValue):
-    if stringValue.lower() == 'true':
-        return True
-    return False
-
-
 def on_closing(win, setupOptions, savedJSONFileName, trainDictText, validationDictText, modelEntryVar, folderSuffixText, totalIterationsVar, iterationCheckpointVar, numberClassesVar, classNamesVar, showPlotsVar):
     setupOptions.trainDictPath = trainDictText.get().replace('~', os.path.expanduser('~'))
     setupOptions.validationDictPath = validationDictText.get().replace('~', os.path.expanduser('~'))
@@ -109,20 +76,12 @@ def on_closing(win, setupOptions, savedJSONFileName, trainDictText, validationDi
     setupOptions.iterationCheckpointPeriod = strToInt(iterationCheckpointVar.get())
     setupOptions.numClasses = strToInt(numberClassesVar.get())
     setupOptions.classNameList = [entry for entry in lineSplitter(classNamesVar.get()) if entry]
-    setupOptions.showPlots = stringToBool(showPlotsVar.get())
+    setupOptions.showPlots = textToBool(showPlotsVar.get())
 
     with open(savedJSONFileName, 'w') as outfile:
         json.dump(jsonpickle.encode(setupOptions), outfile)
     win.destroy()
 
-
-def listToCommaString(listValue):
-    outString = ""
-    for entryNum in range(len(listValue)):
-        outString += listValue[entryNum]
-        if entryNum < len(listValue) - 1:
-            outString += ', '
-    return outString
 
 def uiInput(win, setupOptions, savedJSONFileName):
     win.title("ML Training UI")
@@ -142,7 +101,6 @@ def uiInput(win, setupOptions, savedJSONFileName):
 
     showPlotsVar = tkinter.StringVar(value=boolToString(setupOptions.showPlots))
     showPlotsOptions = {'True', 'False'}
-
 
     tkinter.Label(win, text="Training Annotation Dictionary:").grid(row=0, column=0)
     trainingDictEntry = tkinter.Entry(win, textvariable=trainDictText, width=len(setupOptions.trainDictPath.replace(os.path.expanduser('~'), '~')))
