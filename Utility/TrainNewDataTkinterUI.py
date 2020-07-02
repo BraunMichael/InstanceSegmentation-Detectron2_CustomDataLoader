@@ -35,11 +35,9 @@ class IterationValidator(object):
         if lastIteration > 0:
             goodColor = (39 / 255, 174 / 255, 96 / 255, 1)
             self.setupOptions.continueTraining = True
-            print("Found iterations")
         else:
             warningColor = (241 / 255, 196 / 255, 15 / 255, 1)
             self.setupOptions.continueTraining = False
-            print("No found iterations")
         return True
 
     def folderSuffixValidate(self, proposedText):
