@@ -19,6 +19,7 @@ from kivy.core.window import Window
 
 from Utility.Utilities import *
 from Utility.TrainNewDataUI import KivySetupOptionsUI
+from Utility.TrainNewDataTkinterUI import setupOptionsUI
 from torch import load as torchload
 from torch import device as torchdevice
 from glob import glob
@@ -162,4 +163,5 @@ def main(setupoptions: SetupOptions):
 
 if __name__ == "__main__":
     setupoptions = KivySetupOptionsUI()
+    setupoptionstkinter = setupOptionsUI()
     main(setupoptions)
