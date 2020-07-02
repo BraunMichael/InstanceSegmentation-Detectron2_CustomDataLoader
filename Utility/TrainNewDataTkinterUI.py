@@ -19,6 +19,34 @@ def checkClassNames(classNamesString, numberClasses):
         return True
 
 
+class IterationValidator(object):
+    def __init__(self, tkWindow, setupOptions, modelEntryVar, folderSuffixText, completedIterationsVar):
+        self.tkWindow = tkWindow
+        self.modelEntryVar = modelEntryVar
+        self.folderSuffixText = folderSuffixText
+        self.completedIterationsVar = completedIterationsVar
+        self.setupOptions = setupOptions
+
+    def iterationValidate(self, modelType, folderSuffix):
+        lastIteration = getLastIteration(outputModelFolderConverter(modelType, folderSuffix))
+        if lastIteration > 0:
+            lastIteration += 1
+        self.completedIterationsVar.set(lastIteration)
+        if lastIteration > 0:
+            goodColor = (39 / 255, 174 / 255, 96 / 255, 1)
+            self.setupOptions.continueTraining = True
+            print("Found iterations")
+        else:
+            warningColor = (241 / 255, 196 / 255, 15 / 255, 1)
+            self.setupOptions.continueTraining = False
+            print("No found iterations")
+        return True
+
+    def folderSuffixValidate(self, proposedText):
+        self.iterationValidate(self.modelEntryVar.get(), proposedText)
+        return True
+
+
 class NumberValidator(object):
     def __init__(self, tkWindow, numberClassesVar, classNamesVar, validClassNamesVar):
         self.tkWindow = tkWindow
@@ -91,9 +119,6 @@ def on_closing(win, setupOptions, savedJSONFileName, trainDictText, validationDi
     win.destroy()
 
 
-
-
-
 def uiInput(win, setupOptions, savedJSONFileName):
     win.title("ML Training UI")
     trainDictText = tkinter.StringVar(value=setupOptions.trainDictPath.replace(os.path.expanduser('~'), '~'))
@@ -102,7 +127,7 @@ def uiInput(win, setupOptions, savedJSONFileName):
     modelEntryOptions = {'MaskRCNN', 'PointRend'}
     folderSuffixText = tkinter.StringVar(value=setupOptions.folderSuffix)
 
-    # completedIterationsVar = tkinter.StringVar(value=0)
+    completedIterationsVar = tkinter.StringVar(value=0)
     
     totalIterationsVar = tkinter.StringVar(value=setupOptions.totalIterations)
     iterationCheckpointVar = tkinter.StringVar(value=setupOptions.iterationCheckpointPeriod)
@@ -128,13 +153,16 @@ def uiInput(win, setupOptions, savedJSONFileName):
     tkinter.OptionMenu(win, modelEntryVar, *modelEntryOptions).grid(row=4, column=1)
 
     # TODO: figure out validation, possibly changing text color
-    # txtValidator = TextValidator(win, numberClasses=numberClassesVar, modelType=modelEntryVar, folderSuffix=folderSuffixText)
+    iterationValidator = IterationValidator(win, setupOptions=setupOptions, modelEntryVar=modelEntryVar, folderSuffixText=folderSuffixText, completedIterationsVar=completedIterationsVar)
+    folderSuffixValidatorFunction = (win.register(iterationValidator.folderSuffixValidate), '%P')
     tkinter.Label(win, text="Model output folder name suffix:").grid(row=5, column=0)
-    tkinter.Entry(win, textvariable=folderSuffixText).grid(row=5, column=1)
-    # tkinter.Entry(win, textvariable=folderSuffixText, width=len(setupOptions.folderSuffix), validate='all', validatecommand=scaleBarWidthMicronsValidatorFunction).grid(row=5, column=1)
-    #
-    # tkinter.Label(win, text="Completed iterations on chosen model:").grid(row=6, column=0)
-    # tkinter.Entry(win, textvariable=completedIterationsVar, width=len(completedIterationsVar.get()), state='readonly').grid(row=6, column=1)
+    # tkinter.Entry(win, textvariable=folderSuffixText).grid(row=5, column=1)
+    tkinter.Entry(win, textvariable=folderSuffixText, validate='all', validatecommand=folderSuffixValidatorFunction).grid(row=5, column=1)
+
+    numberValidator = NumberValidator(win, numberClassesVar=numberClassesVar, classNamesVar=classNamesVar, validClassNamesVar=validClassNamesVar)
+    numberValidatorFunction = (win.register(numberValidator.NumberValidate), '%P')
+    tkinter.Label(win, text="Completed iterations on chosen model:").grid(row=6, column=0)
+    tkinter.Entry(win, textvariable=completedIterationsVar, width=len(completedIterationsVar.get()), state='readonly').grid(row=6, column=1)
 
     numberValidator = NumberValidator(win, numberClassesVar=numberClassesVar, classNamesVar=classNamesVar, validClassNamesVar=validClassNamesVar)
     numberValidatorFunction = (win.register(numberValidator.NumberValidate), '%P')
