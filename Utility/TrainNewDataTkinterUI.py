@@ -9,32 +9,22 @@ from PIL import Image
 from Utility.Utilities import *
 
 
-class TextValidator(object):
-    def __init__(self, tkWindow, numberClassesVar, modelTypeVar, folderSuffixText):
-        self.tkWindow = tkWindow
-        self.numberClassesVar = numberClassesVar
-        self.modelTypeVar = modelTypeVar
-        self.folderSuffixText = folderSuffixText
-
-    def stringNumberRangeValidator(self, proposedText, minimumValue, maximumValue):
-        if proposedText == '':
-            return True
-        if not proposedText.replace('.', '', 1).isdigit():
-            self.tkWindow.bell()
-            return False
-        numberFloat = strToFloat(proposedText)
-        if minimumValue <= numberFloat <= maximumValue:
-            return True
-        self.tkWindow.bell()
+def checkClassNames(classNamesString, numberClasses):
+    splitLine = [entry for entry in lineSplitter(classNamesString) if entry]
+    if len(splitLine) != int(numberClasses) or not classNamesString:
+        warningColor = (241 / 255, 196 / 255, 15 / 255, 1)
         return False
-
-    def classNameListValidator(self, proposedText):
-        return self.stringNumberRangeValidator(proposedText, self.minimumScaleBarWidthMicronsValue, self.maximumScaleBarWidthMicronsValue)
+    else:
+        goodColor = (39 / 255, 174 / 255, 96 / 255, 1)
+        return True
 
 
 class NumberValidator(object):
-    def __init__(self, tkWindow):
+    def __init__(self, tkWindow, numberClassesVar, classNamesVar, validClassNamesVar):
         self.tkWindow = tkWindow
+        self.numberClassesVar = numberClassesVar
+        self.classNamesVar = classNamesVar
+        self.validClassNamesVar = validClassNamesVar
 
     def NumberValidate(self, proposedText):
         if proposedText == '':
@@ -42,6 +32,20 @@ class NumberValidator(object):
         if not proposedText.replace('.', '', 1).isdigit():
             self.tkWindow.bell()
             return False
+        return True
+
+    def ClassNumberValidate(self, proposedText):
+        print(self.classNamesVar.get())
+        if self.NumberValidate(proposedText):
+            if proposedText:
+                if checkClassNames(self.classNamesVar.get(), strToInt(proposedText)):
+                    self.validClassNamesVar.set(True)
+                else:
+                    self.validClassNamesVar.set(False)
+            return True
+        return False
+
+    def ClassListValidate(self, proposedText):
         return True
 
 
@@ -83,6 +87,9 @@ def on_closing(win, setupOptions, savedJSONFileName, trainDictText, validationDi
     win.destroy()
 
 
+
+
+
 def uiInput(win, setupOptions, savedJSONFileName):
     win.title("ML Training UI")
     trainDictText = tkinter.StringVar(value=setupOptions.trainDictPath.replace(os.path.expanduser('~'), '~'))
@@ -101,6 +108,7 @@ def uiInput(win, setupOptions, savedJSONFileName):
 
     showPlotsVar = tkinter.StringVar(value=boolToString(setupOptions.showPlots))
     showPlotsOptions = {'True', 'False'}
+    validClassNamesVar = tkinter.BooleanVar(value=checkClassNames(classNamesVar.get(), int(numberClassesVar.get())))
 
     tkinter.Label(win, text="Training Annotation Dictionary:").grid(row=0, column=0)
     trainingDictEntry = tkinter.Entry(win, textvariable=trainDictText, width=len(setupOptions.trainDictPath.replace(os.path.expanduser('~'), '~')))
@@ -124,8 +132,9 @@ def uiInput(win, setupOptions, savedJSONFileName):
     # tkinter.Label(win, text="Completed iterations on chosen model:").grid(row=6, column=0)
     # tkinter.Entry(win, textvariable=completedIterationsVar, width=len(completedIterationsVar.get()), state='readonly').grid(row=6, column=1)
 
-    numberValidator = NumberValidator(win)
+    numberValidator = NumberValidator(win, numberClassesVar=numberClassesVar, classNamesVar=classNamesVar, validClassNamesVar=validClassNamesVar)
     numberValidatorFunction = (win.register(numberValidator.NumberValidate), '%P')
+    classNumberValidatorFunction = (win.register(numberValidator.ClassNumberValidate), '%P')
 
     tkinter.Label(win, text="Total Number of Iterations:").grid(row=7, column=0)
     tkinter.Entry(win, textvariable=totalIterationsVar, validate='all', validatecommand=numberValidatorFunction).grid(row=7, column=1)
@@ -134,13 +143,16 @@ def uiInput(win, setupOptions, savedJSONFileName):
     tkinter.Entry(win, textvariable=iterationCheckpointVar, validate='all', validatecommand=numberValidatorFunction).grid(row=8, column=1)
 
     tkinter.Label(win, text="Number of classes in images (normally 1)").grid(row=9, column=0)
-    tkinter.Entry(win, textvariable=numberClassesVar, validate='all', validatecommand=numberValidatorFunction).grid(row=9, column=1)
+    tkinter.Entry(win, textvariable=numberClassesVar, validate='all', validatecommand=classNumberValidatorFunction).grid(row=9, column=1)
 
     tkinter.Label(win, text="Class names (comma separated)").grid(row=10, column=0)
     tkinter.Entry(win, textvariable=classNamesVar).grid(row=10, column=1)
 
     tkinter.Label(win, text="Show plots with annotated images before training?").grid(row=11, column=0)
     tkinter.OptionMenu(win, showPlotsVar, *showPlotsOptions).grid(row=11, column=1)
+
+    tkinter.Label(win, text="Valid class names list:").grid(row=12, column=0)
+    tkinter.Entry(win, textvariable=validClassNamesVar, state='readonly').grid(row=12, column=1)
 
     win.protocol("WM_DELETE_WINDOW", lambda: on_closing(win, setupOptions, savedJSONFileName, trainDictText, validationDictText, modelEntryVar, folderSuffixText, totalIterationsVar, iterationCheckpointVar, numberClassesVar, classNamesVar, showPlotsVar))
     win.mainloop()
