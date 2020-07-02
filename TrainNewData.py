@@ -36,6 +36,10 @@ setup_logger()
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
 
+def outputModelFolderConverter(prefix: str, suffix: str):
+    return prefix + "Model_" + suffix
+
+
 def setConfigurator(setupoptions: SetupOptions, baseStr: str = '', maskType: str = ''):
     modelType = setupoptions.modelType
     outputModelFolder = outputModelFolderConverter(modelType, setupoptions.folderSuffix)
@@ -163,5 +167,5 @@ def main(setupoptions: SetupOptions):
 
 if __name__ == "__main__":
     setupoptions = KivySetupOptionsUI()
-    setupoptionstkinter = setupOptionsUI()
+    # setupoptionstkinter = setupOptionsUI()
     main(setupoptions)
