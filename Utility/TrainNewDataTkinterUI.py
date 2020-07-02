@@ -46,6 +46,9 @@ class IterationValidator(object):
         self.iterationValidate(self.modelEntryVar.get(), proposedText)
         return True
 
+    def modelTypeValidate(self, selection):
+        self.iterationValidate(selection, self.folderSuffixText.get())
+
 
 class NumberValidator(object):
     def __init__(self, tkWindow, numberClassesVar, classNamesVar, validClassNamesVar):
@@ -149,8 +152,11 @@ def uiInput(win, setupOptions, savedJSONFileName):
     validationDictEntry.grid(row=3, column=0)
     tkinter.Button(win, text='Choose File', command=lambda: get_file(validationDictEntry, validationDictText, 'Choose Validation Annotation Dictionary', '.txt')).grid(row=3, column=1)
 
+    iterationValidator = IterationValidator(win, setupOptions=setupOptions, modelEntryVar=modelEntryVar, folderSuffixText=folderSuffixText, completedIterationsVar=completedIterationsVar)
+    folderSuffixValidatorFunction = (win.register(iterationValidator.folderSuffixValidate), '%P')
+
     tkinter.Label(win, text="Machine Learning Model:").grid(row=4, column=0)
-    tkinter.OptionMenu(win, modelEntryVar, *modelEntryOptions).grid(row=4, column=1)
+    tkinter.OptionMenu(win, modelEntryVar, *modelEntryOptions, command=iterationValidator.modelTypeValidate).grid(row=4, column=1)
 
     # TODO: figure out validation, possibly changing text color
     iterationValidator = IterationValidator(win, setupOptions=setupOptions, modelEntryVar=modelEntryVar, folderSuffixText=folderSuffixText, completedIterationsVar=completedIterationsVar)
