@@ -7,18 +7,18 @@ from PIL import Image
 import multiprocessing
 import random
 import locale
-from kivy.lang import Builder
-from kivy.factory import Factory
-from kivy.properties import NumericProperty
-from kivymd.app import MDApp
-from kivy.storage.jsonstore import JsonStore
-from kivymd.uix.textfield import MDTextField
-from kivymd.uix.menu import MDDropdownMenu
-from kivymd.uix.dropdownitem import MDDropDownItem
-from kivy.core.window import Window
+# from kivy.lang import Builder
+# from kivy.factory import Factory
+# from kivy.properties import NumericProperty
+# from kivymd.app import MDApp
+# from kivy.storage.jsonstore import JsonStore
+# from kivymd.uix.textfield import MDTextField
+# from kivymd.uix.menu import MDDropdownMenu
+# from kivymd.uix.dropdownitem import MDDropDownItem
+# from kivy.core.window import Window
 
 from Utility.Utilities import *
-from Utility.TrainNewDataUI import KivySetupOptionsUI
+# from Utility.TrainNewDataUI import KivySetupOptionsUI
 from Utility.TrainNewDataTkinterUI import setupOptionsUI
 
 from detectron2 import model_zoo
