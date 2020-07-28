@@ -328,7 +328,7 @@ def createPolygonPatchesAndDict(allMeasLineList, isVerticalSubSection):
                             outlinePatch = preparePath(polygonPerimeter, instanceColor)
                         else:
                             polygonPerimeter = Polygon(shell=contiguousSide1 + contiguousSide2[::-1])
-                            outlinePatch = PolygonPatch(polygonPerimeter, ec='none', fc=instanceColor, fill=True, linewidth=2, alpha=0.5)
+                            outlinePatch = PolygonPatch(polygonPerimeter, ec=instanceColor, fc=instanceColor, fill=True, lw=5, alpha=0.5)
                         contiguousPolygonsList.append((instanceNumber, polygonPerimeter))
                         patchList.append(outlinePatch)
                         contiguousSide1 = []
@@ -343,7 +343,7 @@ def createPolygonPatchesAndDict(allMeasLineList, isVerticalSubSection):
                             outlinePatch = preparePath(polygonPerimeter, instanceColor)
                         else:
                             polygonPerimeter = Polygon(shell=contiguousSide1 + contiguousSide2[::-1])
-                            outlinePatch = PolygonPatch(polygonPerimeter, ec='none', fc=instanceColor, fill=True, linewidth=2, alpha=0.5)
+                            outlinePatch = PolygonPatch(polygonPerimeter, ec=instanceColor, fc=instanceColor, fill=True, lw=5, alpha=0.5)
                         contiguousPolygonsList.append((instanceNumber, polygonPerimeter))
                         patchList.append(outlinePatch)
                         contiguousSide1 = []
