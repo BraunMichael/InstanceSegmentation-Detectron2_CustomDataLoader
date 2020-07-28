@@ -248,6 +248,7 @@ def analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, setupOp
 
     measLineList = []
     lineLengthList = []
+    filteredLineLengthList = []
     lineStd = None
     lineAvg = None
 
@@ -277,17 +278,22 @@ def analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, setupOp
                 # The first and last lines sometimes have issues, remove them
                 measLineList = measLineList[1:-1]
                 lineLengthList = np.asarray(lineLengthList[1:-1])
-                if len(lineLengthList) == 2:
-                    lineStd = np.std(lineLengthList, ddof=1)
+
+                filteredLineLengthList = lineLengthList[lineLengthList > (np.max(lineLengthList)-0.5*np.std(lineLengthList))]
+                measLineList = [measLineListItem for measLineListItem, lineLength in zip(measLineList, lineLengthList) if lineLength > (np.max(lineLengthList) - 0.5 * np.std(lineLengthList))]
+
+                if len(filteredLineLengthList) == 2:
+                    lineStd = np.std(filteredLineLengthList, ddof=1)
+                elif len(filteredLineLengthList) == 1:
+                    lineStd = 0
                 else:
-                    lineStd = np.std(lineLengthList, ddof=0)
-                lineAvg = np.mean(lineLengthList)
+                    lineStd = np.std(filteredLineLengthList, ddof=0)
+                lineAvg = np.mean(filteredLineLengthList)
             else:
                 # else there are no valid lines
                 measLineList = []
-                lineLengthList = []
 
-    return measLineList, lineLengthList, lineStd, lineAvg, maskAngle
+    return measLineList, filteredLineLengthList, lineStd, lineAvg, maskAngle
 
 
 def preparePath(lineObject, instanceColor):
