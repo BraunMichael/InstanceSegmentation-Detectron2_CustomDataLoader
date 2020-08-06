@@ -211,7 +211,7 @@ def getInstances():
     cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
     cfg.MODEL.WEIGHTS = os.path.join(setupOptions.modelPath)
     cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512  # (default: 512, balloon test used 128)
-    cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (VerticalNanowires)
+    cfg.MODEL.ROI_HEADS.NUM_CLASSES = setupOptions.numClasses  # only has one class (VerticalNanowires)
     cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5  # set threshold for this model
 
     predictor = DefaultPredictor(cfg)
