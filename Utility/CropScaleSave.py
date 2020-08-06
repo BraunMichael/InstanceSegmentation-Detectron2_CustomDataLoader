@@ -227,29 +227,29 @@ def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file'
     return fileOrFolderList
 
 
-def importRawImageAndScale():
-    setupOptions = setupOptionsUI()
-    scaleBarDictFile = setupOptions.scaleDictPath
-    inputFileName = setupOptions.imageFilePath
+def getRawImageScales(scaleBarDictFile: str, inputFileNames: Union[list, str], scaleBarWidthMicrons):
     scaleBarMicronsPerPixelDict = getScaleDictFromFile(scaleBarDictFile)
 
+    if isinstance(inputFileNames, str):
+        inputFileNames = [inputFileNames]
     fileNames = []
-    if inputFileName.endswith(('jpg', '.jpeg')):
-        fileNames.append(inputFileName)
+    for inputFileName in inputFileNames:
+        if inputFileName.endswith(('jpg', '.jpeg')):
+            fileNames.append(inputFileName)
 
-    if inputFileName.endswith(('.tiff', '.tif')):
-        print("attempting to convert tiff to png")
-        imagePath = inputFileName
+        if inputFileName.endswith(('.tiff', '.tif')):
+            print("attempting to convert tiff to png")
+            imagePath = inputFileName
 
-        fileTypeEnding = imagePath[imagePath.rfind('.'):]
-        pngPath = inputFileName.replace(fileTypeEnding, '.png')
-        # pngPath = os.path.join(dirpath, pngName)
-        rawImage = Image.open(imagePath)
-        npImage = ((np.array(rawImage) + 1) / 256) - 1
-        visImage = Image.fromarray(np.uint8(npImage), mode='L')
-        visImage.save(pngPath, 'PNG')
-        fileNames.append(pngPath)
-        # os.remove(imagePath)
+            fileTypeEnding = imagePath[imagePath.rfind('.'):]
+            pngPath = inputFileName.replace(fileTypeEnding, '.png')
+            # pngPath = os.path.join(dirpath, pngName)
+            rawImage = Image.open(imagePath)
+            npImage = ((np.array(rawImage) + 1) / 256) - 1
+            visImage = Image.fromarray(np.uint8(npImage), mode='L')
+            visImage.save(pngPath, 'PNG')
+            fileNames.append(pngPath)
+            # os.remove(imagePath)
 
     noDuplicateNames = True
     namesLeftToCheck = len(fileNames)
@@ -264,7 +264,7 @@ def importRawImageAndScale():
                 replaceScaleEntry = True
         nameNum += 1
 
-    (scaleBarMicronsPerPixelDict, dataBarPixelRowDict) = getScaleandDataBarDicts(fileNames, scaleBarMicronsPerPixelDict, replaceScaleEntry, setupOptions.scaleBarWidthMicrons)
+    (scaleBarMicronsPerPixelDict, dataBarPixelRowDict) = getScaleandDataBarDicts(fileNames, scaleBarMicronsPerPixelDict, replaceScaleEntry, scaleBarWidthMicrons)
 
     # Copy the original scaleBarDictFile to a backup before overwriting for safety, then delete the copy
     scaleBarDictFileCopyName, scaleBarDictFileExtension = os.path.splitext(scaleBarDictFile)
@@ -275,20 +275,28 @@ def importRawImageAndScale():
             file.write('%s\t%s\n' % (getNakedNameFromFilePath(key), str(value)))
     os.remove(scaleBarDictFileCopyName)
 
-    inputFileName = fileNames[0]
+    croppedImage = []
+    scaleBarMicronsPerPixel = 0
+    for inputFileName in fileNames:
+        rawImage = Image.open(inputFileName)
+        (imageWidth, imageHeight) = rawImage.size
 
-    scaleBarMicronsPerPixel = scaleBarMicronsPerPixelDict[getNakedNameFromFilePath(inputFileName)]
-    rawImage = Image.open(inputFileName)
-    (imageWidth, imageHeight) = rawImage.size
+        # This is the white line closest to the middle of the image in the bottom half of the image. Should be top of databar
+        dataBarPixelRow = dataBarPixelRowDict[inputFileName]
+        croppedImage = rawImage.crop((0, 0, imageWidth, dataBarPixelRow-1))
+        # databarImage = rawImage.crop((0, dataBarPixelRow, imageWidth, imageHeight))
+        rawImage.close()
 
-    # This is the white line closest to the middle of the image in the bottom half of the image. Should be top of databar
-    dataBarPixelRow = dataBarPixelRowDict[inputFileName]
-    croppedImage = rawImage.crop((0, 0, imageWidth, dataBarPixelRow-1))
-    # databarImage = rawImage.crop((0, dataBarPixelRow, imageWidth, imageHeight))
-    rawImage.close()
+        fileTypeEnding = inputFileName[inputFileName.rfind('.'):]
+        croppedFileName = inputFileName.replace(fileTypeEnding, '_cropped'+fileTypeEnding)
+        croppedImage.save(croppedFileName)
+        scaleBarMicronsPerPixel = scaleBarMicronsPerPixelDict[getNakedNameFromFilePath(inputFileName)]
 
-    fileTypeEnding = inputFileName[inputFileName.rfind('.'):]
-    croppedFileName = inputFileName.replace(fileTypeEnding, '_cropped'+fileTypeEnding)
-    croppedImage.save(croppedFileName)
+    return croppedImage, scaleBarMicronsPerPixel
+
+
+def importRawImageAndScale():
+    setupOptions = setupOptionsUI()
+    croppedImage, scaleBarMicronsPerPixel = getRawImageScales(setupOptions.scaleDictPath, setupOptions.imageFilePath, setupOptions.scaleBarWidthMicrons)
 
     return croppedImage, scaleBarMicronsPerPixel, setupOptions
