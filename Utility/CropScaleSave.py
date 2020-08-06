@@ -5,8 +5,7 @@ import numpy as np
 import easygui
 import shutil
 from PIL import Image
-from tkinter import Tk
-from tkinter import filedialog
+from tkinter import Tk, filedialog
 from Utility.AnalyzeOutputUI import setupOptionsUI
 
 
