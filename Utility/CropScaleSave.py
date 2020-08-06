@@ -300,3 +300,48 @@ def importRawImageAndScale():
     croppedImage, scaleBarMicronsPerPixel = getRawImageScales(setupOptions.scaleDictPath, setupOptions.imageFilePath, setupOptions.scaleBarWidthMicrons)
 
     return croppedImage, scaleBarMicronsPerPixel, setupOptions
+
+
+# This is for manually cropping a whole folder of images with the same scale bar (ie for prepping images for training)
+def cropAndSave(scaleBarWidthMicrons):
+    root = Tk()
+    root.withdraw()
+    imageFilesFolder = filedialog.askdirectory(initialdir=os.getcwd(), title="Select Image Folder")
+    root.destroy()
+    if not imageFilesFolder:
+        print("No folder found")
+        quit()
+
+    (_, _, binaryRawFileNames) = next(os.walk(imageFilesFolder))
+    scaleBarDictFile = "/home/mbraun/InstanceSegmentation-Detectron2/ScaleBarMicronsPerPixel.txt"
+    fileNames = []
+    for inputFileName in binaryRawFileNames:
+        fileNames.append(os.path.join(imageFilesFolder, inputFileName))
+    getRawImageScales(scaleBarDictFile, fileNames, scaleBarWidthMicrons)
+
+
+# This is for manually cropping a whole folder of images by some number of pixels (often times just 1 pixel needed)
+def cropHeightByNPixels(numPixels):
+    imageFilesFolder = getFileOrDirList('folder', 'Choose folder of images to crop', '*', os.getcwd())
+
+    if not imageFilesFolder:
+        print("No binary files folder")
+        quit()
+
+    parentFolder, _ = os.path.split(imageFilesFolder)
+    (binaryDirpath, _, binaryRawFileNames) = next(os.walk(imageFilesFolder))
+
+    binaryImageNames = []
+    for name in binaryRawFileNames:
+        if name.endswith('.png'):
+            binaryImageNames.append(os.path.join(binaryDirpath, name))
+
+    binaryImageNames = sorted(binaryImageNames)
+    for binaryImageName in binaryImageNames:
+        binaryImage = Image.open(binaryImageName)
+        (width, height) = binaryImage.size
+        croppedImage = binaryImage.crop((0, 0, width, height - numPixels))
+        binaryImage.close()
+
+        # croppedFileName = binaryImageName.replace('.png', '_cropped.png')
+        croppedImage.save(binaryImageName)
