@@ -178,21 +178,15 @@ def getInstances():
             assert fileMaskType, 'The annotation dict annotations did not match the expected pattern for polygon or bitmask encoding. Check your annotation creation.'
             if fileMaskType not in maskTypeSet:
                 maskTypeSet.add(fileMaskType)
-
-    # dirNameSet should return {'Train', 'Validation'}
     assert len(maskTypeSet) == 1, "The number of detected mask types is not 1, check your annotation creation and file choice."
+    # dirNameSet should return {'Train', 'Validation'}
     assert 'Train' in dirNameSet and 'Validation' in dirNameSet, 'You are missing either a Train or Validation directory in your annotations'
     dirnames = ['Train', 'Validation']  # After making sure these are directories as expected, lets force the order to match the annotationDicts order
-    nanowireStr = 'VerticalNanowires'
-    for d in range(len(dirnames)):
-        if nanowireStr + "_" + dirnames[d] not in DatasetCatalog.__dict__['_REGISTERED']:
-            DatasetCatalog.register(nanowireStr + "_" + dirnames[d], lambda d=d: annotationDicts[d])
-        MetadataCatalog.get(nanowireStr + "_" + dirnames[d]).set(thing_classes=["VerticalNanowires"])
 
-    DatasetCatalog.get('VerticalNanowires_Train')
 
     rawImage, scaleBarMicronsPerPixel, setupOptions = importRawImageAndScale()
-    if not setupOptions.isVerticalSubSection:
+
+    if not setupOptions.isVerticalSubSection and not setupOptions.tiltAngle == 0:
         # Correct for tilt angle, this is equivalent to multiplying the measured length, but is more convenient here
         scaleBarMicronsPerPixel = scaleBarMicronsPerPixel / np.sin(np.deg2rad(setupOptions.tiltAngle))
     npImage = np.array(rawImage)
@@ -204,6 +198,25 @@ def getInstances():
         else:
             print('The imported rawImage is 1 dimensional for some reason, check it out.')
             quit()
+
+
+    if setupOptions.tiltAngle == 0:
+        nanowireStr = 'TopDownNanowires'
+        for d in range(len(dirnames)):
+            if nanowireStr + "_" + dirnames[d] not in DatasetCatalog.__dict__['_REGISTERED']:
+                DatasetCatalog.register(nanowireStr + "_" + dirnames[d], lambda d=d: annotationDicts[d])
+            MetadataCatalog.get(nanowireStr + "_" + dirnames[d]).set(thing_classes=setupOptions.classNameList)
+
+    else:
+
+        nanowireStr = 'VerticalNanowires'
+        for d in range(len(dirnames)):
+            if nanowireStr + "_" + dirnames[d] not in DatasetCatalog.__dict__['_REGISTERED']:
+                DatasetCatalog.register(nanowireStr + "_" + dirnames[d], lambda d=d: annotationDicts[d])
+            MetadataCatalog.get(nanowireStr + "_" + dirnames[d]).set(thing_classes=["VerticalNanowires"])
+
+    DatasetCatalog.get(nanowireStr+'_Train')
+    nanowire_metadata = MetadataCatalog.get(nanowireStr + "_Train")
 
     cfg = get_cfg()
     cfg.MODEL.DEVICE = 'cpu'
@@ -232,14 +245,36 @@ def main():
         boundingBoxPolyDict[instanceNumber] = Polygon(bboxToPoly(npBoundingBox[0], npBoundingBox[1], npBoundingBox[2], npBoundingBox[3]))
         maskDict[instanceNumber] = np.asarray(mask.cpu())
 
-    if setupOptions.parallelProcessing:
-        with joblib.parallel_backend('multiprocessing'):
-            with tqdm_joblib(tqdm(desc="Analyzing Instances", total=numInstances)) as progress_bar:
-                analysisOutput = joblib.Parallel(n_jobs=multiprocessing.cpu_count())(joblib.delayed(analyzeSingleInstance)(maskDict, boundingBoxPolyDict, instanceNumber, setupOptions) for instanceNumber in range(numInstances))
+    if setupOptions.tiltAngle == 0:
+        fig, ax = plt.subplots(figsize=(10, 8))
+        print(setupOptions.imageFilePath)
+        try:
+            visualizerNP = Visualizer(npImage[:, :, ::-1], metadata=nanowire_metadata, scale=0.5)
+        except IndexError:
+            npImage = np.expand_dims(npImage, axis=2)
+            visualizerNP = Visualizer(npImage[:, :, ::-1], metadata=nanowire_metadata, scale=0.5)
+        out = visualizerNP.draw_instance_predictions(outputs["instances"].to("cpu"))
+        ax.imshow(out.get_image()[:, :, ::-1])
+        plt.show(block=True)
+
+        # if setupOptions.parallelProcessing:
+        #     with joblib.parallel_backend('multiprocessing'):
+        #         with tqdm_joblib(tqdm(desc="Analyzing Instances", total=numInstances)) as progress_bar:
+        #             analysisOutput = joblib.Parallel(n_jobs=multiprocessing.cpu_count())(joblib.delayed(analyzeSingleTopDownInstance)(maskDict, boundingBoxPolyDict, instanceNumber, setupOptions) for instanceNumber in range(numInstances))
+        # else:
+        #     analysisOutput = []
+        #     for instanceNumber in range(numInstances):
+        #         analysisOutput.append(analyzeSingleTopDownInstance(maskDict, boundingBoxPolyDict, instanceNumber, setupOptions))
     else:
-        analysisOutput = []
-        for instanceNumber in range(numInstances):
-            analysisOutput.append(analyzeSingleInstance(maskDict, boundingBoxPolyDict, instanceNumber, setupOptions))
+        if setupOptions.parallelProcessing:
+            with joblib.parallel_backend('multiprocessing'):
+                with tqdm_joblib(tqdm(desc="Analyzing Instances", total=numInstances)) as progress_bar:
+                    analysisOutput = joblib.Parallel(n_jobs=multiprocessing.cpu_count())(joblib.delayed(analyzeSingleTiltInstance)(maskDict, boundingBoxPolyDict, instanceNumber, setupOptions) for instanceNumber in range(numInstances))
+        else:
+            analysisOutput = []
+            for instanceNumber in range(numInstances):
+                analysisOutput.append(analyzeSingleTiltInstance(maskDict, boundingBoxPolyDict, instanceNumber, setupOptions))
+
 
     allMeasLineList = [entry[0] for entry in analysisOutput if entry[0]]
     contiguousPolygonsList, patchList = createPolygonPatchesAndDict(allMeasLineList, setupOptions.isVerticalSubSection)
