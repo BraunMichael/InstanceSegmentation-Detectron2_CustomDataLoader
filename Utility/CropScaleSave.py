@@ -227,7 +227,7 @@ def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file'
     return fileOrFolderList
 
 
-def getRawImageScales(scaleBarDictFile: str, inputFileNames: Union[list, str], scaleBarWidthMicrons):
+def getRawImageScales(scaleBarDictFile: str, inputFileNames, scaleBarWidthMicrons):
     scaleBarMicronsPerPixelDict = getScaleDictFromFile(scaleBarDictFile)
 
     if isinstance(inputFileNames, str):
