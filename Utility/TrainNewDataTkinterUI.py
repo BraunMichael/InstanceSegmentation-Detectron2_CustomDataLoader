@@ -9,16 +9,6 @@ from PIL import Image
 from Utility.Utilities import *
 
 
-def checkClassNames(classNamesString, numberClasses):
-    splitLine = [entry for entry in lineSplitter(classNamesString) if entry]
-    if len(splitLine) != int(numberClasses) or not classNamesString:
-        warningColor = (241 / 255, 196 / 255, 15 / 255, 1)
-        return False
-    else:
-        goodColor = (39 / 255, 174 / 255, 96 / 255, 1)
-        return True
-
-
 class IterationValidator(object):
     def __init__(self, tkWindow, setupOptions, modelEntryVar, folderSuffixText, completedIterationsVar):
         self.tkWindow = tkWindow
