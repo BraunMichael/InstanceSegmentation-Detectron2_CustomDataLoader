@@ -331,8 +331,8 @@ for entry in range(0, len(rawImageFileNames)):
     fullImageList, segmapList = imageAugment(baseImageList, baseMaskList, fullImageList, segmapList, "GaussianBlur")
     # fullImageList, segmapList = imageAugment(baseImageList, baseMaskList, fullImageList, segmapList, "ScalingAug")
     fullImageList, segmapList = imageAugment(baseImageList, baseMaskList, fullImageList, segmapList, "ShotNoise")
-    fullImageList, segmapList = imageAugment(baseImageList, baseMaskList, fullImageList, segmapList, "ShearX")
-    fullImageList, segmapList = imageAugment(baseImageList, baseMaskList, fullImageList, segmapList, "ShearY")
+    # fullImageList, segmapList = imageAugment(baseImageList, baseMaskList, fullImageList, segmapList, "ShearX")
+    # fullImageList, segmapList = imageAugment(baseImageList, baseMaskList, fullImageList, segmapList, "ShearY")
 
     if showPlots or showGridImage:
         def drawSegmentationMapsOnImages(fullImage, segmapImage, colorList):
@@ -352,7 +352,7 @@ for entry in range(0, len(rawImageFileNames)):
                 plotList.append(drawSegmentationMapsOnImages(fullImage, segmapImage, colorList))
 
     if saveFiles:
-        augmentedRawImagesDir = 'TopDownAugmentedRawImages'
+        augmentedRawImagesDir = 'NoSnTopDownAugmentedRawImages'
         if not os.path.isdir(augmentedRawImagesDir):
             os.mkdir(augmentedRawImagesDir)
         augmentedRawImagesTrainDir = os.path.join(augmentedRawImagesDir, 'Train')
@@ -362,7 +362,7 @@ for entry in range(0, len(rawImageFileNames)):
         if not os.path.isdir(augmentedRawImagesValidationDir):
             os.mkdir(augmentedRawImagesValidationDir)
 
-        augmentedMaskedImagesDir = 'TopDownAugmentedMaskImages'
+        augmentedMaskedImagesDir = 'NoSnTopDownAugmentedMaskImages'
         if not os.path.isdir(augmentedMaskedImagesDir):
             os.mkdir(augmentedMaskedImagesDir)
         augmentedMaskedImagesTrainDir = os.path.join(augmentedMaskedImagesDir, 'Train')
