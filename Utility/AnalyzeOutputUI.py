@@ -43,6 +43,39 @@ class TextValidator(object):
         return self.stringNumberRangeValidator(proposedText, self.minimumCenterFractionToMeasureValue, self.maximumCenterFractionToMeasureValue)
 
 
+class NumberValidator(object):
+    def __init__(self, tkWindow, numberClassesVar, classNamesVar, validClassNamesVar):
+        self.tkWindow = tkWindow
+        self.numberClassesVar = numberClassesVar
+        self.classNamesVar = classNamesVar
+        self.validClassNamesVar = validClassNamesVar
+
+    def NumberValidate(self, proposedText):
+        if proposedText == '':
+            return True
+        if not proposedText.replace('.', '', 1).isdigit():
+            self.tkWindow.bell()
+            return False
+        return True
+
+    def ClassNumberValidate(self, proposedText):
+        if self.NumberValidate(proposedText):
+            if proposedText:
+                if checkClassNames(self.classNamesVar.get(), strToInt(proposedText)):
+                    self.validClassNamesVar.set(True)
+                else:
+                    self.validClassNamesVar.set(False)
+            return True
+        return False
+
+    def ClassListValidate(self, proposedText):
+        if self.numberClassesVar.get():
+            if checkClassNames(proposedText, strToInt(self.numberClassesVar.get())):
+                self.validClassNamesVar.set(True)
+            else:
+                self.validClassNamesVar.set(False)
+        return True
+
 def hide_AdvancedOptions(win):
     if 'showPlots_Label' in win.children:
         win.children['showPlots_Label'].destroy()
@@ -61,7 +94,7 @@ def hide_AdvancedOptions(win):
 
 def show_AdvancedOptions(win, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar):
     if 'showPlots_Label' not in win.children:
-        initialRow = 11
+        initialRow = 13
         tkinter.Label(win, text="Show Intermediate Plots?", name='showPlots_Label').grid(row=initialRow, column=0)
         tkinter.Radiobutton(win, text="Yes", variable=showPlotsVar, value=1, name='showPlots_YesButton').grid(row=initialRow, column=1)
         tkinter.Radiobutton(win, text="No", variable=showPlotsVar, value=0, name='showPlots_NoButton').grid(row=initialRow, column=2)
@@ -111,7 +144,7 @@ def get_setupOptions(savedJSONFileName):
     return setupOptions
 
 
-def on_closing(win, setupOptions, savedJSONFileName, ImageEntryText, scaleDictEntryText, modelEntryText, isVerticalSubSectionVar, centerFractionToMeasureVar, tiltAngleVar, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar, scaleBarWidthMicronsVar):
+def on_closing(win, setupOptions, savedJSONFileName, ImageEntryText, scaleDictEntryText, modelEntryText, isVerticalSubSectionVar, centerFractionToMeasureVar, tiltAngleVar, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar, scaleBarWidthMicronsVar, numberClassesVar, classNamesVar):
     setupOptions.imageFilePath = ImageEntryText.get().replace('~', os.path.expanduser('~'))
     setupOptions.scaleDictPath = scaleDictEntryText.get().replace('~', os.path.expanduser('~'))
     setupOptions.modelPath = modelEntryText.get().replace('~', os.path.expanduser('~'))
@@ -123,6 +156,8 @@ def on_closing(win, setupOptions, savedJSONFileName, ImageEntryText, scaleDictEn
     setupOptions.plotPolylidar = plotPolylidarVar.get()
     setupOptions.parallelProcessing = parallelProcessingVar.get()
     setupOptions.scaleBarWidthMicrons = strToFloat(scaleBarWidthMicronsVar.get())
+    setupOptions.numClasses = strToInt(numberClassesVar.get())
+    setupOptions.classNameList = [entry for entry in lineSplitter(classNamesVar.get()) if entry]
 
     with open(savedJSONFileName, 'w') as outfile:
         json.dump(jsonpickle.encode(setupOptions), outfile)
@@ -138,6 +173,10 @@ def uiInput(win, setupOptions, savedJSONFileName):
     scaleBarWidthMicronsVar = tkinter.StringVar(value=setupOptions.scaleBarWidthMicrons)
     centerFractionToMeasureVar = tkinter.StringVar(value=setupOptions.centerFractionToMeasure)
     tiltAngleVar = tkinter.StringVar(value=setupOptions.tiltAngle)
+    numberClassesVar = tkinter.StringVar(value=setupOptions.numClasses)
+    classNamesVar = tkinter.StringVar(value=listToCommaString(setupOptions.classNameList))
+    validClassNamesVar = tkinter.BooleanVar(value=checkClassNames(classNamesVar.get(), int(numberClassesVar.get())))
+
 
     showPlotsVar = tkinter.BooleanVar(value=setupOptions.showPlots)
     showBoundingBoxPlotsVar = tkinter.BooleanVar(value=setupOptions.showBoundingBoxPlots)
@@ -177,10 +216,20 @@ def uiInput(win, setupOptions, savedJSONFileName):
     tkinter.Label(win, text="Center Fraction to Measure").grid(row=9, column=0)
     tkinter.Entry(win, textvariable=centerFractionToMeasureVar, validate='all', validatecommand=centerFractionToMeasureValidatorFunction).grid(row=9, column=1)
 
-    tkinter.Button(win, text='Show/Hide Advanced Options', command=lambda: show_AdvancedOptions(win, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar)).grid(row=10, column=1)
+    numberValidator = NumberValidator(win, numberClassesVar=numberClassesVar, classNamesVar=classNamesVar, validClassNamesVar=validClassNamesVar)
+    classNumberValidatorFunction = (win.register(numberValidator.ClassNumberValidate), '%P')
+    classListValidatorFunction = (win.register(numberValidator.ClassListValidate), '%P')
+
+    tkinter.Label(win, text="Number of classes in images (normally 1)").grid(row=10, column=0)
+    tkinter.Entry(win, textvariable=numberClassesVar, validate='all', validatecommand=classNumberValidatorFunction).grid(row=10, column=1)
+
+    tkinter.Label(win, text="Class names (comma separated)").grid(row=11, column=0)
+    tkinter.Entry(win, textvariable=classNamesVar, validate='all', validatecommand=classListValidatorFunction).grid(row=11, column=1)
+
+    tkinter.Button(win, text='Show/Hide Advanced Options', command=lambda: show_AdvancedOptions(win, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar)).grid(row=12, column=1)
 
     hide_AdvancedOptions(win)
-    win.protocol("WM_DELETE_WINDOW", lambda: on_closing(win, setupOptions, savedJSONFileName, ImageEntryText, scaleDictEntryText, modelEntryText, isVerticalSubSectionVar, centerFractionToMeasureVar, tiltAngleVar, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar, scaleBarWidthMicronsVar))
+    win.protocol("WM_DELETE_WINDOW", lambda: on_closing(win, setupOptions, savedJSONFileName, ImageEntryText, scaleDictEntryText, modelEntryText, isVerticalSubSectionVar, centerFractionToMeasureVar, tiltAngleVar, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar, scaleBarWidthMicronsVar, numberClassesVar, classNamesVar))
     win.mainloop()
 
 
