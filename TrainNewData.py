@@ -71,7 +71,7 @@ def setConfigurator(setupoptions: SetupOptions, baseStr: str = '', maskType: str
 
     # cfg.INPUT.MIN_SIZE_TRAIN = (1179,)  # (default: (800,)) previously 1179 for tilted
     # cfg.INPUT.MAX_SIZE_TRAIN = 1366  # (default: 1333) previously 1366 for tilted
-    cfg.TEST.DETECTIONS_PER_IMAGE = 200  # Increased from COCO default, should never have more than 200 wires per image (default: 100)
+    cfg.TEST.DETECTIONS_PER_IMAGE = 2000  # Increased from COCO default, should never have more than 2000 wires per image (default: 100)
     cfg.SOLVER.CHECKPOINT_PERIOD = setupoptions.iterationCheckpointPeriod
     cfg.MODEL.RPN.PRE_NMS_TOPK_TRAIN = 12000  # (default: 12000)
     cfg.MODEL.RPN.PRE_NMS_TOPK_TEST = 6000  # (default: 6000)

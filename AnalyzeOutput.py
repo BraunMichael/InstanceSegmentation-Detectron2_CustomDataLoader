@@ -225,7 +225,8 @@ def getInstances():
     cfg.MODEL.WEIGHTS = os.path.join(setupOptions.modelPath)
     cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512  # (default: 512, balloon test used 128)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = setupOptions.numClasses  # only has one class (VerticalNanowires)
-    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5  # set threshold for this model
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.1  # set threshold for this model
+    cfg.TEST.DETECTIONS_PER_IMAGE = 2000  # Increased from COCO default, should never have more than 2000 wires per image (default: 100)
 
     predictor = DefaultPredictor(cfg)
     # look at the outputs. See https://detectron2.readthedocs.io/tutorials/models.html#model-output-format for specification
