@@ -230,11 +230,11 @@ def getInstances():
     predictor = DefaultPredictor(cfg)
     # look at the outputs. See https://detectron2.readthedocs.io/tutorials/models.html#model-output-format for specification
     outputs = predictor(npImage)
-    return outputs, npImage, scaleBarMicronsPerPixel * 1000, setupOptions
+    return outputs, npImage, scaleBarMicronsPerPixel * 1000, setupOptions, nanowire_metadata
 
 
 def main():
-    outputs, npImage, scaleBarNMPerPixel, setupOptions = getInstances()
+    outputs, npImage, scaleBarNMPerPixel, setupOptions, nanowire_metadata = getInstances()
     boundingBoxPolyDict = {}
     maskDict = {}
     numInstances = len(outputs['instances'])
@@ -276,47 +276,47 @@ def main():
                 analysisOutput.append(analyzeSingleTiltInstance(maskDict, boundingBoxPolyDict, instanceNumber, setupOptions))
 
 
-    allMeasLineList = [entry[0] for entry in analysisOutput if entry[0]]
-    contiguousPolygonsList, patchList = createPolygonPatchesAndDict(allMeasLineList, setupOptions.isVerticalSubSection)
-    fig, ax = plt.subplots(figsize=(8, 8), nrows=1, ncols=1)
-    plt.imshow(npImage, interpolation='none')
-    for patch in patchList:
-        ax.add_patch(patch)
-    plt.subplots_adjust(bottom=0.15)
-    plt.axis('equal')
+        allMeasLineList = [entry[0] for entry in analysisOutput if entry[0]]
+        contiguousPolygonsList, patchList = createPolygonPatchesAndDict(allMeasLineList, setupOptions.isVerticalSubSection)
+        fig, ax = plt.subplots(figsize=(8, 8), nrows=1, ncols=1)
+        plt.imshow(npImage, interpolation='none')
+        for patch in patchList:
+            ax.add_patch(patch)
+        plt.subplots_adjust(bottom=0.15)
+        plt.axis('equal')
 
-    polygonListManager = PolygonListManager(contiguousPolygonsList, len(patchList), fig, ax)
-    axAddRegion = plt.axes([0.7, 0.02, 0.2, 0.075])
-    bRemove = Button(axAddRegion, 'Remove Instance')
-    rect = RectangleSelector(ax, polygonListManager.RangeSelection, drawtype='box', rectprops=dict(facecolor='red', edgecolor='none', alpha=0.3, fill=True))
-    bRemove.on_clicked(polygonListManager.RemoveButtonClicked)
-    plt.show()
+        polygonListManager = PolygonListManager(contiguousPolygonsList, len(patchList), fig, ax)
+        axAddRegion = plt.axes([0.7, 0.02, 0.2, 0.075])
+        bRemove = Button(axAddRegion, 'Remove Instance')
+        rect = RectangleSelector(ax, polygonListManager.RangeSelection, drawtype='box', rectprops=dict(facecolor='red', edgecolor='none', alpha=0.3, fill=True))
+        bRemove.on_clicked(polygonListManager.RemoveButtonClicked)
+        plt.show()
 
-    allLineLengthList = [entry[1] for entry in analysisOutput if entry[0]]
-    lineStdList = [entry[2] for entry in analysisOutput if entry[0]]
-    lineAvgList = [entry[3] for entry in analysisOutput if entry[0]]
-    allMeasAnglesList = [entry[4] for entry in analysisOutput if entry[0]]
-    finalMeasLineList = []
-    finalAllLineLengthList = []
-    finalLineStdList = []
-    finalLineAvgList = []
-    finalAllMeasAnglesList = []
-    for instanceNumber in list(polygonListManager.instancesToMeasSet):
-        finalMeasLineList.append(allMeasLineList[instanceNumber])
-        finalAllLineLengthList.append(allLineLengthList[instanceNumber])
-        finalLineStdList.append(lineStdList[instanceNumber])
-        finalLineAvgList.append(lineAvgList[instanceNumber])
-        finalAllMeasAnglesList.append(allMeasAnglesList[instanceNumber])
-    # TODO: The uncertainty calculation isn't quite right, may be doing standard error, need to investigate propagation and inclusion of standard deviation across all the measurements
-    # uncertaintyLineArray = unp.uarray(finalLineAvgList, finalLineStdList)
-    # averageMeasValue = uncertaintyLineArray.mean()
-    averageMeasValue = np.mean(finalLineAvgList)
+        allLineLengthList = [entry[1] for entry in analysisOutput if entry[0]]
+        lineStdList = [entry[2] for entry in analysisOutput if entry[0]]
+        lineAvgList = [entry[3] for entry in analysisOutput if entry[0]]
+        allMeasAnglesList = [entry[4] for entry in analysisOutput if entry[0]]
+        finalMeasLineList = []
+        finalAllLineLengthList = []
+        finalLineStdList = []
+        finalLineAvgList = []
+        finalAllMeasAnglesList = []
+        for instanceNumber in list(polygonListManager.instancesToMeasSet):
+            finalMeasLineList.append(allMeasLineList[instanceNumber])
+            finalAllLineLengthList.append(allLineLengthList[instanceNumber])
+            finalLineStdList.append(lineStdList[instanceNumber])
+            finalLineAvgList.append(lineAvgList[instanceNumber])
+            finalAllMeasAnglesList.append(allMeasAnglesList[instanceNumber])
+        # TODO: The uncertainty calculation isn't quite right, may be doing standard error, need to investigate propagation and inclusion of standard deviation across all the measurements
+        # uncertaintyLineArray = unp.uarray(finalLineAvgList, finalLineStdList)
+        # averageMeasValue = uncertaintyLineArray.mean()
+        averageMeasValue = np.mean(finalLineAvgList)
 
-    # print(finalLineAvgList)
-    # print(finalLineStdList)
-    print("Analyzed Image:", getNakedNameFromFilePath(setupOptions.imageFilePath))
-    print("Overall Average Size (with std dev): {:.0f} with random standard deviation of {:.0f} nm".format(scaleBarNMPerPixel * averageMeasValue, np.std(finalLineAvgList)))
-    print("Number of Measurements: ", len(finalLineAvgList))
+        # print(finalLineAvgList)
+        # print(finalLineStdList)
+        print("Analyzed Image:", getNakedNameFromFilePath(setupOptions.imageFilePath))
+        print("Overall Average Size (with std dev): {:.0f} with random standard deviation of {:.0f} nm".format(scaleBarNMPerPixel * averageMeasValue, np.std(finalLineAvgList)))
+        print("Number of Measurements: ", len(finalLineAvgList))
 
 
 if __name__ == "__main__":
