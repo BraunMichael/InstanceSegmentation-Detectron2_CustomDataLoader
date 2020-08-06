@@ -258,14 +258,39 @@ def main():
         ax.imshow(out.get_image()[:, :, ::-1])
         plt.show(block=True)
 
-        # if setupOptions.parallelProcessing:
-        #     with joblib.parallel_backend('multiprocessing'):
-        #         with tqdm_joblib(tqdm(desc="Analyzing Instances", total=numInstances)) as progress_bar:
-        #             analysisOutput = joblib.Parallel(n_jobs=multiprocessing.cpu_count())(joblib.delayed(analyzeSingleTopDownInstance)(maskDict, boundingBoxPolyDict, instanceNumber, setupOptions) for instanceNumber in range(numInstances))
-        # else:
-        #     analysisOutput = []
-        #     for instanceNumber in range(numInstances):
-        #         analysisOutput.append(analyzeSingleTopDownInstance(maskDict, boundingBoxPolyDict, instanceNumber, setupOptions))
+        mask = maskDict[0]
+        imageWidth = mask.shape[1]
+        imageHeight = mask.shape[0]
+        imageAreaMicronsSq = imageWidth * (scaleBarNMPerPixel / 1000) * imageHeight * (scaleBarNMPerPixel / 1000)
+        outputClasses = outputs['instances'].pred_classes
+        classesNums, classCounts = np.unique(outputClasses, return_counts=True)
+        outputClassesNumDict = dict(zip(classesNums, classCounts))
+
+        verticalWireClass = 2
+        mergedWireClass = 1
+        inclinedWireClass = 0
+        try:
+            numVerticalWires = outputClassesNumDict[verticalWireClass]
+        except KeyError:
+            numVerticalWires = 0
+        try:
+            numMergedWires = outputClassesNumDict[mergedWireClass]
+        except KeyError:
+            numMergedWires = 0
+        try:
+            numInclinedWires = outputClassesNumDict[inclinedWireClass]
+        except KeyError:
+            numInclinedWires = 0
+
+        print(numVerticalWires, " Vertical wires, ", numMergedWires, " Merged wires, ", numInclinedWires, " Inclined Wires")
+        print(numVerticalWires + 2*numMergedWires + numInclinedWires, " Wires in ", imageAreaMicronsSq, " um^2")
+        wiresPerSqMicron = (numVerticalWires + 2*numMergedWires + numInclinedWires)/imageAreaMicronsSq
+        print(wiresPerSqMicron, "wires/um^2")
+
+
+
+        quit()
+        analyzeSingleTopDownInstances(maskDict, boundingBoxPolyDict, instanceNumber, setupOptions)
     else:
         if setupOptions.parallelProcessing:
             with joblib.parallel_backend('multiprocessing'):
@@ -275,7 +300,6 @@ def main():
             analysisOutput = []
             for instanceNumber in range(numInstances):
                 analysisOutput.append(analyzeSingleTiltInstance(maskDict, boundingBoxPolyDict, instanceNumber, setupOptions))
-
 
         allMeasLineList = [entry[0] for entry in analysisOutput if entry[0]]
         contiguousPolygonsList, patchList = createPolygonPatchesAndDict(allMeasLineList, setupOptions.isVerticalSubSection)
