@@ -42,7 +42,6 @@ def splitSingleImage(imageName, dirpath, gridSize: int):
     nakedFileName, fileExtension = getNakedNameFromFilePath(imageName, True)
     for rowNum in range(gridSize):
         for colNum in range(gridSize):
-            print(colNum * width / gridSize, rowNum * height / gridSize, ((colNum + 1) * width / gridSize) - 1, ((rowNum + 1) * height / gridSize) - 1)
             croppedImage = rawImage.crop((colNum * width / gridSize, rowNum * height / gridSize, ((colNum + 1) * width / gridSize) - 1, ((rowNum + 1) * height / gridSize) - 1))
             croppedImage.save(os.path.join(dirpath, nakedFileName + "_" + str(colNum) + str(rowNum) + fileExtension))
     rawImage.close()
