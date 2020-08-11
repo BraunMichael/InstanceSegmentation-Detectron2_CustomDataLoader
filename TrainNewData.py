@@ -57,7 +57,7 @@ def setConfigurator(setupoptions: SetupOptions, baseStr: str = '', maskType: str
     cfg.SOLVER.IMS_PER_BATCH = 1
     cfg.SOLVER.BASE_LR = 0.00025  # pick a good LR
     cfg.SOLVER.MAX_ITER = setupoptions.totalIterations
-    cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512   # (default: 512, balloon test used 128)
+    cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 1024   # (default: 512, balloon test used 128)
 
     # cfg.INPUT.MIN_SIZE_TRAIN = (1179,)  # (default: (800,)) previously 1179 for tilted
     # cfg.INPUT.MAX_SIZE_TRAIN = 1366  # (default: 1333) previously 1366 for tilted
