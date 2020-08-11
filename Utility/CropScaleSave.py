@@ -202,9 +202,11 @@ def getScaleDictFromFile(scaleBarDictFileFunc):
     return scaleBarMicronsPerPixelDict
 
 
-def getNakedNameFromFilePath(name):
+def getNakedNameFromFilePath(name, returnFileExtension: bool = False):
     head, tail = os.path.split(name)
     nakedName, fileExtension = os.path.splitext(tail)
+    if returnFileExtension:
+        return nakedName, fileExtension
     return nakedName
 
 
