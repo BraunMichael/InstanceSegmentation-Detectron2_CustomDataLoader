@@ -31,7 +31,7 @@ def tqdm_joblib(tqdm_object):
         tqdm_object.close()
 
 
-def splitSingleImage(imageName, dirpath, gridSize: int):
+def splitSingleImage(imageName, dirpath, gridSize: int, saveSplitImages: bool = True, deleteOriginalImage: bool = False):
     rawImage = Image.open(imageName)
     (width, height) = rawImage.size
     if not width % gridSize == 0:
@@ -40,12 +40,17 @@ def splitSingleImage(imageName, dirpath, gridSize: int):
         rawImage = rawImage.crop((0, 0, width, height - (height % gridSize)))
     (width, height) = rawImage.size
     nakedFileName, fileExtension = getNakedNameFromFilePath(imageName, True)
+    croppedImageList = []
     for rowNum in range(gridSize):
         for colNum in range(gridSize):
             croppedImage = rawImage.crop((colNum * width / gridSize, rowNum * height / gridSize, ((colNum + 1) * width / gridSize) - 1, ((rowNum + 1) * height / gridSize) - 1))
-            croppedImage.save(os.path.join(dirpath, nakedFileName + "_" + str(colNum) + str(rowNum) + fileExtension))
+            if saveSplitImages:
+                croppedImage.save(os.path.join(dirpath, nakedFileName + "_" + str(colNum) + str(rowNum) + fileExtension))
+            croppedImageList.append(croppedImage)
     rawImage.close()
-    os.remove(os.path.join(dirpath, nakedFileName + fileExtension))
+    if deleteOriginalImage:
+        os.remove(os.path.join(dirpath, nakedFileName + fileExtension))
+    return croppedImageList
 
 
 def main():
