@@ -300,7 +300,6 @@ def getRawImageScales(scaleBarDictFile: str, inputFileNames, scaleBarWidthMicron
 def importRawImageAndScale():
     setupOptions = setupOptionsUI()
     croppedImage, scaleBarMicronsPerPixel = getRawImageScales(setupOptions.scaleDictPath, setupOptions.imageFilePath, setupOptions.scaleBarWidthMicrons)
-
     return croppedImage, scaleBarMicronsPerPixel, setupOptions
 
 
