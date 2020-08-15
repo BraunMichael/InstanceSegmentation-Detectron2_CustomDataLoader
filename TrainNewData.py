@@ -131,7 +131,7 @@ def setDatasetAndMetadata(baseStr: str, setupoptions: SetupOptions):
 
 
 def main(setupoptions: SetupOptions):
-    baseStr = 'VerticalNanowires_noSn'
+    baseStr = 'VerticalNanowires_noSn_16'
 
     maskType = setDatasetAndMetadata(baseStr, setupoptions)
     configurator = setConfigurator(setupoptions, baseStr, maskType)
