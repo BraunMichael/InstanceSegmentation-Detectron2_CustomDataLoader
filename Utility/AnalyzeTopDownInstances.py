@@ -6,6 +6,7 @@ from detectron2.utils.visualizer import Visualizer
 # from Utility.CropScaleSave import importRawImageAndScale, getNakedNameFromFilePath
 # from Utility.AnalyzeOutputUI import SetupOptions
 from Utility.Utilities import *
+from Utility.ImageGridding import splitSingleImage
 
 
 # @profile
@@ -22,6 +23,8 @@ def analyzeTopDownInstances(mask, npImage, outputs, nanowire_metadata, scaleBarN
         ax.imshow(out.get_image()[:, :, ::-1])
         plt.show(block=True)
 
+    croppedImageList = splitSingleImage(setupOptions.imageFilePath, _, 4, saveSplitImages=False, deleteOriginalImage=False)
+    # TODO: go through each image and do analysis, find edge instances and count as 0.5
     imageWidth = mask.shape[1]
     imageHeight = mask.shape[0]
     imageAreaMicronsSq = imageWidth * (scaleBarNMPerPixel / 1000) * imageHeight * (scaleBarNMPerPixel / 1000)
