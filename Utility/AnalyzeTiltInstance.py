@@ -262,9 +262,11 @@ def analyzeSingleTiltInstance(maskDict, boundingBoxPolyDict, instanceNumber, set
                 # The first and last lines sometimes have issues, remove them
                 measLineList = measLineList[1:-1]
                 lineLengthList = np.asarray(lineLengthList[1:-1])
-
-                filteredLineLengthList = lineLengthList[lineLengthList > (np.max(lineLengthList)-0.5*np.std(lineLengthList))]
-                measLineList = [measLineListItem for measLineListItem, lineLength in zip(measLineList, lineLengthList) if lineLength > (np.max(lineLengthList) - 0.5 * np.std(lineLengthList))]
+                if setupOptions.isVerticalSubSection:
+                    filteredLineLengthList = lineLengthList
+                else:
+                    filteredLineLengthList = lineLengthList[lineLengthList > (np.max(lineLengthList)-0.5*np.std(lineLengthList))]
+                    measLineList = [measLineListItem for measLineListItem, lineLength in zip(measLineList, lineLengthList) if lineLength > (np.max(lineLengthList) - 0.5 * np.std(lineLengthList))]
 
                 if len(filteredLineLengthList) == 2:
                     lineStd = np.std(filteredLineLengthList, ddof=1)
