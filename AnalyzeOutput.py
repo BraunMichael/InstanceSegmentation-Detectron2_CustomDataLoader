@@ -229,16 +229,18 @@ def getInstances():
     cfg.TEST.DETECTIONS_PER_IMAGE = 2000  # Increased from COCO default, should never have more than 2000 wires per image (default: 100)
 
     predictor = DefaultPredictor(cfg)
-    # look at the outputs. See https://detectron2.readthedocs.io/tutorials/models.html#model-output-format for specification
-    outputs = predictor(npImage)
-    return outputs, npImage, scaleBarMicronsPerPixel * 1000, setupOptions, nanowire_metadata
+
+    return predictor, npImage, scaleBarMicronsPerPixel * 1000, setupOptions, nanowire_metadata
 
 
 def main():
-    outputs, npImage, scaleBarNMPerPixel, setupOptions, nanowire_metadata = getInstances()
+    predictor, npImage, scaleBarNMPerPixel, setupOptions, nanowire_metadata = getInstances()
+    # look at the outputs. See https://detectron2.readthedocs.io/tutorials/models.html#model-output-format for specification
+
     if setupOptions.tiltAngle == 0:
-        analyzeTopDownInstances(outputs['instances'].pred_masks[0], npImage, outputs, nanowire_metadata, scaleBarNMPerPixel, setupOptions)
+        analyzeTopDownInstances(predictor, nanowire_metadata, scaleBarNMPerPixel, setupOptions)
     else:
+        outputs = predictor(npImage)
         boundingBoxPolyDict = {}
         maskDict = {}
         numInstances = len(outputs['instances'])
