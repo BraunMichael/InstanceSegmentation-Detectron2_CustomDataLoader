@@ -259,33 +259,34 @@ def analyzeSingleTiltInstance(maskDict, boundingBoxPolyDict, instanceNumber, set
                     lineStartPoints = getLinePoints(bottomLeft, bottomRight)  # Bottom line
                     lineEndPoints = getLinePoints(topLeft, topRight)  # Top line
 
-            for startPoint, endPoint in zip(lineStartPoints, lineEndPoints):
-                instanceLine = LineString([startPoint, endPoint])
-                longestLine, lineLength = longestLineAndLengthInPolygon(outputSubMaskPoly, instanceLine)
-                if longestLine is not None:
-                    if isValidLine(subStrTree, instanceBoxCoords, imageHeight, longestLine):
-                        measLineList.append(longestLine)
-                        lineLengthList.append(lineLength)
-            if len(lineLengthList) > 2:
-                # The first and last lines sometimes have issues, remove them
-                measLineList = measLineList[1:-1]
-                lineLengthList = np.asarray(lineLengthList[1:-1])
-                if setupOptions.isVerticalSubSection:
-                    filteredLineLengthList = lineLengthList
-                else:
-                    filteredLineLengthList = lineLengthList[lineLengthList > (np.max(lineLengthList)-0.5*np.std(lineLengthList))]
-                    measLineList = [measLineListItem for measLineListItem, lineLength in zip(measLineList, lineLengthList) if lineLength > (np.max(lineLengthList) - 0.5 * np.std(lineLengthList))]
+                for startPoint, endPoint in zip(lineStartPoints, lineEndPoints):
+                    instanceLine = LineString([startPoint, endPoint])
+                    longestLine, lineLength = longestLineAndLengthInPolygon(outputSubMaskPoly, instanceLine)
+                    if longestLine is not None:
+                        if isValidLine(subStrTree, instanceBoxCoords, imageHeight, longestLine):
+                            measLineList.append(longestLine)
+                            lineLengthList.append(lineLength)
+                if len(lineLengthList) > 2:
+                    # The first and last lines sometimes have issues, remove them
+                    measLineList = measLineList[1:-1]
+                    lineLengthList = np.asarray(lineLengthList[1:-1])
+                    if setupOptions.isVerticalSubSection:
+                        filteredLineLengthList = lineLengthList
 
-                if len(filteredLineLengthList) == 2:
-                    lineStd = np.std(filteredLineLengthList, ddof=1)
-                elif len(filteredLineLengthList) == 1:
-                    lineStd = 0
+                    else:
+                        filteredLineLengthList = lineLengthList[lineLengthList > (np.max(lineLengthList)-0.5*np.std(lineLengthList))]
+                        measLineList = [measLineListItem for measLineListItem, lineLength in zip(measLineList, lineLengthList) if lineLength > (np.max(lineLengthList) - 0.5 * np.std(lineLengthList))]
+
+                    if len(filteredLineLengthList) == 2:
+                        lineStd = np.std(filteredLineLengthList, ddof=1)
+                    elif len(filteredLineLengthList) == 1:
+                        lineStd = 0
+                    else:
+                        lineStd = np.std(filteredLineLengthList, ddof=0)
+                    lineAvg = np.mean(filteredLineLengthList)
                 else:
-                    lineStd = np.std(filteredLineLengthList, ddof=0)
-                lineAvg = np.mean(filteredLineLengthList)
-            else:
-                # else there are no valid lines
-                measLineList = []
+                    # else there are no valid lines
+                    measLineList = []
 
     return measLineList, filteredLineLengthList, lineStd, lineAvg, maskAngle
 
