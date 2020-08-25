@@ -243,14 +243,7 @@ def analyzeSingleTiltInstance(maskDict, boundingBoxPolyDict, instanceNumber, set
 
         bottomLeft, bottomRight, topLeft, topRight = getXYFromPolyBox(subBoundingBoxPoly)
         instanceBoxCoords = getXYFromPolyBox(boundingBoxPolyDict[instanceNumber])
-        continueAnalysis = True
-        if setupOptions.isVerticalSubSection:
-            if -85 < maskAngle < 85:
-                continueAnalysis = False
-        else:
-            if not -5 < maskAngle < 5:
-                continueAnalysis = False
-        if continueAnalysis:
+        if -5 < maskAngle < 5:
             if not isEdgeInstance(imageWidth, imageHeight, instanceBoxCoords, setupOptions.isVerticalSubSection):
                 if setupOptions.isVerticalSubSection:
                     lineStartPoints = getLinePoints(bottomLeft, topLeft)  # Left line
