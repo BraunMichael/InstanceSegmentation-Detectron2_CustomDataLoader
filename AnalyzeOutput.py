@@ -146,20 +146,14 @@ class PolygonListManager:
         self.fig.canvas.draw()
 
 
-def getAnnotationDict(basePath, fileName):
-    annotationListFileName = os.path.join(basePath, fileName)
-    if not annotationListFileName:
-        quit()
-    with open(annotationListFileName, 'rb') as handle:
-        annotationDict = pickle.loads(handle.read())
-    return annotationDict
+
 
 
 def getInstances():
     setup_logger()
     basePath = os.getcwd()
-    annotationTrainDicts = getAnnotationDict(basePath, "annotations_Train.txt")
-    annotationValidateDicts = getAnnotationDict(basePath, "annotations_Validation.txt")
+    annotationTrainDicts = getPickleFile(basePath, "annotations_Train.txt")
+    annotationValidateDicts = getPickleFile(basePath, "annotations_Validation.txt")
     annotationDicts = [annotationTrainDicts, annotationValidateDicts]
 
     dirNameSet = set()

@@ -61,6 +61,13 @@ def tqdm_joblib(tqdm_object):
         tqdm_object.close()
 
 
+def getPickleFile(basePath, fileName):
+    pickleFileName = os.path.join(basePath, fileName)
+    if not pickleFileName:
+        quit()
+    return fileHandling(pickleFileName)
+
+
 def fileHandling(annotationFileName):
     with open(annotationFileName, 'rb') as handle:
         fileContents = pickle.loads(handle.read())
