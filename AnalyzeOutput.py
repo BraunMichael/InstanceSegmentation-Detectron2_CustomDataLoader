@@ -2,6 +2,7 @@ import sys
 import os
 import pickle
 import joblib
+import shutil
 import numpy as np
 from tqdm import tqdm
 import multiprocessing
@@ -289,6 +290,39 @@ def main():
         # uncertaintyLineArray = unp.uarray(finalLineAvgList, finalLineStdList)
         # averageMeasValue = uncertaintyLineArray.mean()
         averageMeasValue = np.mean(finalLineAvgList)
+
+        lineMeasurementsDict = fileHandling(setupOptions.lineMeasurementsPath)
+        lineMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)] = {}
+        lineMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Individual Wires"] = {}
+
+        if setupOptions.isVerticalSubSection:
+            lineMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Average Width"] = scaleBarNMPerPixel * averageMeasValue
+            lineMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Width Standard Deviation"] = np.std(finalLineAvgList)
+            lineMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Number Width Measurements"] = len(finalLineAvgList)
+            for wireNumber in range(len(finalLineAvgList)):
+                lineMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Individual Wires"][wireNumber] = {}
+                lineMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Individual Wires"][wireNumber]["Average Width"] = finalLineAvgList[wireNumber]
+                lineMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Individual Wires"][wireNumber]["Width Standard Deviation"] = finalLineStdList[wireNumber]
+                lineMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Individual Wires"][wireNumber]["Number Width Measurements"] = len(finalAllLineLengthList[wireNumber])
+                lineMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Individual Wires"][wireNumber]["Individual Width Measurements"] = finalAllLineLengthList[wireNumber]
+        else:
+            lineMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Average Length"] = scaleBarNMPerPixel * averageMeasValue
+            lineMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Length Standard Deviation"] = np.std(finalLineAvgList)
+            lineMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Number Length Measurements"] = len(finalLineAvgList)
+            for wireNumber in range(len(finalLineAvgList)):
+                lineMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Individual Wires"][wireNumber] = {}
+                lineMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Individual Wires"][wireNumber]["Average Length"] = finalLineAvgList[wireNumber]
+                lineMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Individual Wires"][wireNumber]["Length Standard Deviation"] = finalLineStdList[wireNumber]
+                lineMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Individual Wires"][wireNumber]["Number Length Measurements"] = len(finalAllLineLengthList[wireNumber])
+                lineMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Individual Wires"][wireNumber]["Individual Length Measurements"] = finalAllLineLengthList[wireNumber]
+
+        # Copy the original lineMeasurements file to a backup before overwriting for safety, then delete the copy
+        lineMeasurementsCopyPathName, lineMeasurementsCopyPathExtension = os.path.splitext(setupOptions.lineMeasurementsPath)
+        lineMeasurementsCopyPathName = lineMeasurementsCopyPathName + 'backup' + lineMeasurementsCopyPathExtension
+        shutil.copy2(setupOptions.lineMeasurementsPath, lineMeasurementsCopyPathName)
+        with open(setupOptions.lineMeasurementsPath, 'wb') as handle:
+            pickle.dump(lineMeasurementsDict, handle)
+        os.remove(lineMeasurementsCopyPathName)
 
         # print(finalLineAvgList)
         # print(finalLineStdList)
