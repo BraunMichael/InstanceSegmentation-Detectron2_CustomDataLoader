@@ -144,11 +144,11 @@ def get_setupOptions(savedJSONFileName):
     return setupOptions
 
 
-def on_closing(win, setupOptions, savedJSONFileName, ImageEntryText, scaleDictEntryText, modelEntryText, isVerticalSubSectionVar, centerFractionToMeasureVar, tiltAngleVar, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar, scaleBarWidthMicronsVar, numberClassesVar, classNamesVar, lineMeasurementsText):
+def on_closing(win, setupOptions, savedJSONFileName, ImageEntryText, scaleDictEntryText, modelEntryText, isVerticalSubSectionVar, centerFractionToMeasureVar, tiltAngleVar, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar, scaleBarWidthMicronsVar, numberClassesVar, classNamesVar, wireMeasurementsText):
     setupOptions.imageFilePath = ImageEntryText.get().replace('~', os.path.expanduser('~'))
     setupOptions.scaleDictPath = scaleDictEntryText.get().replace('~', os.path.expanduser('~'))
     setupOptions.modelPath = modelEntryText.get().replace('~', os.path.expanduser('~'))
-    setupOptions.lineMeasurementsPath = lineMeasurementsText.get().replace('~', os.path.expanduser('~'))
+    setupOptions.wireMeasurementsPath = wireMeasurementsText.get().replace('~', os.path.expanduser('~'))
     setupOptions.isVerticalSubSection = isVerticalSubSectionVar.get()
     setupOptions.centerFractionToMeasure = strToFloat(centerFractionToMeasureVar.get())
     setupOptions.tiltAngle = strToFloat(tiltAngleVar.get())
@@ -170,7 +170,7 @@ def uiInput(win, setupOptions, savedJSONFileName):
     ImageEntryText = tkinter.StringVar(value=setupOptions.imageFilePath.replace(os.path.expanduser('~'), '~'))
     scaleDictEntryText = tkinter.StringVar(value=setupOptions.scaleDictPath.replace(os.path.expanduser('~'), '~'))
     modelEntryText = tkinter.StringVar(value=setupOptions.modelPath.replace(os.path.expanduser('~'), '~'))
-    lineMeasurementsText = tkinter.StringVar(value=setupOptions.lineMeasurementsPath.replace(os.path.expanduser('~'), '~'))
+    wireMeasurementsText = tkinter.StringVar(value=setupOptions.wireMeasurementsPath.replace(os.path.expanduser('~'), '~'))
 
     isVerticalSubSectionVar = tkinter.BooleanVar(value=setupOptions.isVerticalSubSection)
     scaleBarWidthMicronsVar = tkinter.StringVar(value=setupOptions.scaleBarWidthMicrons)
@@ -202,9 +202,9 @@ def uiInput(win, setupOptions, savedJSONFileName):
     tkinter.Button(win, text='Choose File', command=lambda: get_file(modelEntry, modelEntryText, 'Choose Machine Learning Model', '.pth')).grid(row=5, column=1)
 
     tkinter.Label(win, text="Line Measurement File:").grid(row=6, column=0)
-    lineMeasurements = tkinter.Entry(win, textvariable=lineMeasurementsText, width=len(setupOptions.lineMeasurementsPath.replace(os.path.expanduser('~'), '~')))
-    lineMeasurements.grid(row=7, column=0)
-    tkinter.Button(win, text='Choose File', command=lambda: get_file(lineMeasurements, lineMeasurementsText, 'Choose Line Measurements File', '.txt')).grid(row=7, column=1)
+    wireMeasurements = tkinter.Entry(win, textvariable=wireMeasurementsText, width=len(setupOptions.wireMeasurementsPath.replace(os.path.expanduser('~'), '~')))
+    wireMeasurements.grid(row=7, column=0)
+    tkinter.Button(win, text='Choose File', command=lambda: get_file(wireMeasurements, wireMeasurementsText, 'Choose Line Measurements File', '.txt')).grid(row=7, column=1)
 
     tkinter.Label(win, text="Measure Widths or Lengths").grid(row=8, column=0)
     tkinter.Radiobutton(win, text="Widths", variable=isVerticalSubSectionVar, value=1).grid(row=8, column=1)
@@ -236,7 +236,7 @@ def uiInput(win, setupOptions, savedJSONFileName):
     tkinter.Button(win, text='Show/Hide Advanced Options', command=lambda: show_AdvancedOptions(win, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar)).grid(row=14, column=1)
 
     hide_AdvancedOptions(win)
-    win.protocol("WM_DELETE_WINDOW", lambda: on_closing(win, setupOptions, savedJSONFileName, ImageEntryText, scaleDictEntryText, modelEntryText, isVerticalSubSectionVar, centerFractionToMeasureVar, tiltAngleVar, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar, scaleBarWidthMicronsVar, numberClassesVar, classNamesVar, lineMeasurementsText))
+    win.protocol("WM_DELETE_WINDOW", lambda: on_closing(win, setupOptions, savedJSONFileName, ImageEntryText, scaleDictEntryText, modelEntryText, isVerticalSubSectionVar, centerFractionToMeasureVar, tiltAngleVar, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar, scaleBarWidthMicronsVar, numberClassesVar, classNamesVar, wireMeasurementsText))
     win.mainloop()
 
 

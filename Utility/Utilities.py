@@ -28,7 +28,7 @@ class SetupOptions:
         self.imageFilePath = ''
         self.scaleDictPath = ''
         self.modelPath = ''
-        self.lineMeasurementsPath = ''
+        self.wireMeasurementsPath = ''
         self.isVerticalSubSection = True
         self.centerFractionToMeasure = 0.5
         self.tiltAngle = 30

@@ -62,5 +62,7 @@ def analyzeTopDownInstances(predictor, nanowire_metadata, scaleBarNMPerPixel, se
         wiresPerSqMicron = (numVerticalWires + 2 * numMergedWires + numInclinedWires) / imageAreaMicronsSq
         print(wiresPerSqMicron, "wires/um^2")
 
+        return numVerticalWires, numMergedWires, numInclinedWires, imageAreaMicronsSq, wiresPerSqMicron
+
 
 
