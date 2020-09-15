@@ -16,8 +16,7 @@ def analyzeTopDownInstances(predictor, nanowire_metadata, scaleBarNMPerPixel, se
     numInclinedWiresArray = np.zeros(gridSize * gridSize)
     imageAreaMicronsSqArray = np.zeros(gridSize * gridSize)
 
-    for position, image in enumerate(croppedImageList):
-        # TODO: go through each image and do analysis, find edge instances and count as 0.5
+    for imageIndex, image in enumerate(croppedImageList):
         npImage = np.array(image)
         if npImage.ndim < 3:
             if npImage.ndim == 2:
@@ -42,41 +41,53 @@ def analyzeTopDownInstances(predictor, nanowire_metadata, scaleBarNMPerPixel, se
         (imageWidth, imageHeight) = image.size
         imageAreaMicronsSq = imageWidth * (scaleBarNMPerPixel / 1000) * imageHeight * (scaleBarNMPerPixel / 1000)
 
+        _, boundingBoxPolyDict, numInstances = getMaskAndBBDicts(outputs)
         outputClasses = outputs['instances'].pred_classes
-
-        classesNums, classCounts = np.unique(outputClasses, return_counts=True)
-        outputClassesNumDict = dict(zip(classesNums, classCounts))
 
         verticalWireClass = 2
         mergedWireClass = 1
         inclinedWireClass = 0
-        try:
-            numVerticalWires = outputClassesNumDict[verticalWireClass]
-        except KeyError:
-            numVerticalWires = 0
-        try:
-            numMergedWires = outputClassesNumDict[mergedWireClass]
-        except KeyError:
-            numMergedWires = 0
-        try:
-            numInclinedWires = outputClassesNumDict[inclinedWireClass]
-        except KeyError:
-            numInclinedWires = 0
 
-        numVerticalWiresArray[position] = numVerticalWires
-        numMergedWiresArray[position] = numMergedWires
-        numInclinedWiresArray[position] = numInclinedWires
-        imageAreaMicronsSqArray[position] = imageAreaMicronsSq
+        numVerticalWires = 0
+        numMergedWires = 0
+        numInclinedWires = 0
+        for instanceNumber in range(numInstances):
+            instanceBoxCoords = getXYFromPolyBox(boundingBoxPolyDict[instanceNumber])
+            wireFraction = 1
+            isLRSideInstance = False
+            isTBSideInstance = False
+            if isEdgeInstance(imageWidth, imageHeight, instanceBoxCoords, True):
+                isLRSideInstance = True
+            if isEdgeInstance(imageWidth, imageHeight, instanceBoxCoords, False):
+                isTBSideInstance = True
+            if isLRSideInstance and isTBSideInstance:  # It's a corner instance
+                wireFraction = 0.25
+            elif isLRSideInstance or isTBSideInstance:  # It's a side instance, but not a corner instance
+                wireFraction = 0.5
+            if outputClasses[instanceNumber] == verticalWireClass:
+                numVerticalWires += wireFraction
+            elif outputClasses[instanceNumber] == mergedWireClass:
+                numMergedWires += wireFraction
+            elif outputClasses[instanceNumber] == inclinedWireClass:
+                numInclinedWires += wireFraction
+            else:
+                print('Too many classes')
+                quit()
 
-        print(numVerticalWires, " Vertical wires, ", numMergedWires, " Merged wires, ", numInclinedWires, " Inclined Wires")
-        print(numVerticalWires + 2 * numMergedWires + numInclinedWires, " Wires in ", imageAreaMicronsSq, " um^2")
-        wiresPerSqMicron = (numVerticalWires + 2 * numMergedWires + numInclinedWires) / imageAreaMicronsSq
-        print(wiresPerSqMicron, "wires/um^2")
+        numVerticalWiresArray[imageIndex] = numVerticalWires
+        numMergedWiresArray[imageIndex] = numMergedWires
+        numInclinedWiresArray[imageIndex] = numInclinedWires
+        imageAreaMicronsSqArray[imageIndex] = imageAreaMicronsSq
+
     totalNumVerticalWires = numVerticalWiresArray.sum()
     totalNumMergedWires = numMergedWiresArray.sum()
     totalNumInclinedWires = numInclinedWiresArray.sum()
     totalImageAreaMicronsSq = imageAreaMicronsSqArray.sum()
     wiresPerSqMicron = (totalNumVerticalWires + 2 * totalNumMergedWires + totalNumInclinedWires) / totalImageAreaMicronsSq
+
+    print(totalNumVerticalWires, " Vertical wires, ", totalNumMergedWires, " Merged wires, ", totalNumInclinedWires, " Inclined Wires")
+    print(totalNumVerticalWires + 2 * totalNumMergedWires + totalNumInclinedWires, " Wires in ", totalImageAreaMicronsSq, " um^2")
+    print(wiresPerSqMicron, "wires/um^2")
     return totalNumVerticalWires, totalNumMergedWires, totalNumInclinedWires, totalImageAreaMicronsSq, wiresPerSqMicron
 
 
