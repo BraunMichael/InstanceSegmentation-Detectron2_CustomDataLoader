@@ -238,12 +238,13 @@ def analyzeSingleTiltInstance(maskDict, boundingBoxPolyDict, instanceNumber, set
 
     outputSubMaskPoly, subBoundingBoxPoly, maskAngle = centerXPercentofWire(mask, setupOptions)
     if outputSubMaskPoly is not None:
-        strTree = STRtree([poly for i, poly in boundingBoxPolyDict.items() if i != instanceNumber])
-        subStrTree = STRtree(strTree.query(boundingBoxPolyDict[instanceNumber]))
-
-        bottomLeft, bottomRight, topLeft, topRight = getXYFromPolyBox(subBoundingBoxPoly)
-        instanceBoxCoords = getXYFromPolyBox(boundingBoxPolyDict[instanceNumber])
         if -5 < maskAngle < 5:
+            strTree = STRtree([poly for i, poly in boundingBoxPolyDict.items() if i != instanceNumber])
+            subStrTree = STRtree(strTree.query(boundingBoxPolyDict[instanceNumber]))
+
+            bottomLeft, bottomRight, topLeft, topRight = getXYFromPolyBox(subBoundingBoxPoly)
+            instanceBoxCoords = getXYFromPolyBox(boundingBoxPolyDict[instanceNumber])
+
             if not isEdgeInstance(imageWidth, imageHeight, instanceBoxCoords, setupOptions.isVerticalSubSection):
                 if setupOptions.isVerticalSubSection:
                     lineStartPoints = getLinePoints(bottomLeft, topLeft)  # Left line
