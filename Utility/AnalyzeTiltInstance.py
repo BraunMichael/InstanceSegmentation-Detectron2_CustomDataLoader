@@ -136,29 +136,6 @@ def isValidLine(strTree, instanceBoxCoords, imageHeight, instanceLine):
     return False
 
 
-def isEdgeInstance(imageRight, imageBottom, instanceBoxCoords, isVerticalSubSection):
-    bottomLeft, bottomRight, topLeft, topRight = instanceBoxCoords
-    instanceBottom = bottomLeft[1]
-    instanceTop = topLeft[1]
-    instanceRight = bottomRight[0]
-    instanceLeft = bottomLeft[0]
-    if isVerticalSubSection:
-        if instanceLeft < 20:
-            # too close to left side
-            return True
-        elif abs(instanceRight - imageRight) < 20:
-            # too close to right side
-            return True
-    else:  # HorizontalSubSection
-        if instanceTop < 20:
-            # too close to top side
-            return True
-        elif abs(instanceBottom - imageBottom) < 20:
-            # too close to bottom side
-            return True
-    return False
-
-
 # @profile
 def longestLineAndLengthInPolygon(maskPolygon, lineTest):
     # TODO: This is slow, just the lineTest.intersection line
@@ -195,30 +172,6 @@ def getLinePoints(startXY, endXY):
         roundedPoint = map(round, interpolatedPoint)
         xyPoints[tuple(roundedPoint)] = None
     return xyPoints
-
-
-# @profile
-def getXYFromPolyBox(boundingBoxPoly):
-    topXY = []
-    bottomXY = []
-    boundingBoxXY = boundingBoxPoly.boundary.coords[:-1]
-    boundingBoxXYCentroid = boundingBoxPoly.boundary.centroid.coords[0][1]
-    assert len(boundingBoxXY) == 4, "The polygon used did not have 4 sides"
-    for coords in boundingBoxXY:
-        if coords[1] > boundingBoxXYCentroid:
-            bottomXY.append(coords)
-        else:
-            topXY.append(coords)
-
-    if topXY[0][0] > topXY[1][0]:
-        topXY.reverse()
-    if bottomXY[0][0] > bottomXY[1][0]:
-        bottomXY.reverse()
-    topLeft = topXY[0]
-    topRight = topXY[1]
-    bottomLeft = bottomXY[0]
-    bottomRight = bottomXY[1]
-    return bottomLeft, bottomRight, topLeft, topRight
 
 
 # @profile
