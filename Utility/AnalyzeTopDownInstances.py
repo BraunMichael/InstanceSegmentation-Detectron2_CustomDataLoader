@@ -9,8 +9,14 @@ from Utility.ImageGridding import splitSingleImage
 
 # @profile
 def analyzeTopDownInstances(predictor, nanowire_metadata, scaleBarNMPerPixel, setupOptions: SetupOptions):
-    croppedImageList = splitSingleImage(setupOptions.imageFilePath, os.getcwd(), gridSize=4, saveSplitImages=False, deleteOriginalImage=False)
-    for image in croppedImageList:
+    gridSize = 4
+    croppedImageList = splitSingleImage(setupOptions.imageFilePath, os.getcwd(), gridSize=gridSize, saveSplitImages=False, deleteOriginalImage=False)
+    numVerticalWiresArray = np.zeros(gridSize * gridSize)
+    numMergedWiresArray = np.zeros(gridSize * gridSize)
+    numInclinedWiresArray = np.zeros(gridSize * gridSize)
+    imageAreaMicronsSqArray = np.zeros(gridSize * gridSize)
+
+    for position, image in enumerate(croppedImageList):
         # TODO: go through each image and do analysis, find edge instances and count as 0.5
         npImage = np.array(image)
         if npImage.ndim < 3:
@@ -57,12 +63,21 @@ def analyzeTopDownInstances(predictor, nanowire_metadata, scaleBarNMPerPixel, se
         except KeyError:
             numInclinedWires = 0
 
+        numVerticalWiresArray[position] = numVerticalWires
+        numMergedWiresArray[position] = numMergedWires
+        numInclinedWiresArray[position] = numInclinedWires
+        imageAreaMicronsSqArray[position] = imageAreaMicronsSq
+
         print(numVerticalWires, " Vertical wires, ", numMergedWires, " Merged wires, ", numInclinedWires, " Inclined Wires")
         print(numVerticalWires + 2 * numMergedWires + numInclinedWires, " Wires in ", imageAreaMicronsSq, " um^2")
         wiresPerSqMicron = (numVerticalWires + 2 * numMergedWires + numInclinedWires) / imageAreaMicronsSq
         print(wiresPerSqMicron, "wires/um^2")
-
-        return numVerticalWires, numMergedWires, numInclinedWires, imageAreaMicronsSq, wiresPerSqMicron
+    totalNumVerticalWires = numVerticalWiresArray.sum()
+    totalNumMergedWires = numMergedWiresArray.sum()
+    totalNumInclinedWires = numInclinedWiresArray.sum()
+    totalImageAreaMicronsSq = imageAreaMicronsSqArray.sum()
+    wiresPerSqMicron = (totalNumVerticalWires + 2 * totalNumMergedWires + totalNumInclinedWires) / totalImageAreaMicronsSq
+    return totalNumVerticalWires, totalNumMergedWires, totalNumInclinedWires, totalImageAreaMicronsSq, wiresPerSqMicron
 
 
 
