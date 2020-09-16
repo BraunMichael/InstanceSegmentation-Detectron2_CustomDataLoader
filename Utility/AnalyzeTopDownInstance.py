@@ -7,7 +7,7 @@ from Utility.Utilities import *
 
 
 # @profile
-def analyzeTopDownInstance(outputs, nanowire_metadata, scaleBarNMPerPixel, setupOptions: SetupOptions, image):
+def analyzeTopDownInstance(predictor, nanowire_metadata, scaleBarNMPerPixel, setupOptions: SetupOptions, image):
     npImage = np.array(image)
     if npImage.ndim < 3:
         if npImage.ndim == 2:
@@ -16,6 +16,7 @@ def analyzeTopDownInstance(outputs, nanowire_metadata, scaleBarNMPerPixel, setup
         else:
             print('The imported rawImage is 1 dimensional for some reason, check it out.')
             quit()
+    outputs = predictor(npImage)
     if setupOptions.showPlots:
         fig, ax = plt.subplots(figsize=(10, 8))
         print(setupOptions.imageFilePath)

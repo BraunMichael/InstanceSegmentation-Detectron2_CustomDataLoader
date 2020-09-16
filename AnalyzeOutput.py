@@ -236,38 +236,19 @@ def main():
         gridSize = 4
         croppedImageList = splitSingleImage(setupOptions.imageFilePath, os.getcwd(), gridSize=gridSize, saveSplitImages=False, deleteOriginalImage=False)
 
-        # TODO: The slow part is the predictor for all of the images, not the stuff currently parallelized
-        outputsList = []
-        for image in croppedImageList:
-            npImage = np.array(image)
-            if npImage.ndim < 3:
-                if npImage.ndim == 2:
-                    # Assuming black and white image, just copy to all 3 color channels
-                    npImage = np.repeat(npImage[:, :, np.newaxis], 3, axis=2)
-                else:
-                    print('The imported rawImage is 1 dimensional for some reason, check it out.')
-                    quit()
-            outputsList.append(predictor(npImage))
-
         if setupOptions.parallelProcessing:
-            with joblib.parallel_backend('multiprocessing'):
+            with joblib.parallel_backend('loky'):
                 with tqdm_joblib(tqdm(desc="Analyzing Instances", total=len(croppedImageList))) as progress_bar:
-                    analysisOutput = joblib.Parallel(n_jobs=multiprocessing.cpu_count())(joblib.delayed(analyzeTopDownInstance)(outputs, nanowire_metadata, scaleBarNMPerPixel, setupOptions, image) for outputs, image in zip(outputsList, croppedImageList))
+                    analysisOutput = joblib.Parallel(n_jobs=multiprocessing.cpu_count())(joblib.delayed(analyzeTopDownInstance)(predictor, nanowire_metadata, scaleBarNMPerPixel, setupOptions, image) for image in croppedImageList)
         else:
             analysisOutput = []
-            for outputs, image in zip(outputsList, croppedImageList):
-                analysisOutput.append(analyzeTopDownInstance(outputs, nanowire_metadata, scaleBarNMPerPixel, setupOptions, image))
+            for image in croppedImageList:
+                analysisOutput.append(analyzeTopDownInstance(predictor, nanowire_metadata, scaleBarNMPerPixel, setupOptions, image))
 
-
-        NumVerticalWires = np.asarray([entry[0] for entry in analysisOutput])
-        NumMergedWires = np.asarray([entry[1] for entry in analysisOutput])
-        NumInclinedWires = np.asarray([entry[2] for entry in analysisOutput])
-        ImageAreaMicronsSq = np.asarray([entry[3] for entry in analysisOutput])
-
-        totalNumVerticalWires = analysisOutput[0].sum()
-        totalNumMergedWires = analysisOutput[1].sum()
-        totalNumInclinedWires = analysisOutput[2].sum()
-        totalImageAreaMicronsSq = analysisOutput[3].sum()
+        totalNumVerticalWires = np.sum([entry[0] for entry in analysisOutput])
+        totalNumMergedWires = np.sum([entry[1] for entry in analysisOutput])
+        totalNumInclinedWires = np.sum([entry[2] for entry in analysisOutput])
+        totalImageAreaMicronsSq = np.sum([entry[3] for entry in analysisOutput])
         wiresPerSqMicron = (totalNumVerticalWires + 2 * totalNumMergedWires + totalNumInclinedWires) / totalImageAreaMicronsSq
 
         print(totalNumVerticalWires, " Vertical wires, ", totalNumMergedWires, " Merged wires, ", totalNumInclinedWires, " Inclined Wires")
