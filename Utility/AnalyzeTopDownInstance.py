@@ -35,12 +35,10 @@ def analyzeTopDownInstance(predictor, nanowire_metadata, scaleBarNMPerPixel, set
     _, boundingBoxPolyDict, numInstances = getMaskAndBBDicts(outputs)
     outputClasses = outputs['instances'].pred_classes
 
-    verticalWireClass = 2
-    mergedWireClass = 1
+    verticalWireClass = 1
     inclinedWireClass = 0
 
     numVerticalWires = 0
-    numMergedWires = 0
     numInclinedWires = 0
     for instanceNumber in range(numInstances):
         instanceBoxCoords = getXYFromPolyBox(boundingBoxPolyDict[instanceNumber])
@@ -57,15 +55,13 @@ def analyzeTopDownInstance(predictor, nanowire_metadata, scaleBarNMPerPixel, set
             wireFraction = 0.5
         if outputClasses[instanceNumber] == verticalWireClass:
             numVerticalWires += wireFraction
-        elif outputClasses[instanceNumber] == mergedWireClass:
-            numMergedWires += wireFraction
         elif outputClasses[instanceNumber] == inclinedWireClass:
             numInclinedWires += wireFraction
         else:
             print('Too many classes')
             quit()
 
-    return numVerticalWires, numMergedWires, numInclinedWires, imageAreaMicronsSq
+    return numVerticalWires, numInclinedWires, imageAreaMicronsSq
 
 
 
