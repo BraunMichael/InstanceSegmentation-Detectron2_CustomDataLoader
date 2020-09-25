@@ -11,6 +11,7 @@ import matplotlib.path as mpath
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.widgets import RectangleSelector, Button
+from mpl_toolkits.axes_grid1 import ImageGrid
 from descartes import PolygonPatch
 from shapely.geometry import Point, LineString, MultiLineString, Polygon
 
@@ -248,6 +249,7 @@ def main():
         totalNumVerticalWires = np.sum([entry[0] for entry in analysisOutput])
         totalNumInclinedWires = np.sum([entry[1] for entry in analysisOutput])
         totalImageAreaMicronsSq = np.sum([entry[2] for entry in analysisOutput])
+        annotatedImageList = [entry[3] for entry in analysisOutput]
         wiresPerSqMicron = (totalNumVerticalWires + totalNumInclinedWires) / totalImageAreaMicronsSq
 
         print(totalNumVerticalWires, " Vertical wires, ", totalNumInclinedWires, " Inclined Wires")
@@ -258,6 +260,20 @@ def main():
         wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Number Inclined Wires"] = totalNumInclinedWires
         wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Image Area (Square Microns)"] = totalImageAreaMicronsSq
         wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Wires Per Square Micron"] = wiresPerSqMicron
+
+        if setupOptions.showPlots:
+            fig = plt.figure(figsize=(12, 12))
+            grid = ImageGrid(fig, 111,  # similar to subplot(111)
+                             nrows_ncols=(gridSize, gridSize),  # creates nxn grid of axes
+                             axes_pad=0.05,  # pad between axes in inch.
+                             )
+
+            for ax, im in zip(grid, annotatedImageList):
+                # Iterating over the grid returns the Axes.
+                ax.axis("off")
+                ax.imshow(im)
+            plt.show()
+
     else:
         outputs = predictor(npImage)
         maskDict, boundingBoxPolyDict, numInstances = getMaskAndBBDicts(outputs)
@@ -305,7 +321,6 @@ def main():
         # uncertaintyLineArray = unp.uarray(finalLineAvgList, finalLineStdList)
         # averageMeasValue = uncertaintyLineArray.mean()
         averageMeasValue = np.mean(finalLineAvgList)
-
 
         wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Individual Wires"] = {}
 
