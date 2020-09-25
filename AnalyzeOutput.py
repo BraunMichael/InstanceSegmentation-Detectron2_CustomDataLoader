@@ -234,7 +234,7 @@ def main():
 
     if setupOptions.tiltAngle == 0:
         gridSize = 4
-        croppedImageList = splitSingleImage(setupOptions.imageFilePath, os.getcwd(), gridSize=gridSize, saveSplitImages=False, deleteOriginalImage=False)
+        croppedImageList = splitSingleImage(setupOptions.imageFilePath, os.getcwd(), gridSize=gridSize, saveSplitImages=False, deleteOriginalImage=False, removeDataBar=True)
 
         if setupOptions.parallelProcessing:
             with joblib.parallel_backend('loky'):

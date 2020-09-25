@@ -1,6 +1,6 @@
 import os
 from Utility.Utilities import *
-from Utility.CropScaleSave import getNakedNameFromFilePath
+from Utility.CropScaleSave import getNakedNameFromFilePath, getDataBarPixelRow
 from PIL import Image
 from tqdm import tqdm
 import multiprocessing
@@ -31,26 +31,33 @@ def tqdm_joblib(tqdm_object):
         tqdm_object.close()
 
 
-def splitSingleImage(imageName, dirpath, gridSize: int, saveSplitImages: bool = True, deleteOriginalImage: bool = False):
+def splitSingleImage(imageName, dirpath, gridSize: int, saveSplitImages: bool = True, deleteOriginalImage: bool = False, removeDataBar: bool = False):
     rawImage = Image.open(imageName)
-    (width, height) = rawImage.size
+    (imageWidth, imageHeight) = rawImage.size
+    if removeDataBar:
+        dataBarPixelRow, _, _, _, _, _, _ = getDataBarPixelRow(rawImage)
+        croppedImage = rawImage.crop((0, 0, imageWidth, imageHeight - dataBarPixelRow))
+    else:
+        croppedImage = rawImage
+    (width, height) = croppedImage.size
     if not width % gridSize == 0:
-        rawImage = rawImage.crop((0, 0, width - (width % gridSize), height))
+        croppedImage = croppedImage.crop((0, 0, width - (width % gridSize), height))
     if not height % gridSize == 0:
-        rawImage = rawImage.crop((0, 0, width, height - (height % gridSize)))
-    (width, height) = rawImage.size
+        croppedImage = croppedImage.crop((0, 0, width, height - (height % gridSize)))
+    (width, height) = croppedImage.size
     nakedFileName, fileExtension = getNakedNameFromFilePath(imageName, True)
-    croppedImageList = []
+    griddedImageList = []
     for rowNum in range(gridSize):
         for colNum in range(gridSize):
-            croppedImage = rawImage.crop((colNum * width / gridSize, rowNum * height / gridSize, ((colNum + 1) * width / gridSize) - 1, ((rowNum + 1) * height / gridSize) - 1))
+            gridImage = croppedImage.crop((colNum * width / gridSize, rowNum * height / gridSize, ((colNum + 1) * width / gridSize) - 1, ((rowNum + 1) * height / gridSize) - 1))
             if saveSplitImages:
-                croppedImage.save(os.path.join(dirpath, nakedFileName + "_" + str(colNum) + str(rowNum) + fileExtension))
-            croppedImageList.append(croppedImage)
+                gridImage.save(os.path.join(dirpath, nakedFileName + "_" + str(colNum) + str(rowNum) + fileExtension))
+            griddedImageList.append(gridImage)
     rawImage.close()
+    croppedImage.close()
     if deleteOriginalImage:
         os.remove(os.path.join(dirpath, nakedFileName + fileExtension))
-    return croppedImageList
+    return griddedImageList
 
 
 def main():
@@ -67,7 +74,7 @@ def main():
 
     totalImages = len(rawImageNames)
     with tqdm_joblib(tqdm(desc="Splitting Images", total=totalImages)) as progress_bar:
-        joblib.Parallel(n_jobs=num_cores)(joblib.delayed(splitSingleImage)(imageName, dirpath, gridSize) for imageName in rawImageNames)
+        joblib.Parallel(n_jobs=num_cores)(joblib.delayed(splitSingleImage)(imageName, dirpath, gridSize, saveSplitImages=True, deleteOriginalImage=True) for imageName in rawImageNames)
 
 
 if __name__ == "__main__":
