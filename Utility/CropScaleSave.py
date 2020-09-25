@@ -94,20 +94,26 @@ def whiteLinePixelLocationList(rawImage, horizontalLine_truefalse):
     return whiteLinesList
 
 
-def scaleBarProcessing(filename, scaleBarMicronsPerPixelDict, replaceScaleEntry, scalebarWidthMicrons):
-    rawImage = Image.open(filename)
+def getDataBarPixelRow(rawImage):
     (rawImageWidth, rawImageHeight) = rawImage.size
     rawImageHeightOffset = rawImageHeight*0.75
     rawImageWidthOffset = rawImageWidth*0.5
+
     # crop(left upper right lower)
     reducedRawImage = rawImage.crop((rawImageWidthOffset, rawImageHeightOffset, rawImageWidth, rawImageHeight))
 
     # Find top of databar
-    horizontalLine_truefalse = True
-    whiteRowList = whiteLinePixelLocationList(reducedRawImage, horizontalLine_truefalse)
-
+    whiteRowList = whiteLinePixelLocationList(reducedRawImage, horizontalLine_truefalse=True)
     dataBarPixelRow = whiteRowList[0]
     dataBarPixelRow_OffsetCorrected = dataBarPixelRow + rawImageHeightOffset
+
+    return dataBarPixelRow, dataBarPixelRow_OffsetCorrected, reducedRawImage, rawImageWidth, rawImageHeight, rawImageWidthOffset, rawImageHeightOffset
+
+
+def scaleBarProcessing(filename, scaleBarMicronsPerPixelDict, replaceScaleEntry, scalebarWidthMicrons):
+    rawImage = Image.open(filename)
+
+    dataBarPixelRow, dataBarPixelRow_OffsetCorrected, reducedRawImage, rawImageWidth, rawImageHeight, rawImageWidthOffset, rawImageHeightOffset = getDataBarPixelRow(rawImage)
 
     nakedFileName = getNakedNameFromFilePath(filename)
     if replaceScaleEntry or nakedFileName not in scaleBarMicronsPerPixelDict:
@@ -346,3 +352,5 @@ def cropHeightByNPixels(numPixels):
 
         # croppedFileName = binaryImageName.replace('.png', '_cropped.png')
         croppedImage.save(binaryImageName)
+
+# cropHeightByNPixels(1)
