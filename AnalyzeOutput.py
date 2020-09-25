@@ -246,17 +246,15 @@ def main():
                 analysisOutput.append(analyzeTopDownInstance(predictor, nanowire_metadata, scaleBarNMPerPixel, setupOptions, image))
 
         totalNumVerticalWires = np.sum([entry[0] for entry in analysisOutput])
-        totalNumMergedWires = np.sum([entry[1] for entry in analysisOutput])
-        totalNumInclinedWires = np.sum([entry[2] for entry in analysisOutput])
-        totalImageAreaMicronsSq = np.sum([entry[3] for entry in analysisOutput])
-        wiresPerSqMicron = (totalNumVerticalWires + 2 * totalNumMergedWires + totalNumInclinedWires) / totalImageAreaMicronsSq
+        totalNumInclinedWires = np.sum([entry[1] for entry in analysisOutput])
+        totalImageAreaMicronsSq = np.sum([entry[2] for entry in analysisOutput])
+        wiresPerSqMicron = (totalNumVerticalWires + totalNumInclinedWires) / totalImageAreaMicronsSq
 
-        print(totalNumVerticalWires, " Vertical wires, ", totalNumMergedWires, " Merged wires, ", totalNumInclinedWires, " Inclined Wires")
-        print(totalNumVerticalWires + 2 * totalNumMergedWires + totalNumInclinedWires, " Wires in ", totalImageAreaMicronsSq, " um^2")
-        print(wiresPerSqMicron, "wires/um^2")
+        print(totalNumVerticalWires, " Vertical wires, ", totalNumInclinedWires, " Inclined Wires")
+        print(totalNumVerticalWires + totalNumInclinedWires, " Wires in ", round(totalImageAreaMicronsSq, 1), " um^2")
+        print(round(wiresPerSqMicron, 3), "wires/um^2")
 
         wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Number Vertical Wires"] = totalNumVerticalWires
-        wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Number Merged Wires"] = totalNumMergedWires
         wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Number Inclined Wires"] = totalNumInclinedWires
         wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Image Area (Square Microns)"] = totalImageAreaMicronsSq
         wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Wires Per Square Micron"] = wiresPerSqMicron
