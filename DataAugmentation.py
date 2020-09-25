@@ -352,7 +352,7 @@ for entry in range(0, len(rawImageFileNames)):
                 plotList.append(drawSegmentationMapsOnImages(fullImage, segmapImage, colorList))
 
     if saveFiles:
-        augmentedRawImagesDir = 'NoSnTopDownAugmentedRawImages'
+        augmentedRawImagesDir = 'NoSnOrMergedTopDownAugmentedRawImages'
         if not os.path.isdir(augmentedRawImagesDir):
             os.mkdir(augmentedRawImagesDir)
         augmentedRawImagesTrainDir = os.path.join(augmentedRawImagesDir, 'Train')
@@ -362,7 +362,7 @@ for entry in range(0, len(rawImageFileNames)):
         if not os.path.isdir(augmentedRawImagesValidationDir):
             os.mkdir(augmentedRawImagesValidationDir)
 
-        augmentedMaskedImagesDir = 'NoSnTopDownAugmentedMaskImages'
+        augmentedMaskedImagesDir = 'NoSnOrMergedTopDownAugmentedMaskImages'
         if not os.path.isdir(augmentedMaskedImagesDir):
             os.mkdir(augmentedMaskedImagesDir)
         augmentedMaskedImagesTrainDir = os.path.join(augmentedMaskedImagesDir, 'Train')
