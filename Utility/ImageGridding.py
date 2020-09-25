@@ -60,6 +60,36 @@ def splitSingleImage(imageName, dirpath, gridSize: int, saveSplitImages: bool = 
     return griddedImageList
 
 
+def create_collage(listofimages, marginFraction):
+    assert np.sqrt(len(listofimages)).is_integer(), "You have a non-square array of images (length of image list is not a perfect square)"
+    gridSize = int(np.sqrt(len(listofimages)))
+    firstImage = Image.fromarray(np.uint8(listofimages[0]), mode='RGB')
+    size = firstImage.size
+    (thumbnail_width, thumbnail_height) = size
+    marginWidth = int(marginFraction*thumbnail_width)
+    marginHeight = int(marginFraction*thumbnail_height)
+    width = gridSize*thumbnail_width + (gridSize - 1)*marginWidth
+    height = gridSize*thumbnail_height + (gridSize - 1)*marginHeight
+    collageImage = Image.new('RGB', (width, height), 'white')
+    ims = []
+    for p in listofimages:
+        im = Image.fromarray(np.uint8(p), mode='RGB')
+        im.thumbnail(size)
+        ims.append(im)
+    i = 0
+    x = 0
+    y = 0
+    for row in range(gridSize):
+        for col in range(gridSize):
+            # print(i, x, y)
+            collageImage.paste(ims[i], (x, y))
+            i += 1
+            x += thumbnail_width + marginWidth
+        y += thumbnail_height + marginHeight
+        x = 0
+    return collageImage
+
+
 def main():
     filesFolder = getFileOrDir('folder', 'Choose folder of image files')
     if not filesFolder:

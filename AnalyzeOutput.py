@@ -28,7 +28,7 @@ from Utility.CropScaleSave import importRawImageAndScale, getNakedNameFromFilePa
 # from Utility.AnalyzeOutputUI import SetupOptions
 from Utility.AnalyzeTiltInstance import analyzeSingleTiltInstance
 from Utility.AnalyzeTopDownInstance import analyzeTopDownInstance
-from Utility.ImageGridding import splitSingleImage
+from Utility.ImageGridding import splitSingleImage, create_collage
 from Utility.Utilities import *
 
 
@@ -252,6 +252,7 @@ def main():
         annotatedImageList = [entry[3] for entry in analysisOutput]
         wiresPerSqMicron = (totalNumVerticalWires + totalNumInclinedWires) / totalImageAreaMicronsSq
 
+        print("Analyzed Image:", getNakedNameFromFilePath(setupOptions.imageFilePath))
         print(totalNumVerticalWires, " Vertical wires, ", totalNumInclinedWires, " Inclined Wires")
         print(totalNumVerticalWires + totalNumInclinedWires, " Wires in ", round(totalImageAreaMicronsSq, 1), " um^2")
         print(round(wiresPerSqMicron, 3), "wires/um^2")
@@ -262,17 +263,9 @@ def main():
         wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Wires Per Square Micron"] = wiresPerSqMicron
 
         if setupOptions.showPlots:
-            fig = plt.figure(figsize=(12, 12))
-            grid = ImageGrid(fig, 111,  # similar to subplot(111)
-                             nrows_ncols=(gridSize, gridSize),  # creates nxn grid of axes
-                             axes_pad=0.05,  # pad between axes in inch.
-                             )
-
-            for ax, im in zip(grid, annotatedImageList):
-                # Iterating over the grid returns the Axes.
-                ax.axis("off")
-                ax.imshow(im)
-            plt.show()
+            collageImage = create_collage(annotatedImageList, 0.02)
+            collageImage.save(getNakedNameFromFilePath(setupOptions.imageFilePath)+"_annotated.jpg")
+            collageImage.show()
 
     else:
         outputs = predictor(npImage)
