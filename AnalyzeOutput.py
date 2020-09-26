@@ -151,6 +151,8 @@ class PolygonListManager:
 def getInstances():
     setup_logger()
     basePath = os.getcwd()
+
+    # TODO: some or all of this may not be necessary
     annotationTrainDicts = getPickleFile(basePath, "annotations_Train.txt")
     annotationValidateDicts = getPickleFile(basePath, "annotations_Validation.txt")
     annotationDicts = [annotationTrainDicts, annotationValidateDicts]
