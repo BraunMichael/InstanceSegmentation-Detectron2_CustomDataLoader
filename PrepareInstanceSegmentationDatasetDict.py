@@ -7,6 +7,7 @@ import matplotlib.cm
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import numpy as np  # (pip install numpy)
+from statistics import mode
 from skimage import measure  # (pip install scikit-image)
 from shapely.geometry import Polygon, MultiPolygon  # (pip install Shapely)
 from PIL import Image, ImageOps
@@ -168,14 +169,15 @@ def annotateSingleImage(rawImageName, binaryMaskName, maskType, parentFolder):
     hist, bins = np.histogram(binaryNPImageOriginal.ravel(), np.max(binaryNPImageOriginal) + 1, [0, np.max(binaryNPImageOriginal) + 1])
     levelDict = {}
     for ind, value in enumerate(np.where(hist > 0)[0]):
-        levelDict[value] = ind
+        levelDict[value] = ind - 1  # Assumes a black background (so the 0 index is not a class)
     objectsList = []
     regionNumber = 1
     for region in allRegionProperties:
         # take regions with large enough areas
         if region.area > 100:
-            regionGreyLevel = binaryNPImageOriginal[int(round(region.centroid[0])), int(round(region.centroid[1]))]
+            regionGreyLevel = mode([binaryNPImageOriginal[coord[0],coord[1]] for coord in region.coords])
             category_id = levelDict[regionGreyLevel]
+            assert category_id >= 0, "Code assumes a black background that is not a designated class"
             maskCoords = region.coords
 
             subMask = np.zeros(binaryNPImage.shape)
