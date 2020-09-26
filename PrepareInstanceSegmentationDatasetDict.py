@@ -25,6 +25,7 @@ showPlots = False
 showSavedMaskAndImage = False
 is_crowd = 0  # Likely never relevant for us, used to mark if it is a collection of objects rather than fully separated
 num_cores = multiprocessing.cpu_count()
+parallelProcessing = True
 assert maskType.lower() == 'bitmask' or maskType.lower() == 'polygon', "The valid maskType options are 'bitmask' and 'polygon'"
 
 
@@ -259,8 +260,14 @@ def main():
         assert len(binaryImageNames) == len(rawImageNames), "There are a different number of files in each of the selected folders. Make sure you have a masked image for each raw image! Make sure you have png masks!"
 
         totalImages = len(binaryImageNames)
-        with tqdm_joblib(tqdm(desc="Annotating" + dirName + "Images", total=totalImages)) as progress_bar:
-            allAnnotations = joblib.Parallel(n_jobs=num_cores)(joblib.delayed(annotateSingleImage)(rawImageName, binaryImageName, maskType, parentFolder) for (rawImageName, binaryImageName) in zip(rawImageNames, binaryImageNames))
+
+        if parallelProcessing:
+            with tqdm_joblib(tqdm(desc="Annotating" + dirName + "Images", total=totalImages)) as progress_bar:
+                allAnnotations = joblib.Parallel(n_jobs=num_cores)(joblib.delayed(annotateSingleImage)(rawImageName, binaryImageName, maskType, parentFolder) for (rawImageName, binaryImageName) in zip(rawImageNames, binaryImageNames))
+        else:
+            allAnnotations = []
+            for (rawImageName, binaryImageName) in zip(rawImageNames, binaryImageNames):
+                allAnnotations.append(annotateSingleImage(rawImageName, binaryImageName, maskType, parentFolder))
 
         annotationDictFileName = 'annotations_16NoSnNoMerged_' + dirName + '.txt'
         with open(annotationDictFileName, 'wb') as handle:
