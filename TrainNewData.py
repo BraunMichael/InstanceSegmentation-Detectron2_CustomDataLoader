@@ -115,8 +115,7 @@ def setDatasetAndMetadata(baseStr: str, setupoptions: SetupOptions):
     if showPlots:
         nanowire_metadata = MetadataCatalog.get(baseStr + "_Train")
         for d in random.sample(annotationTrainDicts, 5):
-            fig, ax = plt.subplots(figsize=(10, 8))
-            print(d["file_name"])
+            # rawImage = Image.open(d["file_name"]).convert('L')
             rawImage = Image.open(d["file_name"])
             npImage = np.array(rawImage)
             try:
@@ -125,6 +124,7 @@ def setDatasetAndMetadata(baseStr: str, setupoptions: SetupOptions):
                 npImage = np.expand_dims(npImage, axis=2)
                 visualizerNP = Visualizer(npImage[:, :, ::-1], metadata=nanowire_metadata, scale=0.5)
             visTest = visualizerNP.draw_dataset_dict(d)
+            fig, ax = plt.subplots(figsize=(10, 8))
             ax.imshow(visTest.get_image()[:, :, ::-1])
             plt.show(block=True)
     return maskType
