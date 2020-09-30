@@ -37,8 +37,8 @@ def analyzeTopDownInstance(predictor, nanowire_metadata, scaleBarNMPerPixel, set
     _, boundingBoxPolyDict, numInstances = getMaskAndBBDicts(outputs)
     outputClasses = outputs['instances'].pred_classes
 
-    verticalWireClass = 1
-    inclinedWireClass = 0
+    verticalWireClass = 0
+    inclinedWireClass = 1
 
     numVerticalWires = 0
     numInclinedWires = 0
