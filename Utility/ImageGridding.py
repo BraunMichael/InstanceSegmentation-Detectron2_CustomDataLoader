@@ -32,7 +32,24 @@ def tqdm_joblib(tqdm_object):
 
 
 def splitSingleImage(imageName, dirpath, gridSize: int, saveSplitImages: bool = True, deleteOriginalImage: bool = False, removeDataBar: bool = False):
-    rawImage = Image.open(imageName)
+
+    if imageName.endswith(('jpg', '.jpeg')):
+        fileName = imageName
+
+    if imageName.endswith(('.tiff', '.tif')):
+        print("attempting to convert tiff to png")
+        imagePath = imageName
+
+        fileTypeEnding = imagePath[imagePath.rfind('.'):]
+        pngPath = imageName.replace(fileTypeEnding, '.png')
+        # pngPath = os.path.join(dirpath, pngName)
+        rawImage = Image.open(imagePath)
+        npImage = ((np.array(rawImage) + 1) / 256) - 1
+        visImage = Image.fromarray(np.uint8(npImage), mode='L')
+        visImage.save(pngPath, 'PNG')
+        fileName = pngPath
+
+    rawImage = Image.open(fileName)
     (imageWidth, imageHeight) = rawImage.size
     if removeDataBar:
         dataBarPixelRow, _, _, _, _, _, _ = getDataBarPixelRow(rawImage)
@@ -45,7 +62,7 @@ def splitSingleImage(imageName, dirpath, gridSize: int, saveSplitImages: bool = 
     if not height % gridSize == 0:
         croppedImage = croppedImage.crop((0, 0, width, height - (height % gridSize)))
     (width, height) = croppedImage.size
-    nakedFileName, fileExtension = getNakedNameFromFilePath(imageName, True)
+    nakedFileName, fileExtension = getNakedNameFromFilePath(fileName, True)
     griddedImageList = []
     for rowNum in range(gridSize):
         for colNum in range(gridSize):
