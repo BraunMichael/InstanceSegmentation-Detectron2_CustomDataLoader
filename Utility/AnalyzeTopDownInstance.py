@@ -2,6 +2,8 @@ import sys
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+from math import pi
+from skimage.measure import label, regionprops
 from detectron2.utils.visualizer import Visualizer
 from Utility.Utilities import *
 
@@ -34,7 +36,7 @@ def analyzeTopDownInstance(predictor, nanowire_metadata, scaleBarNMPerPixel, set
     (imageWidth, imageHeight) = image.size
     imageAreaMicronsSq = imageWidth * (scaleBarNMPerPixel / 1000) * imageHeight * (scaleBarNMPerPixel / 1000)
 
-    _, boundingBoxPolyDict, numInstances = getMaskAndBBDicts(outputs)
+    maskDict, boundingBoxPolyDict, numInstances = getMaskAndBBDicts(outputs)
     outputClasses = outputs['instances'].pred_classes
 
     verticalWireClass = 0
@@ -42,6 +44,8 @@ def analyzeTopDownInstance(predictor, nanowire_metadata, scaleBarNMPerPixel, set
 
     numVerticalWires = 0
     numInclinedWires = 0
+
+    wireDiameterList = []
     for instanceNumber in range(numInstances):
         instanceBoxCoords = getXYFromPolyBox(boundingBoxPolyDict[instanceNumber])
         wireFraction = 1
@@ -57,13 +61,30 @@ def analyzeTopDownInstance(predictor, nanowire_metadata, scaleBarNMPerPixel, set
             wireFraction = 0.5
         if outputClasses[instanceNumber] == verticalWireClass:
             numVerticalWires += wireFraction
+            if wireFraction == 1:  #is not a side or corner instance
+                label_image = label(maskDict[instanceNumber], connectivity=1)
+                allRegionProperties = regionprops(label_image)
+
+                largeRegionsNums = set()
+                regionNum = 0
+                for region in allRegionProperties:
+                    # Ignore small regions or if an instance got split into a major and minor part
+                    if region.area > 100:
+                        largeRegionsNums.add(regionNum)
+                    regionNum += 1
+                if len(largeRegionsNums) == 1:
+                    region = allRegionProperties[list(largeRegionsNums)[0]]
+                    wireArea = region.area
+                    wireDiameter = 2*np.sqrt(wireArea/pi)*scaleBarNMPerPixel
+                    wireDiameterList.append(wireDiameter)
+
         elif outputClasses[instanceNumber] == inclinedWireClass:
             numInclinedWires += wireFraction
         else:
             print('Too many classes')
             quit()
 
-    return numVerticalWires, numInclinedWires, imageAreaMicronsSq, annotatedImage
+    return numVerticalWires, numInclinedWires, imageAreaMicronsSq, annotatedImage, wireDiameterList
 
 
 
