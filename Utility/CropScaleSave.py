@@ -176,7 +176,7 @@ def scaleBarProcessing(filename, scaleBarMicronsPerPixelDict, replaceScaleEntry,
         scaleBarMicronsPerPixel = scalebarWidthMicrons/scaleBarWidthPixels
         croppedImage.close()
         print("Scale bar is ", scaleBarWidthPixels, " pixels across. Total width of cropped area is: ", cropWidth)
-        scaleBarMicronsPerPixelDict[getNakedNameFromFilePath(filename)] = scaleBarMicronsPerPixel
+        scaleBarMicronsPerPixelDict[nakedFileName] = scaleBarMicronsPerPixel
     else:  # use existing scaleBarMicronsPerPixel from dict
         scaleBarMicronsPerPixel = scaleBarMicronsPerPixelDict[nakedFileName]
 
@@ -280,7 +280,7 @@ def getRawImageScales(scaleBarDictFile: str, inputFileNames, scaleBarWidthMicron
     shutil.copy2(scaleBarDictFile, scaleBarDictFileCopyName)
     with open(scaleBarDictFile, 'w') as file:
         for key, value in scaleBarMicronsPerPixelDict.items():
-            file.write('%s\t%s\n' % (getNakedNameFromFilePath(key), str(value)))
+            file.write('%s\t%s\n' % (key, str(value)))
     os.remove(scaleBarDictFileCopyName)
 
     croppedImage = []
