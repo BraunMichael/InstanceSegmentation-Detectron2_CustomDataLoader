@@ -233,7 +233,8 @@ def main():
     # look at the outputs. See https://detectron2.readthedocs.io/tutorials/models.html#model-output-format for specification
 
     wireMeasurementsDict = fileHandling(setupOptions.wireMeasurementsPath)
-    wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)] = {}
+    if getNakedNameFromFilePath(setupOptions.imageFilePath) not in wireMeasurementsDict:
+        wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)] = {}
 
     if setupOptions.tiltAngle == 0:
         gridSize = 4
@@ -258,8 +259,7 @@ def main():
         compiledWireDiameterList = [element for innerList in wireDiameterListofLists for element in innerList]
 
         print("Analyzed Image:", getNakedNameFromFilePath(setupOptions.imageFilePath))
-        print(totalNumVerticalWires, " Vertical wires, ", totalNumInclinedWires, " Inclined Wires")
-        print(totalNumVerticalWires + totalNumInclinedWires, " Wires in ", round(totalImageAreaMicronsSq, 1), " um^2")
+        print(totalNumVerticalWires, " Vertical wires, ", totalNumInclinedWires, " Inclined Wires. Together that is:", totalNumVerticalWires + totalNumInclinedWires, " Wires in ", round(totalImageAreaMicronsSq, 1), " um^2")
         print(round(wiresPerSqMicron, 3), "wires/um^2")
         print("Wire diameter list in nm: ", compiledWireDiameterList)
         print("Average wire diameter in nm:", np.average(compiledWireDiameterList))
@@ -324,30 +324,36 @@ def main():
         # averageMeasValue = uncertaintyLineArray.mean()
         averageMeasValue = np.mean(finalLineAvgList)
 
-        wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Individual Wires"] = {}
-
         if setupOptions.isVerticalSubSection:
+
             wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Average Width (nm)"] = averageMeasValue
             wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Width Standard Deviation (nm)"] = np.std(finalLineAvgList)
             wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Number Width Measurements"] = len(finalLineAvgList)
             wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Wire Width Measurements List (nm)"] = finalLineAvgList
+
+            IndividualWireWidthsStr = "Individual Wire Widths"
+            wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)][IndividualWireWidthsStr] = {}
+
             for wireNumber in range(len(finalLineAvgList)):
-                wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Individual Wires"][wireNumber] = {}
-                wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Individual Wires"][wireNumber]["Average Width"] = finalLineAvgList[wireNumber]
-                wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Individual Wires"][wireNumber]["Width Standard Deviation"] = finalLineStdList[wireNumber]
-                wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Individual Wires"][wireNumber]["Number Width Measurements"] = len(finalAllLineLengthList[wireNumber])
-                wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Individual Wires"][wireNumber]["Individual Width Measurements"] = finalAllLineLengthList[wireNumber]
+                wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)][IndividualWireWidthsStr][wireNumber] = {}
+                wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)][IndividualWireWidthsStr][wireNumber]["Average Width (nm)"] = finalLineAvgList[wireNumber]
+                wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)][IndividualWireWidthsStr][wireNumber]["Width Standard Deviation (nm)"] = finalLineStdList[wireNumber]
+                wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)][IndividualWireWidthsStr][wireNumber]["Number Width Measurements"] = len(finalAllLineLengthList[wireNumber])
+                wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)][IndividualWireWidthsStr][wireNumber]["Individual Width Measurements (nm)"] = finalAllLineLengthList[wireNumber]
         else:
-            wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Average Length"] = averageMeasValue
-            wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Length Standard Deviation"] = np.std(finalLineAvgList)
+            wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Average Length (nm)"] = averageMeasValue
+            wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Length Standard Deviation (nm)"] = np.std(finalLineAvgList)
             wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Number Length Measurements"] = len(finalLineAvgList)
             wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Wire Length Measurements List (nm)"] = finalLineAvgList
+
+            IndividualWireLengthsStr = "Individual Wire Lengths"
+            wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)][IndividualWireLengthsStr] = {}
             for wireNumber in range(len(finalLineAvgList)):
-                wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Individual Wires"][wireNumber] = {}
-                wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Individual Wires"][wireNumber]["Average Length (nm)"] = finalLineAvgList[wireNumber]
-                wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Individual Wires"][wireNumber]["Length Standard Deviation (nm)"] = finalLineStdList[wireNumber]
-                wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Individual Wires"][wireNumber]["Number Length Measurements"] = len(finalAllLineLengthList[wireNumber])
-                wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Individual Wires"][wireNumber]["Individual Length Measurements"] = finalAllLineLengthList[wireNumber]
+                wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)][IndividualWireLengthsStr][wireNumber] = {}
+                wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)][IndividualWireLengthsStr][wireNumber]["Average Length (nm)"] = finalLineAvgList[wireNumber]
+                wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)][IndividualWireLengthsStr][wireNumber]["Length Standard Deviation (nm)"] = finalLineStdList[wireNumber]
+                wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)][IndividualWireLengthsStr][wireNumber]["Number Length Measurements"] = len(finalAllLineLengthList[wireNumber])
+                wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)][IndividualWireLengthsStr][wireNumber]["Individual Length Measurements (nm)"] = finalAllLineLengthList[wireNumber]
 
         # print(finalLineAvgList)
         # print(finalLineStdList)
