@@ -3,6 +3,7 @@ import os
 import pickle
 import joblib
 import shutil
+import pyp3rclip
 import numpy as np
 from tqdm import tqdm
 import multiprocessing
@@ -263,13 +264,14 @@ def main():
         print(round(wiresPerSqMicron, 3), "wires/um^2")
         print("Wire diameter list in nm: ", compiledWireDiameterList)
         print("Average wire diameter in nm:", np.average(compiledWireDiameterList))
+        pyp3rclip.copy(str(compiledWireDiameterList).strip('[]'))
 
         wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Number Vertical Wires"] = totalNumVerticalWires
         wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Number Inclined Wires"] = totalNumInclinedWires
         wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Image Area (Square Microns)"] = totalImageAreaMicronsSq
         wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Wires Per Square Micron"] = wiresPerSqMicron
         wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Wire Diameter List (nm)"] = compiledWireDiameterList
-        wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Average Wire Diameter (nm)"] = compiledWireDiameterList
+        wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)]["Average Wire Diameter (nm)"] = np.average(compiledWireDiameterList)
 
         if setupOptions.showPlots:
             collageImage = create_collage(annotatedImageList, 0.02)
@@ -362,6 +364,7 @@ def main():
         print("Number of Measurements: ", len(finalLineAvgList))
         roundedFinalLineAvgList = [int(round(lengthMeasurement, 0)) for lengthMeasurement in finalLineAvgList]
         print("Wire size list in nm: ", roundedFinalLineAvgList)
+        pyp3rclip.copy(str(roundedFinalLineAvgList).strip('[]'))
 
 
     # Copy the original wireMeasurements file to a backup before overwriting for safety, then delete the copy
