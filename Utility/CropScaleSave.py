@@ -111,7 +111,7 @@ def getDataBarPixelRow(rawImage):
 
 
 def scaleBarProcessing(filename, scaleBarMicronsPerPixelDict, replaceScaleEntry, scalebarWidthMicrons):
-    rawImage = Image.open(filename)
+    rawImage = Image.open(filename).convert('L')
 
     dataBarPixelRow, dataBarPixelRow_OffsetCorrected, reducedRawImage, rawImageWidth, rawImageHeight, rawImageWidthOffset, rawImageHeightOffset = getDataBarPixelRow(rawImage)
 
