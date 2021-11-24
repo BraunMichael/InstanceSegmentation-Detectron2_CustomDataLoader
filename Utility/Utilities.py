@@ -10,6 +10,8 @@ from torch import device as torchdevice
 from shapely.geometry import Polygon
 import numpy as np
 import pickle
+import json
+from json.decoder import JSONDecodeError
 import locale
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
@@ -71,10 +73,26 @@ def getPickleFile(basePath, fileName):
     return fileHandling(pickleFileName)
 
 
+class NumpyEncoder(json.JSONEncoder):
+    """ Special json encoder for numpy types """
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
+
+
 def fileHandling(annotationFileName):
-    with open(annotationFileName, 'rb') as handle:
-        fileContents = pickle.loads(handle.read())
+    # with open(annotationFileName, 'rb') as handle:
+    #     fileContents = pickle.loads(handle.read())
+    with open(annotationFileName, 'r') as fileHandle:
+        fileContents = json.load(fileHandle)
     return fileContents
+
+
 
 
 def getFileOrDir(fileOrFolder: str = 'file', titleStr: str = 'Choose a file', fileTypes: str = None, initialDirOrFile: str = os.getcwd()):
