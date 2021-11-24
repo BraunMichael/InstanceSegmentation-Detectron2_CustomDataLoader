@@ -204,7 +204,7 @@ def uiInput(win, setupOptions, savedJSONFileName):
     tkinter.Label(win, text="Line Measurement File:").grid(row=6, column=0)
     wireMeasurements = tkinter.Entry(win, textvariable=wireMeasurementsText, width=len(setupOptions.wireMeasurementsPath.replace(os.path.expanduser('~'), '~')))
     wireMeasurements.grid(row=7, column=0)
-    tkinter.Button(win, text='Choose File', command=lambda: get_file(wireMeasurements, wireMeasurementsText, 'Choose Line Measurements File', '.txt')).grid(row=7, column=1)
+    tkinter.Button(win, text='Choose File', command=lambda: get_file(wireMeasurements, wireMeasurementsText, 'Choose Line Measurements File', '.json')).grid(row=7, column=1)
 
     tkinter.Label(win, text="Measure Widths or Lengths").grid(row=8, column=0)
     tkinter.Radiobutton(win, text="Widths", variable=isVerticalSubSectionVar, value=1).grid(row=8, column=1)

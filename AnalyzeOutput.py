@@ -1,3 +1,4 @@
+import json
 import sys
 import os
 import pickle
@@ -154,8 +155,8 @@ def getInstances():
     basePath = os.getcwd()
 
     # TODO: some or all of this may not be necessary
-    annotationTrainDicts = getPickleFile(basePath, "annotations_Train.txt")
-    annotationValidateDicts = getPickleFile(basePath, "annotations_Validation.txt")
+    annotationTrainDicts = getPickleFile(basePath, "annotations_Train.json")
+    annotationValidateDicts = getPickleFile(basePath, "annotations_Validation.json")
     annotationDicts = [annotationTrainDicts, annotationValidateDicts]
 
     dirNameSet = set()
@@ -179,7 +180,6 @@ def getInstances():
     assert 'Train' in dirNameSet and 'Validation' in dirNameSet, 'You are missing either a Train or Validation directory in your annotations'
     dirnames = ['Train', 'Validation']  # After making sure these are directories as expected, lets force the order to match the annotationDicts order
 
-
     rawImage, scaleBarMicronsPerPixel, setupOptions = importRawImageAndScale()
 
     if not setupOptions.isVerticalSubSection and not setupOptions.tiltAngle == 0:
@@ -195,7 +195,6 @@ def getInstances():
             print('The imported rawImage is 1 dimensional for some reason, check it out.')
             quit()
 
-
     if setupOptions.tiltAngle == 0:
         nanowireStr = 'TopDownNanowires'
         for d in range(len(dirnames)):
@@ -204,7 +203,6 @@ def getInstances():
             MetadataCatalog.get(nanowireStr + "_" + dirnames[d]).set(thing_classes=setupOptions.classNameList)
 
     else:
-
         nanowireStr = 'VerticalNanowires'
         for d in range(len(dirnames)):
             if nanowireStr + "_" + dirnames[d] not in DatasetCatalog.__dict__['_REGISTERED']:
@@ -233,7 +231,10 @@ def main():
     predictor, npImage, scaleBarNMPerPixel, setupOptions, nanowire_metadata = getInstances()
     # look at the outputs. See https://detectron2.readthedocs.io/tutorials/models.html#model-output-format for specification
 
-    wireMeasurementsDict = fileHandling(setupOptions.wireMeasurementsPath)
+    try:
+        wireMeasurementsDict = fileHandling(setupOptions.wireMeasurementsPath)
+    except JSONDecodeError:
+        wireMeasurementsDict = {}
     if getNakedNameFromFilePath(setupOptions.imageFilePath) not in wireMeasurementsDict:
         wireMeasurementsDict[getNakedNameFromFilePath(setupOptions.imageFilePath)] = {}
 
@@ -371,8 +372,9 @@ def main():
     wireMeasurementsCopyPathName, wireMeasurementsCopyPathExtension = os.path.splitext(setupOptions.wireMeasurementsPath)
     wireMeasurementsCopyPathName = wireMeasurementsCopyPathName + 'backup' + wireMeasurementsCopyPathExtension
     shutil.copy2(setupOptions.wireMeasurementsPath, wireMeasurementsCopyPathName)
-    with open(setupOptions.wireMeasurementsPath, 'wb') as handle:
-        pickle.dump(wireMeasurementsDict, handle)
+
+    with open(setupOptions.wireMeasurementsPath, 'w') as handle:
+        json.dump(wireMeasurementsDict, handle, cls=NumpyEncoder)
     os.remove(wireMeasurementsCopyPathName)
 
 
