@@ -1,7 +1,6 @@
 import json
 import sys
 import os
-import pickle
 import joblib
 import shutil
 import pyp3rclip
@@ -155,8 +154,8 @@ def getInstances():
     basePath = os.getcwd()
 
     # TODO: some or all of this may not be necessary
-    annotationTrainDicts = getPickleFile(basePath, "annotations_Train.json")
-    annotationValidateDicts = getPickleFile(basePath, "annotations_Validation.json")
+    annotationTrainDicts = getJSONFile(basePath, "annotations_Train.json")
+    annotationValidateDicts = getJSONFile(basePath, "annotations_Validation.json")
     annotationDicts = [annotationTrainDicts, annotationValidateDicts]
 
     dirNameSet = set()

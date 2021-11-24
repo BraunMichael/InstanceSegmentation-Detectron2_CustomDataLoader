@@ -66,11 +66,11 @@ def tqdm_joblib(tqdm_object):
         tqdm_object.close()
 
 
-def getPickleFile(basePath, fileName):
-    pickleFileName = os.path.join(basePath, fileName)
-    if not pickleFileName:
+def getJSONFile(basePath, fileName):
+    jsonFileName = os.path.join(basePath, fileName)
+    if not jsonFileName:
         quit()
-    return fileHandling(pickleFileName)
+    return fileHandling(jsonFileName)
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -91,8 +91,6 @@ def fileHandling(annotationFileName):
     with open(annotationFileName, 'r') as fileHandle:
         fileContents = json.load(fileHandle)
     return fileContents
-
-
 
 
 def getFileOrDir(fileOrFolder: str = 'file', titleStr: str = 'Choose a file', fileTypes: str = None, initialDirOrFile: str = os.getcwd()):

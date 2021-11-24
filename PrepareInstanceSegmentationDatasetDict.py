@@ -1,7 +1,6 @@
 import os
 import joblib
 import contextlib
-import pickle
 import multiprocessing
 import matplotlib.cm
 import matplotlib.pyplot as plt
@@ -17,8 +16,10 @@ from skimage.color import label2rgb
 from detectron2.structures import BoxMode
 from scipy.ndimage import binary_fill_holes
 from tqdm import tqdm
+import json
 import pycocotools
 from ttictoc import tic, toc
+from Utility.Utilities import *
 
 maskType = 'polygon'  # Options are 'bitmask' or 'polygon'
 # If more than 1 type of thing, need a new (and consistent) category_id (in annotate function) for each different type of object
@@ -271,9 +272,9 @@ def main():
             for (rawImageName, binaryImageName) in zip(rawImageNames, binaryImageNames):
                 allAnnotations.append(annotateSingleImage(rawImageName, binaryImageName, maskType, parentFolder))
 
-        annotationDictFileName = 'annotations_16NoSnNoMerged_' + dirName + '.txt'
-        with open(annotationDictFileName, 'wb') as handle:
-            pickle.dump(allAnnotations, handle)
+        annotationDictFileName = 'annotations_16NoSnNoMerged_' + dirName + '.json'
+        with open(annotationDictFileName, 'w') as handle:
+            json.dump(allAnnotations, handle, cls=NumpyEncoder)
 
 
 if __name__ == "__main__":
