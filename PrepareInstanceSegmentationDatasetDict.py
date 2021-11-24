@@ -73,7 +73,7 @@ def create_sub_mask_annotation(sub_mask, region, category_id, annotation_id, is_
         subMaskImage = Image.fromarray(np.uint8(np.multiply(sub_mask, 255)))
         # This fixes the corner issue of diagonally cutting across the mask since edge pixels had no neighboring black pixels
         sub_mask_bordered = ImageOps.expand(subMaskImage, border=1)
-        contours = measure.find_contours(sub_mask_bordered, 0.5, positive_orientation='low')
+        contours = measure.find_contours(np.array(sub_mask_bordered), 0.5, positive_orientation='low')
 
         segmentations = []
         polygons = []
