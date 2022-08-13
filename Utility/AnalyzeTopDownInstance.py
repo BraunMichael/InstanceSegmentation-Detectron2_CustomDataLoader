@@ -20,18 +20,18 @@ def analyzeTopDownInstance(predictor, nanowire_metadata, scaleBarNMPerPixel, set
             quit()
     outputs = predictor(npImage)
     annotatedImage = None
-    if setupOptions.showPlots:
-        # fig, ax = plt.subplots(figsize=(10, 8))
-        # print(setupOptions.imageFilePath)
-        try:
-            visualizerNP = Visualizer(npImage[:, :, ::-1], metadata=nanowire_metadata, scale=0.5)
-        except IndexError:
-            npImage = np.expand_dims(npImage, axis=2)
-            visualizerNP = Visualizer(npImage[:, :, ::-1], metadata=nanowire_metadata, scale=0.5)
-        out = visualizerNP.draw_instance_predictions(outputs["instances"].to("cpu"))
-        annotatedImage = out.get_image()[:, :, ::-1]
-        # ax.imshow(annotatedImage)
-        # plt.show(block=True)
+
+    # fig, ax = plt.subplots(figsize=(10, 8))
+    # print(setupOptions.imageFilePath)
+    try:
+        visualizerNP = Visualizer(npImage[:, :, ::-1], metadata=nanowire_metadata, scale=0.5)
+    except IndexError:
+        npImage = np.expand_dims(npImage, axis=2)
+        visualizerNP = Visualizer(npImage[:, :, ::-1], metadata=nanowire_metadata, scale=0.5)
+    out = visualizerNP.draw_instance_predictions(outputs["instances"].to("cpu"))
+    annotatedImage = out.get_image()[:, :, ::-1]
+    # ax.imshow(annotatedImage)
+    # plt.show(block=True)
 
     (imageWidth, imageHeight) = image.size
     imageAreaMicronsSq = imageWidth * (scaleBarNMPerPixel / 1000) * imageHeight * (scaleBarNMPerPixel / 1000)
