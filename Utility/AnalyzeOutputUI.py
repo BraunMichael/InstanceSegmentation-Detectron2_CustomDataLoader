@@ -82,19 +82,10 @@ class NumberValidator(object):
         return True
 
 
-def show_ImageRescale(win, rescaleImageValueVar, numberRows, txtValidator):
+def show_ImageRescale(win, rescaleImageValueVar, numberRows, ):
     if 'imageRescale_Label' not in win.children:
-        imageRescaleValidatorFunction = (win.register(txtValidator.imageRescaleValidator), '%P')
-        tkinter.Label(win, text="Rescale image width to (pixels)", name='imageRescale_Label').grid(row=numberRows, column=0)
-        tkinter.Entry(win, textvariable=rescaleImageValueVar, validate='all', validatecommand=imageRescaleValidatorFunction, name='imageRescaleValue_Label').grid(row=numberRows, column=1)
+
         numberRows += 1
-
-
-def hide_ImageRescale(win, numberRows):
-    if 'imageRescale_Label' in win.children:
-        #numberRows -= 1
-        win.children['imageRescale_Label'].destroy()
-        win.children['imageRescaleValue_Label'].destroy()
 
 
 def hide_AdvancedOptions(win):
@@ -111,9 +102,14 @@ def hide_AdvancedOptions(win):
         win.children['parallelProcessing_Label'].destroy()
         win.children['parallelProcessing_YesButton'].destroy()
         win.children['parallelProcessing_NoButton'].destroy()
+        win.children['rescaleImage_Label'].destroy()
+        win.children['rescaleImage_YesButton'].destroy()
+        win.children['rescaleImage_NoButton'].destroy()
+        win.children['imageRescale_Label'].destroy()
+        win.children['imageRescaleValue_Label'].destroy()
 
 
-def show_AdvancedOptions(win, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar, initialRow):
+def show_AdvancedOptions(win, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar, doImageRescaleVar, rescaleImageValueVar, txtValidator, initialRow):
     if 'showPlots_Label' not in win.children:
         tkinter.Label(win, text="Show Intermediate Plots?", name='showPlots_Label').grid(row=initialRow, column=0)
         tkinter.Radiobutton(win, text="Yes", variable=showPlotsVar, value=1, name='showPlots_YesButton').grid(row=initialRow, column=1)
@@ -130,6 +126,14 @@ def show_AdvancedOptions(win, showPlotsVar, showBoundingBoxPlotsVar, plotPolylid
         tkinter.Label(win, text="Use parallelization?", name='parallelProcessing_Label').grid(row=initialRow+3, column=0)
         tkinter.Radiobutton(win, text="Yes", variable=parallelProcessingVar, value=1, name='parallelProcessing_YesButton').grid(row=initialRow+3, column=1)
         tkinter.Radiobutton(win, text="No", variable=parallelProcessingVar, value=0, name='parallelProcessing_NoButton').grid(row=initialRow+3, column=2)
+
+        tkinter.Label(win, text="Rescale Image?", name='rescaleImage_Label').grid(row=initialRow+4, column=0)
+        tkinter.Radiobutton(win, text="Yes", variable=doImageRescaleVar, value=1, name='rescaleImage_YesButton').grid(row=initialRow+4, column=1)
+        tkinter.Radiobutton(win, text="No", variable=doImageRescaleVar, value=0, name='rescaleImage_NoButton').grid(row=initialRow+4, column=2)
+
+        imageRescaleValidatorFunction = (win.register(txtValidator.imageRescaleValidator), '%P')
+        tkinter.Label(win, text="Rescale image width to (pixels)", name='imageRescale_Label').grid(row=initialRow+5, column=0)
+        tkinter.Entry(win, textvariable=rescaleImageValueVar, validate='all', validatecommand=imageRescaleValidatorFunction, name='imageRescaleValue_Label').grid(row=initialRow+5, column=1)
 
     else:
         hide_AdvancedOptions(win)
@@ -173,7 +177,6 @@ def on_closing(win, setupOptions, savedJSONFileName, ImageEntryText, scaleDictEn
     setupOptions.classNameList = [entry for entry in lineSplitter(classNamesVar.get()) if entry]
     setupOptions.doImageRescale = doImageRescaleVar.get()
     setupOptions.imageRescaleWidth = strToInt(rescaleImageValueVar.get())
-    print('image rescale width from setup:' + str(setupOptions.imageRescaleWidth))
 
     with open(savedJSONFileName, 'w') as outfile:
         json.dump(jsonpickle.encode(setupOptions), outfile)
@@ -267,18 +270,8 @@ def uiInput(win, setupOptions, savedJSONFileName):
     tkinter.Entry(win, textvariable=classNamesVar, validate='all', validatecommand=classListValidatorFunction).grid(row=numberRows, column=1)
     numberRows += 1
 
-    tkinter.Label(win, text="Rescale Image?").grid(row=numberRows, column=0)
-    RescaleRow = numberRows + 1
-    tkinter.Radiobutton(win, text="Yes", variable=doImageRescaleVar, value=1, command=lambda: show_ImageRescale(win, rescaleImageValueVar, RescaleRow, txtValidator)).grid(row=numberRows, column=1)
-    tkinter.Radiobutton(win, text="No", variable=doImageRescaleVar, value=0, command=lambda: hide_ImageRescale(win, RescaleRow)).grid(row=numberRows, column=2)
-    print('doimagerescalevar: ' + str(doImageRescaleVar))
-    if doImageRescaleVar:
-        show_ImageRescale(win, rescaleImageValueVar, RescaleRow, txtValidator)
-    else:
-        hide_ImageRescale(win, RescaleRow)
-    numberRows += 2
 
-    tkinter.Button(win, text='Show/Hide Advanced Options', command=lambda: show_AdvancedOptions(win, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar, numberRows)).grid(row=numberRows, column=1)
+    tkinter.Button(win, text='Show/Hide Advanced Options', command=lambda: show_AdvancedOptions(win, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar, doImageRescaleVar, rescaleImageValueVar, txtValidator, numberRows)).grid(row=numberRows, column=1)
     numberRows += 1
 
     hide_AdvancedOptions(win)

@@ -120,7 +120,6 @@ def scaleBarProcessing(filename, scaleBarMicronsPerPixelDict, replaceScaleEntry,
     nakedFileName = getNakedNameFromFilePath(filename)
     if doImageRescale and imageRescaleWidth > 0:
         nakedFileName = nakedFileName + '_' + str(imageRescaleWidth)
-        print(nakedFileName)
 
     if replaceScaleEntry or nakedFileName not in scaleBarMicronsPerPixelDict:
         global fig
@@ -180,21 +179,18 @@ def scaleBarProcessing(filename, scaleBarMicronsPerPixelDict, replaceScaleEntry,
                 break
         assert scaleBarWidthPixels > 0, "Could not find a scale bar, maybe something is different about the input file databar format or white box surrounding it?"
         scaleBarMicronsPerPixel = scalebarWidthMicrons/scaleBarWidthPixels
-        print('uncorrected scalebar um per pixel:' + str(scaleBarMicronsPerPixel))
         if doImageRescale and imageRescaleWidth > 0:
             imageScaleFactor = imageRescaleWidth / rawImage.width
             scaleBarMicronsPerPixel = scaleBarMicronsPerPixel/imageScaleFactor
-            print('image scale factor: ' + str(imageScaleFactor))
-            print('corrected scalebar um per pixel in if: ' + str(scaleBarMicronsPerPixel))
 
         croppedImage.close()
-        print("Scale bar is ", scaleBarWidthPixels, " pixels across. Total width of cropped area is: ", cropWidth)
+        print("Scale bar from full resolution image is ", scaleBarWidthPixels, " pixels across. Total width of cropped area is: ", cropWidth)
         scaleBarMicronsPerPixelDict[nakedFileName] = scaleBarMicronsPerPixel
     else:  # use existing scaleBarMicronsPerPixel from dict
         scaleBarMicronsPerPixel = scaleBarMicronsPerPixelDict[nakedFileName]
 
     rawImage.close()
-    print("Scale Bar Microns Per Pixel is: ", scaleBarMicronsPerPixel)
+    print("Scale Bar nm Per Pixel (corrected if rescaled) is: ", scaleBarMicronsPerPixel*1000)
 
     return scaleBarMicronsPerPixelDict, dataBarPixelRow_OffsetCorrected
 
@@ -316,8 +312,6 @@ def getRawImageScales(setupOptions):
     for inputFileName in fileNames:
         rawImage = Image.open(inputFileName)
         (imageWidth, imageHeight) = rawImage.size
-        print("imageWidth:" + str(imageWidth))
-
 
         fileTypeEnding = inputFileName[inputFileName.rfind('.'):]
         croppedFileName = inputFileName.replace(fileTypeEnding, '_cropped' + fileTypeEnding)
@@ -337,10 +331,7 @@ def getRawImageScales(setupOptions):
             croppedImage = Image.fromarray(np.uint8(croppedImage * 255), mode='L')
         croppedImage.save(croppedFileName)
         setupOptions.imageFilePath = croppedFileName
-        print('setupOptions.imageFilePath in getRawImageScales: ' + setupOptions.imageFilePath)
         scaleBarMicronsPerPixel = scaleBarMicronsPerPixelDict[getNakedNameFromFilePath(inputFileName)]
-        print(inputFileName)
-        print('scalebar um per pixel after correction: ' + str(scaleBarMicronsPerPixel))
 
     return croppedImage, scaleBarMicronsPerPixel
 
