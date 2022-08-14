@@ -31,49 +31,29 @@ def tqdm_joblib(tqdm_object):
         tqdm_object.close()
 
 
-def splitSingleImage(imageName, dirpath, gridSize: int, saveSplitImages: bool = True, deleteOriginalImage: bool = False, removeDataBar: bool = False):
-
-    if imageName.endswith(('jpg', '.jpeg')):
-        fileName = imageName
-
-    if imageName.endswith(('.tiff', '.tif')):
-        print("attempting to convert tiff to png")
-        imagePath = imageName
-
-        fileTypeEnding = imagePath[imagePath.rfind('.'):]
-        pngPath = imageName.replace(fileTypeEnding, '.png')
-        # pngPath = os.path.join(dirpath, pngName)
-        rawImage = Image.open(imagePath)
-        npImage = ((np.array(rawImage) + 1) / 256) - 1
-        visImage = Image.fromarray(np.uint8(npImage), mode='L')
-        visImage.save(pngPath, 'PNG')
-        fileName = pngPath
-
-    rawImage = Image.open(fileName)
-    (imageWidth, imageHeight) = rawImage.size
-    if removeDataBar:
-        dataBarPixelRow, _, _, _, _, _, _ = getDataBarPixelRow(rawImage)
-        croppedImage = rawImage.crop((0, 0, imageWidth, imageHeight - dataBarPixelRow))
-    else:
-        croppedImage = rawImage
-    (width, height) = croppedImage.size
+def splitSingleImage(image, imagePath, gridSize: int, saveSplitImages: bool = True, deleteOriginalImage: bool = False, removeDataBar: bool = False):
+    (width, height) = image.size
     if not width % gridSize == 0:
-        croppedImage = croppedImage.crop((0, 0, width - (width % gridSize), height))
+        image = image.crop((0, 0, width - (width % gridSize), height))
     if not height % gridSize == 0:
-        croppedImage = croppedImage.crop((0, 0, width, height - (height % gridSize)))
-    (width, height) = croppedImage.size
-    nakedFileName, fileExtension = getNakedNameFromFilePath(fileName, True)
+        image = image.crop((0, 0, width, height - (height % gridSize)))
+    (width, height) = image.size
+
+    fileTypeEnding = imagePath[imagePath.rfind('.'):]
+    pngPath = imagePath.replace(fileTypeEnding, '.png')
+
     griddedImageList = []
     for rowNum in range(gridSize):
         for colNum in range(gridSize):
-            gridImage = croppedImage.crop((colNum * width / gridSize, rowNum * height / gridSize, ((colNum + 1) * width / gridSize) - 1, ((rowNum + 1) * height / gridSize) - 1))
+            gridImage = image.crop((colNum * width / gridSize, rowNum * height / gridSize, ((colNum + 1) * width / gridSize) - 1, ((rowNum + 1) * height / gridSize) - 1))
             if saveSplitImages:
-                gridImage.save(os.path.join(dirpath, nakedFileName + "_" + str(colNum) + str(rowNum) + fileExtension))
+                fileTypeEnding = pngPath[imagePath.rfind('.'):]
+                gridImagePath = pngPath.replace(fileTypeEnding, '_' + str(colNum) + str(rowNum) + '.png')
+                gridImage.save(gridImagePath)
             griddedImageList.append(gridImage)
-    rawImage.close()
-    croppedImage.close()
+    image.close()
     if deleteOriginalImage:
-        os.remove(os.path.join(dirpath, nakedFileName + fileExtension))
+        os.remove(imagePath)
     return griddedImageList
 
 

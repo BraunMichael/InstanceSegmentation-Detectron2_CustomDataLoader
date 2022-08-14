@@ -92,7 +92,7 @@ def show_ImageRescale(win, rescaleImageValueVar, numberRows, txtValidator):
 
 def hide_ImageRescale(win, numberRows):
     if 'imageRescale_Label' in win.children:
-        numberRows -= 1
+        #numberRows -= 1
         win.children['imageRescale_Label'].destroy()
         win.children['imageRescaleValue_Label'].destroy()
 
@@ -271,6 +271,7 @@ def uiInput(win, setupOptions, savedJSONFileName):
     RescaleRow = numberRows + 1
     tkinter.Radiobutton(win, text="Yes", variable=doImageRescaleVar, value=1, command=lambda: show_ImageRescale(win, rescaleImageValueVar, RescaleRow, txtValidator)).grid(row=numberRows, column=1)
     tkinter.Radiobutton(win, text="No", variable=doImageRescaleVar, value=0, command=lambda: hide_ImageRescale(win, RescaleRow)).grid(row=numberRows, column=2)
+    print('doimagerescalevar: ' + str(doImageRescaleVar))
     if doImageRescaleVar:
         show_ImageRescale(win, rescaleImageValueVar, RescaleRow, txtValidator)
     else:

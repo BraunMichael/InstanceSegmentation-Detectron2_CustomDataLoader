@@ -8,6 +8,7 @@ from skimage.transform import rescale
 from PIL import Image
 from tkinter import Tk, filedialog
 from Utility.AnalyzeOutputUI import setupOptionsUI
+from Utility import Utilities
 
 
 def longestContinuousLengthPerLine(whitePixelsDict):
@@ -250,7 +251,14 @@ def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file'
     return fileOrFolderList
 
 
-def getRawImageScales(scaleBarDictFile: str, inputFileNames, scaleBarWidthMicrons, doImageRescale=False, imageRescaleWidth=0):
+def getRawImageScales(setupOptions):
+
+    scaleBarDictFile = setupOptions.scaleDictPath
+    inputFileNames = setupOptions.imageFilePath
+    scaleBarWidthMicrons = setupOptions.scaleBarWidthMicrons
+    doImageRescale = setupOptions.doImageRescale
+    imageRescaleWidth = setupOptions.imageRescaleWidth
+
     scaleBarMicronsPerPixelDict = getScaleDictFromFile(scaleBarDictFile)
 
     if isinstance(inputFileNames, str):
@@ -328,6 +336,8 @@ def getRawImageScales(scaleBarDictFile: str, inputFileNames, scaleBarWidthMicron
             croppedImage = rescale(np.array(croppedImage), imageScaleFactor, anti_aliasing=True)
             croppedImage = Image.fromarray(np.uint8(croppedImage * 255), mode='L')
         croppedImage.save(croppedFileName)
+        setupOptions.imageFilePath = croppedFileName
+        print('setupOptions.imageFilePath in getRawImageScales: ' + setupOptions.imageFilePath)
         scaleBarMicronsPerPixel = scaleBarMicronsPerPixelDict[getNakedNameFromFilePath(inputFileName)]
         print(inputFileName)
         print('scalebar um per pixel after correction: ' + str(scaleBarMicronsPerPixel))
@@ -337,12 +347,20 @@ def getRawImageScales(scaleBarDictFile: str, inputFileNames, scaleBarWidthMicron
 
 def importRawImageAndScale():
     setupOptions = setupOptionsUI()
-    croppedImage, scaleBarMicronsPerPixel = getRawImageScales(setupOptions.scaleDictPath, setupOptions.imageFilePath, setupOptions.scaleBarWidthMicrons, setupOptions.doImageRescale, setupOptions.imageRescaleWidth)
+    croppedImage, scaleBarMicronsPerPixel = getRawImageScales(setupOptions)
     return croppedImage, scaleBarMicronsPerPixel, setupOptions
 
 
 # This is for manually cropping a whole folder of images with the same scale bar (ie for prepping images for training)
 def cropAndSave(scaleBarWidthMicrons):
+    class SetupOptions:
+        def __init__(self):
+            self.doImageRescale = False
+            self.imageRescaleWidth = 0
+            self.imageFilePath = ''
+            self.scaleDictPath = ''
+
+
     root = Tk()
     root.withdraw()
     imageFilesFolder = filedialog.askdirectory(initialdir=os.getcwd(), title="Select Image Folder")
@@ -356,7 +374,11 @@ def cropAndSave(scaleBarWidthMicrons):
     fileNames = []
     for inputFileName in binaryRawFileNames:
         fileNames.append(os.path.join(imageFilesFolder, inputFileName))
-    getRawImageScales(scaleBarDictFile, fileNames, scaleBarWidthMicrons)
+
+    setupOptions.scaleDictPath = scaleBarDictFile
+    setupOptions.imageFilePath = fileNames
+    setupOptions.scaleBarWidthMicrons = scaleBarWidthMicrons
+    getRawImageScales(setupOptions)
 
 
 # This is for manually cropping a whole folder of images by some number of pixels (often times just 1 pixel needed)
