@@ -143,15 +143,7 @@ def get_file(entryField, entryFieldText, titleMessage, fileFormatsStr):
 
 def preview_image(imageFilePath):
     inputImagePath = imageFilePath.get().replace('~', os.path.expanduser('~'))
-    if inputImagePath.endswith(('.tiff', '.tif')):
-        print("attempting to convert tiff to png")
-        rawImage = Image.open(inputImagePath)
-        npImage = ((np.array(rawImage) + 1) / 256) - 1
-        visImage = Image.fromarray(np.uint8(npImage), mode='L')
-        visImage.show()
-    else:
-        rawImage = Image.open(inputImagePath)
-        rawImage.show()
+    os.system("xdg-open " + inputImagePath)
 
 
 def get_setupOptions(savedJSONFileName):
@@ -281,6 +273,8 @@ def uiInput(win, setupOptions, savedJSONFileName):
     tkinter.Radiobutton(win, text="No", variable=doImageRescaleVar, value=0, command=lambda: hide_ImageRescale(win, RescaleRow)).grid(row=numberRows, column=2)
     if doImageRescaleVar:
         show_ImageRescale(win, rescaleImageValueVar, RescaleRow, txtValidator)
+    else:
+        hide_ImageRescale(win, RescaleRow)
     numberRows += 2
 
     tkinter.Button(win, text='Show/Hide Advanced Options', command=lambda: show_AdvancedOptions(win, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar, numberRows)).grid(row=numberRows, column=1)

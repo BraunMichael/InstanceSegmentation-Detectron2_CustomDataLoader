@@ -180,7 +180,6 @@ def getInstances():
     dirnames = ['Train', 'Validation']  # After making sure these are directories as expected, lets force the order to match the annotationDicts order
 
     rawImage, scaleBarMicronsPerPixel, setupOptions = importRawImageAndScale()
-
     if not setupOptions.isVerticalSubSection and not setupOptions.tiltAngle == 0:
         # Correct for tilt angle, this is equivalent to multiplying the measured length, but is more convenient here
         scaleBarMicronsPerPixel = scaleBarMicronsPerPixel / np.sin(np.deg2rad(setupOptions.tiltAngle))
@@ -227,9 +226,9 @@ def getInstances():
 
 
 def main():
+
     predictor, npImage, scaleBarNMPerPixel, setupOptions, nanowire_metadata = getInstances()
     # look at the outputs. See https://detectron2.readthedocs.io/tutorials/models.html#model-output-format for specification
-
     try:
         wireMeasurementsDict = fileHandling(setupOptions.wireMeasurementsPath)
     except JSONDecodeError:
@@ -275,8 +274,9 @@ def main():
 
         if setupOptions.showPlots:
             collageImage = create_collage(annotatedImageList, 0.02)
-            collageImage.save(getNakedNameFromFilePath(setupOptions.imageFilePath)+"_annotated.jpg")
-            collageImage.show()
+            collageImagePath = getNakedNameFromFilePath(setupOptions.imageFilePath)+"_annotated.jpg"
+            collageImage.save(collageImagePath)
+            os.system("xdg-open " + collageImagePath)
 
     else:
         outputs = predictor(npImage)
