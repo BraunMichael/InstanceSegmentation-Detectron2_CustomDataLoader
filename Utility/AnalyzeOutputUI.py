@@ -85,7 +85,7 @@ class NumberValidator(object):
 def show_ImageRescale(win, rescaleImageValueVar, numberRows, txtValidator):
     if 'imageRescale_Label' not in win.children:
         imageRescaleValidatorFunction = (win.register(txtValidator.imageRescaleValidator), '%P')
-        tkinter.Label(win, text="Rescale image height to (pixels)", name='imageRescale_Label').grid(row=numberRows, column=0)
+        tkinter.Label(win, text="Rescale image width to (pixels)", name='imageRescale_Label').grid(row=numberRows, column=0)
         tkinter.Entry(win, textvariable=rescaleImageValueVar, validate='all', validatecommand=imageRescaleValidatorFunction, name='imageRescaleValue_Label').grid(row=numberRows, column=1)
         numberRows += 1
 
@@ -164,7 +164,7 @@ def get_setupOptions(savedJSONFileName):
     return setupOptions
 
 
-def on_closing(win, setupOptions, savedJSONFileName, ImageEntryText, scaleDictEntryText, modelEntryText, isVerticalSubSectionVar, centerFractionToMeasureVar, tiltAngleVar, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar, scaleBarWidthMicronsVar, numberClassesVar, classNamesVar, wireMeasurementsText, doImageRescaleVar):
+def on_closing(win, setupOptions, savedJSONFileName, ImageEntryText, scaleDictEntryText, modelEntryText, isVerticalSubSectionVar, centerFractionToMeasureVar, tiltAngleVar, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar, scaleBarWidthMicronsVar, numberClassesVar, classNamesVar, wireMeasurementsText, doImageRescaleVar, rescaleImageValueVar):
     setupOptions.imageFilePath = ImageEntryText.get().replace('~', os.path.expanduser('~'))
     setupOptions.scaleDictPath = scaleDictEntryText.get().replace('~', os.path.expanduser('~'))
     setupOptions.modelPath = modelEntryText.get().replace('~', os.path.expanduser('~'))
@@ -180,6 +180,8 @@ def on_closing(win, setupOptions, savedJSONFileName, ImageEntryText, scaleDictEn
     setupOptions.numClasses = strToInt(numberClassesVar.get())
     setupOptions.classNameList = [entry for entry in lineSplitter(classNamesVar.get()) if entry]
     setupOptions.doImageRescale = doImageRescaleVar.get()
+    setupOptions.imageRescaleWidth = strToInt(rescaleImageValueVar.get())
+    print('image rescale width from setup:' + str(setupOptions.imageRescaleWidth))
 
     with open(savedJSONFileName, 'w') as outfile:
         json.dump(jsonpickle.encode(setupOptions), outfile)
@@ -202,7 +204,7 @@ def uiInput(win, setupOptions, savedJSONFileName):
     validClassNamesVar = tkinter.BooleanVar(value=checkClassNames(classNamesVar.get(), int(numberClassesVar.get())))
 
     doImageRescaleVar = tkinter.BooleanVar(value=setupOptions.doImageRescale)
-    rescaleImageValueVar = tkinter.StringVar(value=setupOptions.imageRescaleHeight)
+    rescaleImageValueVar = tkinter.StringVar(value=setupOptions.imageRescaleWidth)
 
     showPlotsVar = tkinter.BooleanVar(value=setupOptions.showPlots)
     showBoundingBoxPlotsVar = tkinter.BooleanVar(value=setupOptions.showBoundingBoxPlots)
@@ -277,13 +279,15 @@ def uiInput(win, setupOptions, savedJSONFileName):
     RescaleRow = numberRows + 1
     tkinter.Radiobutton(win, text="Yes", variable=doImageRescaleVar, value=1, command=lambda: show_ImageRescale(win, rescaleImageValueVar, RescaleRow, txtValidator)).grid(row=numberRows, column=1)
     tkinter.Radiobutton(win, text="No", variable=doImageRescaleVar, value=0, command=lambda: hide_ImageRescale(win, RescaleRow)).grid(row=numberRows, column=2)
+    if doImageRescaleVar:
+        show_ImageRescale(win, rescaleImageValueVar, RescaleRow, txtValidator)
     numberRows += 2
 
     tkinter.Button(win, text='Show/Hide Advanced Options', command=lambda: show_AdvancedOptions(win, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar, numberRows)).grid(row=numberRows, column=1)
     numberRows += 1
 
     hide_AdvancedOptions(win)
-    win.protocol("WM_DELETE_WINDOW", lambda: on_closing(win, setupOptions, savedJSONFileName, ImageEntryText, scaleDictEntryText, modelEntryText, isVerticalSubSectionVar, centerFractionToMeasureVar, tiltAngleVar, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar, scaleBarWidthMicronsVar, numberClassesVar, classNamesVar, wireMeasurementsText, doImageRescaleVar))
+    win.protocol("WM_DELETE_WINDOW", lambda: on_closing(win, setupOptions, savedJSONFileName, ImageEntryText, scaleDictEntryText, modelEntryText, isVerticalSubSectionVar, centerFractionToMeasureVar, tiltAngleVar, showPlotsVar, showBoundingBoxPlotsVar, plotPolylidarVar, parallelProcessingVar, scaleBarWidthMicronsVar, numberClassesVar, classNamesVar, wireMeasurementsText, doImageRescaleVar, rescaleImageValueVar))
     win.mainloop()
 
 
@@ -294,4 +298,4 @@ def setupOptionsUI():
     return setupOptions
 
 
-setupOptionsUI()
+#setupOptionsUI()

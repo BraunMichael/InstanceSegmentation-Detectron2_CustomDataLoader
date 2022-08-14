@@ -20,7 +20,7 @@ class SetupOptions:
     def __init__(self):
         self.showPlots = False
         self.doImageRescale = False
-        self.imageRescaleHeight = 0
+        self.imageRescaleWidth = 0
         self.continueTraining = True
         self.modelType = "maskrcnn"
         self.numClasses = 1

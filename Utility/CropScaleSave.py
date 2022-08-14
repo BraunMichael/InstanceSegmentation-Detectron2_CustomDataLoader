@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import easygui
 import shutil
+from skimage.transform import rescale
 from PIL import Image
 from tkinter import Tk, filedialog
 from Utility.AnalyzeOutputUI import setupOptionsUI
@@ -110,12 +111,16 @@ def getDataBarPixelRow(rawImage):
     return dataBarPixelRow, dataBarPixelRow_OffsetCorrected, reducedRawImage, rawImageWidth, rawImageHeight, rawImageWidthOffset, rawImageHeightOffset
 
 
-def scaleBarProcessing(filename, scaleBarMicronsPerPixelDict, replaceScaleEntry, scalebarWidthMicrons):
+def scaleBarProcessing(filename, scaleBarMicronsPerPixelDict, replaceScaleEntry, scalebarWidthMicrons, doImageRescale, imageRescaleWidth):
     rawImage = Image.open(filename).convert('L')
 
     dataBarPixelRow, dataBarPixelRow_OffsetCorrected, reducedRawImage, rawImageWidth, rawImageHeight, rawImageWidthOffset, rawImageHeightOffset = getDataBarPixelRow(rawImage)
 
     nakedFileName = getNakedNameFromFilePath(filename)
+    if doImageRescale and imageRescaleWidth > 0:
+        nakedFileName = nakedFileName + '_' + str(imageRescaleWidth)
+        print(nakedFileName)
+
     if replaceScaleEntry or nakedFileName not in scaleBarMicronsPerPixelDict:
         global fig
         global ax
@@ -174,6 +179,13 @@ def scaleBarProcessing(filename, scaleBarMicronsPerPixelDict, replaceScaleEntry,
                 break
         assert scaleBarWidthPixels > 0, "Could not find a scale bar, maybe something is different about the input file databar format or white box surrounding it?"
         scaleBarMicronsPerPixel = scalebarWidthMicrons/scaleBarWidthPixels
+        print('uncorrected scalebar um per pixel:' + str(scaleBarMicronsPerPixel))
+        if doImageRescale and imageRescaleWidth > 0:
+            imageScaleFactor = imageRescaleWidth / rawImage.width
+            scaleBarMicronsPerPixel = scaleBarMicronsPerPixel/imageScaleFactor
+            print('image scale factor: ' + str(imageScaleFactor))
+            print('corrected scalebar um per pixel in if: ' + str(scaleBarMicronsPerPixel))
+
         croppedImage.close()
         print("Scale bar is ", scaleBarWidthPixels, " pixels across. Total width of cropped area is: ", cropWidth)
         scaleBarMicronsPerPixelDict[nakedFileName] = scaleBarMicronsPerPixel
@@ -186,10 +198,13 @@ def scaleBarProcessing(filename, scaleBarMicronsPerPixelDict, replaceScaleEntry,
     return scaleBarMicronsPerPixelDict, dataBarPixelRow_OffsetCorrected
 
 
-def getScaleandDataBarDicts(fileNames, scaleBarMicronsPerPixelDict, replaceScaleEntry, scalebarWidthMicrons):
+def getScaleandDataBarDicts(fileNames, scaleBarMicronsPerPixelDict, replaceScaleEntry, scalebarWidthMicrons, doImageRescale, imageRescaleWidth):
     dataBarPixelRowDict = {}
     for name in fileNames:
-        (scaleBarMicronsPerPixelDict, dataBarPixelRow) = scaleBarProcessing(name, scaleBarMicronsPerPixelDict, replaceScaleEntry, scalebarWidthMicrons)
+        (scaleBarMicronsPerPixelDict, dataBarPixelRow) = scaleBarProcessing(name, scaleBarMicronsPerPixelDict, replaceScaleEntry, scalebarWidthMicrons, doImageRescale, imageRescaleWidth)
+        if doImageRescale and imageRescaleWidth > 0:
+            fileTypeEnding = name[name.rfind('.'):]
+            name = name.replace(fileTypeEnding, '_' + str(imageRescaleWidth) + fileTypeEnding)
         dataBarPixelRowDict[name] = dataBarPixelRow
     return scaleBarMicronsPerPixelDict, dataBarPixelRowDict
 
@@ -235,7 +250,7 @@ def getFileOrDirList(fileOrFolder: str = 'file', titleStr: str = 'Choose a file'
     return fileOrFolderList
 
 
-def getRawImageScales(scaleBarDictFile: str, inputFileNames, scaleBarWidthMicrons):
+def getRawImageScales(scaleBarDictFile: str, inputFileNames, scaleBarWidthMicrons, doImageRescale=False, imageRescaleWidth=0):
     scaleBarMicronsPerPixelDict = getScaleDictFromFile(scaleBarDictFile)
 
     if isinstance(inputFileNames, str):
@@ -256,6 +271,8 @@ def getRawImageScales(scaleBarDictFile: str, inputFileNames, scaleBarWidthMicron
             npImage = ((np.array(rawImage) + 1) / 256) - 1
             visImage = Image.fromarray(np.uint8(npImage), mode='L')
             visImage.save(pngPath, 'PNG')
+            visImage.close()
+            rawImage.close()
             fileNames.append(pngPath)
             # os.remove(imagePath)
 
@@ -264,7 +281,10 @@ def getRawImageScales(scaleBarDictFile: str, inputFileNames, scaleBarWidthMicron
     nameNum = 0
     replaceScaleEntry = True
     while noDuplicateNames & (nameNum < namesLeftToCheck):
-        if getNakedNameFromFilePath(fileNames[nameNum]) in scaleBarMicronsPerPixelDict:
+        nakedFileName = getNakedNameFromFilePath(fileNames[nameNum])
+        if doImageRescale and imageRescaleWidth > 0:
+            nakedFileName = nakedFileName + '_' + str(imageRescaleWidth)
+        if nakedFileName in scaleBarMicronsPerPixelDict:
             noDuplicateNames = False
             replaceScaleEntry = easygui.boolbox('Replace existing scale per pixel for each image or use existing values?',
                                                 'Replace or Use Existing?', ['Replace', 'Use Existing'], cancel_choice='None')
@@ -272,7 +292,7 @@ def getRawImageScales(scaleBarDictFile: str, inputFileNames, scaleBarWidthMicron
                 replaceScaleEntry = True
         nameNum += 1
 
-    (scaleBarMicronsPerPixelDict, dataBarPixelRowDict) = getScaleandDataBarDicts(fileNames, scaleBarMicronsPerPixelDict, replaceScaleEntry, scaleBarWidthMicrons)
+    (scaleBarMicronsPerPixelDict, dataBarPixelRowDict) = getScaleandDataBarDicts(fileNames, scaleBarMicronsPerPixelDict, replaceScaleEntry, scaleBarWidthMicrons, doImageRescale, imageRescaleWidth)
 
     # Copy the original scaleBarDictFile to a backup before overwriting for safety, then delete the copy
     scaleBarDictFileCopyName, scaleBarDictFileExtension = os.path.splitext(scaleBarDictFile)
@@ -288,6 +308,14 @@ def getRawImageScales(scaleBarDictFile: str, inputFileNames, scaleBarWidthMicron
     for inputFileName in fileNames:
         rawImage = Image.open(inputFileName)
         (imageWidth, imageHeight) = rawImage.size
+        print("imageWidth:" + str(imageWidth))
+
+
+        fileTypeEnding = inputFileName[inputFileName.rfind('.'):]
+        croppedFileName = inputFileName.replace(fileTypeEnding, '_cropped' + fileTypeEnding)
+        if doImageRescale and imageRescaleWidth > 0:
+            inputFileName = inputFileName.replace(fileTypeEnding, '_' + str(imageRescaleWidth) + fileTypeEnding)
+            croppedFileName = inputFileName.replace(fileTypeEnding, '_cropped' + fileTypeEnding)
 
         # This is the white line closest to the middle of the image in the bottom half of the image. Should be top of databar
         dataBarPixelRow = dataBarPixelRowDict[inputFileName]
@@ -295,17 +323,21 @@ def getRawImageScales(scaleBarDictFile: str, inputFileNames, scaleBarWidthMicron
         # databarImage = rawImage.crop((0, dataBarPixelRow, imageWidth, imageHeight))
         rawImage.close()
 
-        fileTypeEnding = inputFileName[inputFileName.rfind('.'):]
-        croppedFileName = inputFileName.replace(fileTypeEnding, '_cropped'+fileTypeEnding)
+        if doImageRescale and imageRescaleWidth > 0:
+            imageScaleFactor = imageRescaleWidth / croppedImage.width
+            croppedImage = rescale(np.array(croppedImage), imageScaleFactor, anti_aliasing=True)
+            croppedImage = Image.fromarray(np.uint8(croppedImage * 255), mode='L')
         croppedImage.save(croppedFileName)
         scaleBarMicronsPerPixel = scaleBarMicronsPerPixelDict[getNakedNameFromFilePath(inputFileName)]
+        print(inputFileName)
+        print('scalebar um per pixel after correction: ' + str(scaleBarMicronsPerPixel))
 
     return croppedImage, scaleBarMicronsPerPixel
 
 
 def importRawImageAndScale():
     setupOptions = setupOptionsUI()
-    croppedImage, scaleBarMicronsPerPixel = getRawImageScales(setupOptions.scaleDictPath, setupOptions.imageFilePath, setupOptions.scaleBarWidthMicrons)
+    croppedImage, scaleBarMicronsPerPixel = getRawImageScales(setupOptions.scaleDictPath, setupOptions.imageFilePath, setupOptions.scaleBarWidthMicrons, setupOptions.doImageRescale, setupOptions.imageRescaleWidth)
     return croppedImage, scaleBarMicronsPerPixel, setupOptions
 
 
